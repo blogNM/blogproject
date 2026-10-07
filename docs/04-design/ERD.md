@@ -125,7 +125,8 @@ erDiagram
         char share_token UK "일부 공개 링크 값, 새로 만들면 교체"
         enum status "ACTIVE, CLOSING, CLOSED"
         boolean is_hidden "관리자 숨김 (ADM-02)"
-        datetime close_scheduled_at "폐쇄 예정 시각, 철회하면 NULL"
+        datetime close_scheduled_at "누른 날짜 + 7일 04:00, 철회하면 NULL"
+        enum close_requested_by "OWNER, ADMIN (D-86)"
         datetime closed_at "30일 뒤 완전 삭제"
         tinyint notification_retention_days "블로그 알림 보관"
         datetime created_at
@@ -141,7 +142,6 @@ erDiagram
         boolean perm_manage_posts "부블로그장: 글 관리"
         datetime sub_owner_since "자동 위임 순서 (D-17)"
         datetime suspended_until "정지 끝, 영구면 9999-12-31"
-        tinyint suspension_count "3이면 관리 화면에 표시 (D-46)"
         datetime joined_at
         datetime left_at
     }
@@ -172,7 +172,7 @@ erDiagram
         enum type "WARNING, SUSPEND, LIFT, KICK"
         enum duration "D3, D14, D30, FOREVER"
         varchar reason
-        datetime created_at "1년 보관 (D-60)"
+        datetime created_at "최근 1년 정지 3번이면 표시 (D-87)"
     }
     blacklist_entries {
         bigint id PK
@@ -228,11 +228,11 @@ erDiagram
 
 | 테이블 | 하는 일 | 근거 |
 |---|---|---|
-| `blogs` | 블로그. 주소는 폐쇄 30일 뒤 행을 지우면서 다시 쓸 수 있게 됨 | BLG-01·09, D-35, D-49 |
+| `blogs` | 블로그. 블로그장 폐쇄와 관리자 강제 폐쇄 모두 누른 날짜 + 7일 04:00에 닫히고 철회는 블로그장이 함. 주소는 폐쇄 30일 뒤 행을 지우면서 다시 쓸 수 있게 됨 | BLG-01·09, D-35, D-49, D-86 |
 | `blog_memberships` | 회원 × 블로그의 역할, 부블로그장 권한, 정지 상태 | BLG-13, SEC-07, D-71 |
 | `join_requests` | 참여 신청. 대기 중 재신청 금지, 거절 7일 계산 | BLG-04·05 |
 | `ownership_transfers` | 블로그장 위임 요청 | BLG-08, D-16, D-31 |
-| `member_sanctions` | 블로그 안 멤버 경고·정지·해제·강제 퇴장 기록 | BLG-13, D-57 |
+| `member_sanctions` | 블로그 안 멤버 경고·정지·해제·강제 퇴장 기록. 정지 3번은 이 기록에서 그 블로그의 최근 1년 정지만 세어 판단 | BLG-13, D-57, D-87 |
 | `blacklist_entries` | 강제 퇴장한 사람의 이름·이메일·전화번호 해시 | BLG-11, D-34 |
 | `blacklist_appeals` | 블랙리스트 해제 문의 | BLG-12 |
 | `blog_closing_notices` | 폐쇄 알림을 단계별로 보냈는지 기록. 배치가 밀려도 중복 발송 안 함 | BLG-09, 7장 폐쇄 처리 |
@@ -368,8 +368,8 @@ erDiagram
         bigint reporter_id FK "members"
         enum target_type "MEMBER, BLOG_OWNER, BLOG, POST, COMMENT"
         bigint target_id
-        bigint blog_id FK "어느 블로그의 일인지"
-        enum handler "BLOG_OWNER, ADMIN"
+        bigint blog_id FK "블로그 안의 일이면, 메인 프로필 신고는 NULL"
+        enum handler "BLOG_OWNER, ADMIN, 접수할 때 정함 (D-85)"
         varchar reason_code "선택지 미정"
         varchar detail
         enum status "PENDING, DONE"
@@ -413,7 +413,7 @@ erDiagram
 |---|---|---|
 | `follows`, `subscriptions` | 회원 팔로우, 블로그 구독. 다시 누르면 행을 지움 | SOC-01, D-02 |
 | `blocks` | 회원 차단. 차단할 때 서로의 `follows`를 지움 | SOC-05, D-36 |
-| `reports` | 신고. 블로그 안 대상은 블로그장, 블로그·블로그장은 관리자에게 | SOC-06, D-45 |
+| `reports` | 신고. 블로그 안 멤버와 그 글·댓글은 블로그장, 블로그장과 블로그장의 글·댓글, 블로그 자체, 메인 프로필 신고는 관리자에게. 접수처는 신고할 때 `handler`에 정해 둠 | SOC-06, D-45, D-85 |
 | `notifications` | 알림. 30초 폴링으로 안 읽은 것을 셈 | SOC-04, D-72 |
 | `notification_settings` | 끌 수 있는 알림만 행을 둠. 행이 없으면 켜짐 | SOC-04, D-56 |
 
@@ -445,7 +445,7 @@ erDiagram
         bigint admin_id FK
         bigint report_id FK "신고에서 시작했으면"
         varchar reason
-        datetime created_at "3번이면 권한 박탈"
+        datetime created_at "블로그별 최근 1년 3번이면 권한 박탈 (D-87)"
     }
     notices {
         bigint id PK
@@ -474,9 +474,9 @@ erDiagram
 
 | 테이블 | 하는 일 | 근거 |
 |---|---|---|
-| `admins` | 일반 회원과 분리한 관리자 계정 | SEC-09 (아래 확인 필요 2) |
+| `admins` | 일반 회원과 분리한 관리자 계정. 블로그 생성·글쓰기·팔로우 같은 회원 활동은 하지 않음 | SEC-09, D-84 |
 | `admin_action_logs` | 관리자의 조치와 개인정보 "전체 보기" 기록 | ADM-06, SEC-09 |
-| `owner_warnings` | 블로그장 경고. 블로그별로 세어 3번이면 권한 박탈 | ADM-07, D-30 |
+| `owner_warnings` | 블로그장 경고. 그 블로그의 최근 1년 경고가 3번이면 권한 박탈 | ADM-07, D-30, D-87 |
 | `notices` | 메인 공지사항 | BRD-10 |
 | `shedlock` | 여러 서버에서 04:00 배치가 한 번만 돌게 하는 잠금 (ShedLock 기본 테이블) | SCL-03 |
 
@@ -486,7 +486,7 @@ erDiagram
 
 1. **블로그장은 `blogs.owner_id`와 `blog_memberships.role = OWNER` 두 곳에 둡니다.** `owner_id`는 생성 개수 세기(D-68)와 "내가 만든 블로그"를 빠르게 찾기 위해, 멤버십의 OWNER는 권한 확인을 한 가지 방식으로 하기 위해서입니다. 위임할 때 두 곳을 한 트랜잭션에서 바꿉니다.
 2. **부블로그장 권한은 체크박스 3개**(정보 수정, 멤버 관리, 글 관리)로 멤버십 행에 둡니다. 역할·권한 표(002)에서 "맡길 수 있음"인 항목을 묶은 것이고, 참여 승인·신고 처리·블랙리스트 문의는 "멤버 관리"에 포함했습니다.
-3. **정지는 멤버십의 `suspended_until` 하나로 봅니다.** 영구 정지는 `9999-12-31`로 넣고, 정지 이력은 `member_sanctions`에 따로 남깁니다.
+3. **정지는 멤버십의 `suspended_until` 하나로 봅니다.** 영구 정지는 `9999-12-31`로 넣고, 정지 이력은 `member_sanctions`에 따로 남깁니다. 정지·경고 횟수는 숫자 칸으로 쌓지 않고, 기록 테이블에서 그 블로그의 최근 1년 것만 세어 판단합니다 (D-87). 1년 지난 기록은 보관 기간(D-60)이 끝나 지워지므로 따로 빼는 작업이 필요 없습니다.
 4. **블로그를 떠난 멤버의 글**은 `posts.author_left`로 "탈퇴한 계정"을 표시합니다 (D-33). 멤버십 상태로만 판단하면 다시 참여했을 때 예전 글이 되살아나기 때문입니다. 사이트 탈퇴는 `members.status = WITHDRAWN`으로 "탈퇴한 회원"을 표시합니다.
 5. **탈퇴한 회원의 행은 지우지 않습니다.** 이메일은 즉시 NULL로 비워 같은 이메일로 다시 가입할 수 있게 하고(MySQL 고유 인덱스는 NULL을 여러 개 허용), 이름·전화번호 등은 30일 뒤 배치가 비웁니다.
 6. **인증번호·로그인 실패 테이블은 회원과 연결하지 않고 이메일로 찾습니다.** 가입 안 된 이메일도 똑같이 다뤄야 가입 여부가 드러나지 않습니다 (D-28).
@@ -497,7 +497,9 @@ erDiagram
 11. **공지 알림은 전체 회원에게 한 줄씩** `notifications`에 넣습니다. 1차 규모에서는 이 방식이 가장 단순합니다.
 12. **관리자도 `refresh_tokens`를 같이 씁니다.** `member_id`와 `admin_id` 중 하나만 채웁니다.
 13. **폐쇄 알림 중복 방지**는 알림 테이블이 아니라 `blog_closing_notices`로 합니다. 회원이 알림을 지워도 다시 보내지 않게 하기 위해서입니다.
-14. **신고 대상은 `target_type + target_id`로 둡니다.** 대상이 네 종류라 외래키를 걸지 않고, 블로그 안의 일이면 `blog_id`로 접수처를 찾습니다.
+14. **신고 대상은 `target_type + target_id`로 둡니다.** 대상이 네 종류라 외래키를 걸지 않습니다. 접수처(`handler`)는 신고할 때 정해 저장합니다. 대상 글·댓글의 작성자가 그 블로그의 블로그장이면 `ADMIN`, 멤버면 `BLOG_OWNER`이고, 메인 프로필에서 한 신고는 `blog_id` 없이 `ADMIN`입니다 (D-85). 나중에 블로그장이 바뀌어도 이미 접수된 신고의 처리자는 바뀌지 않습니다.
+15. **폐쇄를 누가 걸었는지는 `blogs.close_requested_by`로 남깁니다** (D-86). 폐쇄 시각·배치·알림은 블로그장 폐쇄와 같고, 관리자 강제 폐쇄일 때는 "블로그장 권한 박탈로 인한 폐쇄 조치"처럼 알림 문구를 다르게 쓰는 데 씁니다.
+16. **태그 금칙어 테이블은 만들지 않습니다** (D-88).
 
 ## 확인이 필요한 것 (설계에 영향을 주는 남은 질문)
 
@@ -506,11 +508,13 @@ erDiagram
 | 번호 | 질문 | 지금 그린 방식 | 다르게 정하면 |
 |---|---|---|---|
 | 1 | IP별 요청 제한을 서버 메모리에서 셀지 DB에서 셀지 (SCL-01과 4.3이 어긋남) | 4.3을 따라 1차는 서버 메모리에서 셈 (2026-10-07 김채림 요청). 테이블 없음. 서버가 2대가 되면 서버마다 따로 세므로 그때 저장소를 바꿈 (헌법 V: 요청 제한 저장소는 인터페이스로 분리) | DB로 되돌리면 `rate_limit_buckets(bucket_key PK, window_start, request_count)` 추가 |
-| 2 | 관리자가 회원 활동(블로그 생성·글쓰기·팔로우)도 하는지 (SEC-09와 2장 권한 표가 어긋남) | 관리자 계정을 `admins`로 완전히 분리. 회원 활동이 필요하면 관리자가 회원 계정을 따로 씀 | 같은 계정으로 하면 `admins` 대신 `members.is_admin` 같은 칸 하나 |
+| 2 | 관리자 계정 분리 | **정함 (D-84)**: `admins`로 완전히 분리하고 블로그 활동은 하지 않음 | - |
 | 3 | 블로그 태그를 직접 다는지, 글 태그로 찾는지 (BLG-03) | 블로그에 직접 다는 `blog_tags`를 그려 둠 | 글 태그로 찾으면 `blog_tags`를 빼고 `post_tags`를 블로그별로 모음 |
 | 4 | 스스로 탈퇴한 멤버의 재참여 | 같은 멤버십 행을 `ACTIVE`로 되돌림 (블로그·회원 쌍은 하나) | 재참여 대기 기간을 두면 `left_at`으로 계산 |
 | 5 | 비회원 조회수의 "같은 사람" 기준 | `viewer_key` 문자열 하나로 받아 회원 번호든 비회원 값이든 넣음 | IP와 쿠키를 함께 쓰면 칸을 나눔 |
-| 6 | 블로그 숨김의 동작, 강제 폐쇄가 즉시인지 | `blogs.is_hidden` 칸 하나, 폐쇄는 `status`·`close_scheduled_at`을 그대로 씀 | 숨김 사유·기간이 필요하면 칸 추가 |
+| 6 | 블로그 숨김의 동작 (강제 폐쇄 시점은 **D-86으로 정함**: 7일 뒤 04:00) | `blogs.is_hidden` 칸 하나 | 숨김 사유·기간이 필요하면 칸 추가 |
+| 9 | 관리자가 건 강제 폐쇄를 블로그장이 철회할 수 있는지 (D-86 문구 그대로면 가능, 확인 중) | 누가 걸었든 블로그장이 철회할 수 있게 그림 | 관리자 폐쇄는 관리자만 철회하게 하면 철회할 때 `close_requested_by`를 확인 |
+| 10 | 메인 프로필 신고를 관리자가 어떻게 처리하는지 (관리자는 회원을 정지하지 않음, D-44, 확인 중) | 접수처만 `ADMIN`으로 정하고 처리 결과는 기존 `result` 값을 씀 | 새 조치가 생기면 `result` 값 추가 |
 | 7 | 신고 사유 선택지 | `reason_code` 문자열 | 선택지가 정해지면 enum으로 |
 | 8 | "인기" 기준 (블로그 목록, 피드, 검색) | `posts`의 좋아요·조회수 숫자로 계산할 수 있게만 해 둠 | 구독자 수 기준이면 `blogs`에 구독자 수 칸 추가 |
 
