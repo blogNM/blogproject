@@ -22,7 +22,7 @@ Spec Kit 명령은 지금 작업 중인 기능을 `.specify/feature.json`에서 
 
 ## 확인이 필요한 항목
 
-spec 안의 `[NEEDS CLARIFICATION]`을 모은 목록입니다. 정하면 해당 spec의 Clarifications에 옮기고, 결정 기록이 필요한 것은 `docs/03-decisions/`에 D-번호로 남깁니다.
+spec 안의 `[NEEDS CLARIFICATION]`을 모은 목록입니다. 항목별 추천안은 [확인항목-추천안.md](확인항목-추천안.md)에 있습니다(미확정). 정하면 해당 spec의 Clarifications에 옮기고, 결정 기록이 필요한 것은 `docs/03-decisions/`에 D-번호로 남깁니다.
 
 **문서끼리 어긋나는 곳**
 
