@@ -7,8 +7,8 @@
 #   선택: MAIL_USERNAME, MAIL_PASSWORD, ADMIN_INITIAL_LOGIN_ID, ADMIN_INITIAL_PASSWORD,
 #         TURNSTILE_SITE_KEY, TURNSTILE_SECRET_KEY
 # 변수 (같은 화면의 Variables 탭)
-#   꼭: APP_PORT (도커 컨테이너를 열 서버 포트)
-#   선택: APP_BASE_URL (사이트 주소. 없으면 http://SSH_ADDRESS:APP_PORT)
+#   APP_PORT: 도커 컨테이너를 열 서버 포트. 없으면 8340 (학교 서버에서 받은 8340~8349의 첫 번호)
+#   APP_BASE_URL (사이트 주소. 없으면 http://SSH_ADDRESS:APP_PORT)
 name: 배포
 
 on:
@@ -64,7 +64,7 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     env:
-      APP_PORT: ${{ vars.APP_PORT || secrets.APP_PORT }}
+      APP_PORT: ${{ vars.APP_PORT || secrets.APP_PORT || '8340' }}
     steps:
       - uses: actions/checkout@v4
       - name: 포트 번호 확인
@@ -105,7 +105,7 @@ jobs:
           DB_NAME: ${{ secrets.DB_NAME }}
           DB_USERNAME: ${{ secrets.DB_USERNAME || secrets.SSH_ID }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          APP_BASE_URL: ${{ vars.APP_BASE_URL || format('http://{0}:{1}', secrets.SSH_ADDRESS, vars.APP_PORT || secrets.APP_PORT) }}
+          APP_BASE_URL: ${{ vars.APP_BASE_URL || format('http://{0}:{1}', secrets.SSH_ADDRESS, vars.APP_PORT || secrets.APP_PORT || '8340') }}
           MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
           MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
           ADMIN_INITIAL_LOGIN_ID: ${{ secrets.ADMIN_INITIAL_LOGIN_ID }}
