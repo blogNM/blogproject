@@ -96,7 +96,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/blogs", "/api/blogs/*").permitAll()
                         // 글 목록·카테고리·글 상세도 공개 범위 안에서 비회원이 읽는다 (004).
                         .requestMatchers(HttpMethod.GET, "/api/blogs/*/posts", "/api/blogs/*/categories",
-                                "/api/posts/*").permitAll()
+                                "/api/posts/*", "/api/posts/*/comments").permitAll()
+                        // 메인 피드·공지·통합 검색 (004 4단계). 팔로우·구독 탭은 서비스가 로그인을 확인한다.
+                        .requestMatchers(HttpMethod.GET, "/api/feed", "/api/notices", "/api/search").permitAll()
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll())
                 .exceptionHandling(e -> e

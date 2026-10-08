@@ -58,6 +58,14 @@ public abstract class IntegrationTest {
     @BeforeEach
     void resetState() {
         jdbc.update("DELETE FROM notifications");
+        jdbc.update("DELETE FROM comments WHERE parent_id IS NOT NULL");
+        jdbc.update("DELETE FROM comments");
+        jdbc.update("DELETE FROM post_likes");
+        jdbc.update("DELETE FROM post_views");
+        jdbc.update("DELETE FROM recent_searches");
+        jdbc.update("DELETE FROM follows");
+        jdbc.update("DELETE FROM blocks");
+        jdbc.update("UPDATE blogs SET cover_image_id = NULL");
         jdbc.update("DELETE FROM post_tags");
         jdbc.update("DELETE FROM images");
         jdbc.update("DELETE FROM posts");

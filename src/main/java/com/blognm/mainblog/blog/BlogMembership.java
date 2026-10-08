@@ -99,6 +99,11 @@ public class BlogMembership {
         this.subOwnerSince = null;
     }
 
+    /** 블로그 정보·테마 수정. 블로그장 또는 정보 수정 권한이 있는 부블로그장 (D-71). */
+    public boolean canEditInfo() {
+        return role == Role.OWNER || (role == Role.SUB_OWNER && permEditInfo);
+    }
+
     /** 블로그장 또는 멤버 관리 권한이 있는 부블로그장 (D-71). */
     public boolean canManageMembers() {
         return role == Role.OWNER || (role == Role.SUB_OWNER && permManageMembers);

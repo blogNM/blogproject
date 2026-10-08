@@ -3,6 +3,8 @@ package com.blognm.mainblog.post;
 import java.util.List;
 import java.util.Map;
 
+import jakarta.servlet.http.HttpServletRequest;
+
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -15,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.blognm.mainblog.auth.MemberPrincipal;
+import com.blognm.mainblog.common.ClientIp;
 
 /**
  * 글 API (004 US1~3). 목록·상세는 비회원도 읽는다(공개 범위 안에서, SecurityConfig).
@@ -26,11 +29,14 @@ public class PostController {
     private final PostService posts;
     private final PostQueryService query;
     private final CategoryService categories;
+    private final ReactionService reactions;
 
-    public PostController(PostService posts, PostQueryService query, CategoryService categories) {
+    public PostController(PostService posts, PostQueryService query, CategoryService categories,
+            ReactionService reactions) {
         this.posts = posts;
         this.query = query;
         this.categories = categories;
+        this.reactions = reactions;
     }
 
     @GetMapping("/api/blogs/{slug}/posts")
@@ -47,10 +53,19 @@ public class PostController {
         return Map.of("id", posts.write(slug, me.memberId(), body));
     }
 
+    /** 글을 열면 조회수를 센다 (BRD-11). 볼 수 없는 글이면 세기 전에 404. */
     @GetMapping("/api/posts/{id}")
     public PostService.PostView view(@PathVariable long id, @RequestParam(required = false) String key,
+            @AuthenticationPrincipal MemberPrincipal me, HttpServletRequest request) {
+        posts.readable(id, key, id(me));
+        reactions.recordView(id, id(me), ClientIp.of(request));
+        return posts.view(id, key, id(me)).withLiked(reactions.liked(id, id(me)));
+    }
+
+    @PostMapping("/api/posts/{id}/like")
+    public ReactionService.LikeResult like(@PathVariable long id, @RequestParam(required = false) String key,
             @AuthenticationPrincipal MemberPrincipal me) {
-        return posts.view(id, key, id(me));
+        return reactions.toggleLike(id, key, me.memberId());
     }
 
     @PutMapping("/api/posts/{id}")

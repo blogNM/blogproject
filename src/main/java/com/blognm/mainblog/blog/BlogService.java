@@ -140,13 +140,44 @@ public class BlogService {
         String role = mine.map(m -> m.getRole().name()).orElse(null);
         boolean owner = mine.filter(m -> m.getRole() == BlogMembership.Role.OWNER).isPresent();
         boolean managePosts = mine.filter(BlogMembership::canManagePosts).isPresent();
+        boolean editInfo = mine.filter(BlogMembership::canEditInfo).isPresent();
         Member ownerMember = members.findById(blog.getOwnerId()).orElseThrow();
         return new BlogView(blog.getSlug(), blog.getName(), blog.getDescription(), blog.getVisibility().name(),
                 blog.getJoinPolicy().name(), blog.getStatus().name(), blog.getCloseScheduledAt(),
                 ownerMember.getNickname(), memberships.countActive(blog.getId()), tagNames(blog),
                 blog.getCreatedAt().format(DATE), role, requestStatus,
                 canRequestAt == null ? null : canRequestAt.format(DATE),
-                owner ? blog.getShareToken() : null, managePosts);
+                owner ? blog.getShareToken() : null, managePosts, editInfo, themeView(blog));
+    }
+
+    private ThemeView themeView(Blog blog) {
+        return new ThemeView(blog.getTheme().name(), blog.getThemeAccent(), blog.getThemeFont().name(),
+                blog.getHeroTitle(), blog.getHeroSubtitle(),
+                blogs.coverImageName(blog.getId()).map(name -> "/uploads/" + name).orElse(null));
+    }
+
+    // ----- 테마 (D-89) -----
+
+    /** 테마 틀·강조 색·글꼴·머리 문구. 정보 수정 권한이 있으면 바꾼다 (권한은 컨트롤러가 먼저 확인). */
+    @Transactional
+    public void updateTheme(String slug, ThemeRequest req) {
+        Blog blog = blogs.findBySlug(slug).filter(b -> !b.isClosed()).orElseThrow(BlogService::notFound);
+        if (req.theme() == null) {
+            throw ApiException.badRequest("INVALID_THEME", "테마 틀을 골라 주세요.");
+        }
+        blog.changeTheme(req.theme(), BlogRules.normalizeAccent(req.accent()),
+                req.font() == null ? Blog.Font.SANS : req.font(),
+                BlogRules.normalizeHeroText(req.heroTitle(), BlogRules.HERO_TITLE_MAX, "큰 문구"),
+                BlogRules.normalizeHeroText(req.heroSubtitle(), BlogRules.HERO_SUBTITLE_MAX, "작은 문구"));
+    }
+
+    /** 머리 사진(블로그 대표 이미지)을 바꾼다. 미리보기 사진이 없는 글의 공유 이미지로도 쓴다 (D-59). */
+    @Transactional
+    public String changeCover(String slug, Long imageId) {
+        Blog blog = blogs.findBySlug(slug).filter(b -> !b.isClosed()).orElseThrow(BlogService::notFound);
+        blog.changeCover(imageId);
+        blogs.flush();
+        return blogs.coverImageName(blog.getId()).map(name -> "/uploads/" + name).orElse(null);
     }
 
     /**
@@ -394,7 +425,15 @@ public class BlogService {
     public record BlogView(String slug, String name, String description, String visibility, String joinPolicy,
             String status, LocalDateTime closeScheduledAt, String ownerNickname, long memberCount, List<String> tags,
             String createdAt, String myRole, String myRequest, String canRequestAt, String shareToken,
-            boolean canManagePosts) {
+            boolean canManagePosts, boolean canEditInfo, ThemeView theme) {
+    }
+
+    public record ThemeView(String theme, String accent, String font, String heroTitle, String heroSubtitle,
+            String coverUrl) {
+    }
+
+    public record ThemeRequest(Blog.Theme theme, String accent, Blog.Font font, String heroTitle,
+            String heroSubtitle) {
     }
 
     public record PendingRequest(long id, String nickname, LocalDateTime requestedAt) {

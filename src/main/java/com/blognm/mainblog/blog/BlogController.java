@@ -14,7 +14,11 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import org.springframework.web.multipart.MultipartFile;
+
 import com.blognm.mainblog.auth.MemberPrincipal;
+import com.blognm.mainblog.image.Image;
+import com.blognm.mainblog.image.ImageService;
 
 /**
  * 블로그 API (002). 블로그 안의 관리 기능은 @PreAuthorize로 블로그별 역할을 매 요청 확인한다 (헌법 II, SEC-07).
@@ -25,10 +29,12 @@ public class BlogController {
 
     private final BlogService blogService;
     private final BlogQueryService queryService;
+    private final ImageService imageService;
 
-    public BlogController(BlogService blogService, BlogQueryService queryService) {
+    public BlogController(BlogService blogService, BlogQueryService queryService, ImageService imageService) {
         this.blogService = blogService;
         this.queryService = queryService;
+        this.imageService = imageService;
     }
 
     @GetMapping("/api/blogs")
@@ -60,6 +66,29 @@ public class BlogController {
             @RequestBody BlogService.UpdateRequest body) {
         blogService.update(slug, me.memberId(), body);
         return Map.of("updated", true);
+    }
+
+    @PutMapping("/api/blogs/{slug}/theme")
+    @PreAuthorize("@blogAuth.canEditInfo(#slug)")
+    public Map<String, Boolean> updateTheme(@PathVariable String slug, @RequestBody BlogService.ThemeRequest body) {
+        blogService.updateTheme(slug, body);
+        return Map.of("updated", true);
+    }
+
+    /** 머리 사진 올리기. 사진 검사는 글 사진과 같다 (SEC-08). */
+    @PostMapping("/api/blogs/{slug}/cover")
+    @PreAuthorize("@blogAuth.canEditInfo(#slug)")
+    public Map<String, String> uploadCover(@PathVariable String slug, @RequestParam("file") MultipartFile file,
+            @AuthenticationPrincipal MemberPrincipal me) {
+        Image image = imageService.upload(me.memberId(), file);
+        return Map.of("coverUrl", blogService.changeCover(slug, image.getId()));
+    }
+
+    @DeleteMapping("/api/blogs/{slug}/cover")
+    @PreAuthorize("@blogAuth.canEditInfo(#slug)")
+    public Map<String, Boolean> removeCover(@PathVariable String slug) {
+        blogService.changeCover(slug, null);
+        return Map.of("removed", true);
     }
 
     @PostMapping("/api/blogs/{slug}/share-link")

@@ -71,7 +71,8 @@ public class BlogQueryService {
                 : "b.id DESC";
         params.addValue("size", size).addValue("offset", (long) (current - 1) * size);
         List<BlogSummary> items = jdbc.query("""
-                SELECT b.id, b.slug, b.name, b.description, b.join_policy, b.status, b.created_at,
+                SELECT b.id, b.slug, b.name, b.description, b.join_policy, b.status, b.created_at, b.theme_accent,
+                       (SELECT i.stored_name FROM images i WHERE i.id = b.cover_image_id) AS cover,
                        m.nickname AS owner_nickname,
                        (SELECT COUNT(*) FROM blog_memberships x WHERE x.blog_id = b.id AND x.status = 'ACTIVE') AS member_count,
                        (SELECT COUNT(*) FROM subscriptions s WHERE s.blog_id = b.id) AS subscriber_count
@@ -83,7 +84,8 @@ public class BlogQueryService {
                 rs.getLong("id"), rs.getString("slug"), rs.getString("name"), rs.getString("description"),
                 rs.getString("join_policy"), rs.getString("status"), null,
                 rs.getString("owner_nickname"), rs.getLong("member_count"), rs.getLong("subscriber_count"),
-                rs.getObject("created_at", LocalDateTime.class).format(DATE), new ArrayList<>()));
+                rs.getObject("created_at", LocalDateTime.class).format(DATE), coverUrl(rs.getString("cover")),
+                rs.getString("theme_accent"), new ArrayList<>()));
         attachTags(items);
         int totalPages = (int) ((total + size - 1) / size);
         return new Page(items, current, totalPages, total);
@@ -92,7 +94,8 @@ public class BlogQueryService {
     /** 내가 만든 블로그와 참여한 블로그를 나눠 보여준다. 대기 중인 참여 신청도 함께 (BLG-06). */
     public MyBlogs myBlogs(long memberId) {
         List<BlogSummary> all = jdbc.query("""
-                SELECT b.id, b.slug, b.name, b.description, b.join_policy, b.status, b.created_at, bm.role,
+                SELECT b.id, b.slug, b.name, b.description, b.join_policy, b.status, b.created_at, bm.role, b.theme_accent,
+                       (SELECT i.stored_name FROM images i WHERE i.id = b.cover_image_id) AS cover,
                        m.nickname AS owner_nickname,
                        (SELECT COUNT(*) FROM blog_memberships x WHERE x.blog_id = b.id AND x.status = 'ACTIVE') AS member_count,
                        (SELECT COUNT(*) FROM subscriptions s WHERE s.blog_id = b.id) AS subscriber_count
@@ -105,7 +108,8 @@ public class BlogQueryService {
                 rs.getLong("id"), rs.getString("slug"), rs.getString("name"), rs.getString("description"),
                 rs.getString("join_policy"), rs.getString("status"), rs.getString("role"),
                 rs.getString("owner_nickname"), rs.getLong("member_count"), rs.getLong("subscriber_count"),
-                rs.getObject("created_at", LocalDateTime.class).format(DATE), new ArrayList<>()));
+                rs.getObject("created_at", LocalDateTime.class).format(DATE), coverUrl(rs.getString("cover")),
+                rs.getString("theme_accent"), new ArrayList<>()));
         attachTags(all);
         List<PendingBlog> pending = jdbc.query("""
                 SELECT b.slug, b.name, r.requested_at
@@ -134,6 +138,10 @@ public class BlogQueryService {
                 rs.getObject("joined_at", LocalDateTime.class).format(DATE)));
     }
 
+    private static String coverUrl(String storedName) {
+        return storedName == null ? null : "/uploads/" + storedName;
+    }
+
     private void attachTags(List<BlogSummary> items) {
         if (items.isEmpty()) {
             return;
@@ -151,7 +159,7 @@ public class BlogQueryService {
 
     public record BlogSummary(long id, String slug, String name, String description, String joinPolicy,
             String status, String myRole, String ownerNickname, long memberCount, long subscriberCount,
-            String createdAt, List<String> tags) {
+            String createdAt, String coverUrl, String accent, List<String> tags) {
     }
 
     public record Page(List<BlogSummary> items, int page, int totalPages, long total) {

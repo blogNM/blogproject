@@ -1,0 +1,101 @@
+package com.blognm.mainblog.board;
+
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.stereotype.Component;
+
+import com.blognm.mainblog.post.MarkdownRenderer;
+
+/**
+ * 메인 피드와 통합 검색이 함께 쓰는 글 카드 목록.
+ * 공개 블로그(숨김·폐쇄 제외)의 정상 글만 나온다. 일부 공개·비공개 블로그의 글은 나오지 않는다 (004 Edge Cases).
+ * 로그인한 회원에게는 서로 차단한 회원의 글을 빼고 보여준다 (SC-005, 추천안 #10 양방향).
+ */
+@Component
+public class PostCards {
+
+    public static final Set<Integer> PAGE_SIZES = Set.of(10, 20, 30);
+    private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern("yyyy.MM.dd HH:mm");
+    private static final int EXCERPT_MAX = 120;
+
+    private final NamedParameterJdbcTemplate jdbc;
+    private final MarkdownRenderer markdown;
+
+    public PostCards(NamedParameterJdbcTemplate jdbc, MarkdownRenderer markdown) {
+        this.jdbc = jdbc;
+        this.markdown = markdown;
+    }
+
+    /** 공개된 글 조건. 별칭은 글 p, 블로그 b. */
+    public static String publicWhere(Long viewerId, MapSqlParameterSource params) {
+        String where = """
+                p.status = 'NORMAL' AND b.visibility = 'PUBLIC' AND b.is_hidden = FALSE
+                AND b.status IN ('ACTIVE', 'CLOSING')
+                """;
+        if (viewerId == null) {
+            return where;
+        }
+        params.addValue("viewerId", viewerId);
+        return where + """
+                AND NOT EXISTS (SELECT 1 FROM blocks bk
+                                WHERE (bk.blocker_id = :viewerId AND bk.blocked_id = p.author_id)
+                                   OR (bk.blocker_id = p.author_id AND bk.blocked_id = :viewerId))
+                """;
+    }
+
+    public Page page(String where, String orderBy, MapSqlParameterSource params, int page, int size) {
+        int pageSize = PAGE_SIZES.contains(size) ? size : 10;
+        int current = Math.max(page, 1);
+        String from = " FROM posts p JOIN blogs b ON b.id = p.blog_id JOIN members m ON m.id = p.author_id WHERE ";
+        Long total = jdbc.queryForObject("SELECT COUNT(*)" + from + where, params, Long.class);
+        params.addValue("size", pageSize).addValue("offset", (long) (current - 1) * pageSize);
+        List<Card> items = jdbc.query("""
+                SELECT p.id, p.title, p.content_md, p.created_at, p.view_count, p.like_count, p.comment_count,
+                       p.author_left, b.slug, b.name AS blog_name, b.theme_accent, m.nickname, m.status AS member_status,
+                       (SELECT i.stored_name FROM images i WHERE i.post_id = p.id ORDER BY i.sort_order, i.id LIMIT 1) AS first_image
+                """ + from + where + " ORDER BY " + orderBy + " LIMIT :size OFFSET :offset", params,
+                (rs, i) -> new Card(rs.getLong("id"), rs.getString("slug"), rs.getString("blog_name"),
+                        rs.getString("theme_accent"), rs.getString("title"),
+                        markdown.toPlainText(rs.getString("content_md"), EXCERPT_MAX),
+                        rs.getBoolean("author_left") ? "탈퇴한 계정"
+                                : "ACTIVE".equals(rs.getString("member_status")) ? rs.getString("nickname") : "탈퇴한 회원",
+                        rs.getObject("created_at", LocalDateTime.class).format(DATE_TIME),
+                        rs.getLong("view_count"), rs.getLong("like_count"), rs.getLong("comment_count"),
+                        rs.getString("first_image") == null ? null : "/uploads/" + rs.getString("first_image"),
+                        new ArrayList<>()));
+        attachTags(items);
+        long count = total == null ? 0 : total;
+        return new Page(items, current, pageSize, (int) ((count + pageSize - 1) / pageSize), count);
+    }
+
+    private void attachTags(List<Card> items) {
+        if (items.isEmpty()) {
+            return;
+        }
+        Map<Long, Card> byId = new HashMap<>();
+        items.forEach(c -> byId.put(c.id(), c));
+        jdbc.query("""
+                SELECT pt.post_id, t.name FROM post_tags pt JOIN tags t ON t.id = pt.tag_id
+                WHERE pt.post_id IN (:ids) ORDER BY t.name
+                """, Map.of("ids", byId.keySet()), rs -> {
+                    byId.get(rs.getLong("post_id")).tags().add(rs.getString("name"));
+                });
+    }
+
+    /** 화면은 모든 값을 textContent로 넣는다. 요약(excerpt)도 HTML을 걷어 낸 글자다. */
+    public record Card(long id, String blogSlug, String blogName, String accent, String title, String excerpt,
+            String authorName, String createdAt, long views, long likes, long comments, String imageUrl,
+            List<String> tags) {
+    }
+
+    public record Page(List<Card> items, int page, int size, int totalPages, long total) {
+    }
+}

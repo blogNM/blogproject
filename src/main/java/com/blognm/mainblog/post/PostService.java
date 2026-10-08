@@ -154,7 +154,7 @@ public class PostService {
                 post.getCreatedAt().format(DATE_TIME),
                 post.getUpdatedAt().isAfter(post.getCreatedAt()) ? post.getUpdatedAt().format(DATE_TIME) : null,
                 new Counts(post.getViewCount(), post.getLikeCount(), post.getCommentCount()), author, author || me.filter(BlogMembership::canManagePosts).isPresent(),
-                me.filter(BlogMembership::canManagePosts).isPresent());
+                me.filter(BlogMembership::canManagePosts).isPresent(), false, viewerId != null);
     }
 
     /**
@@ -180,6 +180,19 @@ public class PostService {
                 .orElse(coverImage(blog).orElse(null));
         return Optional.of(new OgInfo(post.getTitle(), blog.getName(), markdown.toPlainText(post.getContentMd(), 100),
                 image));
+    }
+
+    /**
+     * 이 사람이 읽을 수 있는 글. 댓글·좋아요·조회수(4단계)도 이것으로 확인한다.
+     * 지워졌거나 블로그를 볼 수 없으면 404, 그 블로그에서 정지 중이면 403.
+     */
+    @Transactional(readOnly = true)
+    public Readable readable(long postId, String key, Long viewerId) {
+        Post post = findNormal(postId);
+        Blog blog = blogs.findById(post.getBlogId()).orElseThrow(PostService::notFound);
+        blogService.visibleBlog(blog.getSlug(), key, viewerId);
+        Optional<BlogMembership> me = viewerId == null ? Optional.empty() : activeMembership(blog, viewerId);
+        return new Readable(post, blog, me.orElse(null));
     }
 
     // ----- 공통 -----
@@ -282,7 +295,21 @@ public class PostService {
     public record PostView(long id, String blogSlug, String blogName, String title, String contentHtml,
             String contentMarkdown, String authorName, Long categoryId, String categoryName, List<String> tags,
             boolean notice, String createdAt, String updatedAt, Counts counts, boolean canEdit, boolean canDelete,
-            boolean canManagePosts) {
+            boolean canManagePosts, boolean liked, boolean loggedIn) {
+
+        PostView withLiked(boolean value) {
+            return new PostView(id, blogSlug, blogName, title, contentHtml, contentMarkdown, authorName, categoryId,
+                    categoryName, tags, notice, createdAt, updatedAt, counts, canEdit, canDelete, canManagePosts, value,
+                    loggedIn);
+        }
+    }
+
+    /** 읽을 수 있는 글과 그 블로그, 보는 사람의 멤버십(없으면 null). */
+    public record Readable(Post post, Blog blog, BlogMembership membership) {
+
+        public boolean canManagePosts() {
+            return membership != null && membership.canManagePosts();
+        }
     }
 
     public record OgInfo(String title, String blogName, String description, String imagePath) {

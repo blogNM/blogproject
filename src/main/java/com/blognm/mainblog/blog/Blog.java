@@ -29,6 +29,11 @@ public class Blog {
 
     public enum Status { ACTIVE, CLOSING, CLOSED }
 
+    /** 테마 틀 7가지 (D-89). 화면 배치만 다르고 기능은 같다. */
+    public enum Theme { ODYSSEY, POSTER, WHATEVER, LETTER, BOOK_CLUB, MAGAZINE, PORTFOLIO }
+
+    public enum Font { SANS, SERIF, ROUND, MONO }
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -63,6 +68,25 @@ public class Blog {
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
+
+    @Column(name = "cover_image_id")
+    private Long coverImageId;
+
+    @Enumerated(EnumType.STRING)
+    private Theme theme = Theme.ODYSSEY;
+
+    @Column(name = "theme_accent")
+    private String themeAccent = BlogRules.DEFAULT_ACCENT;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "theme_font")
+    private Font themeFont = Font.SANS;
+
+    @Column(name = "hero_title")
+    private String heroTitle;
+
+    @Column(name = "hero_subtitle")
+    private String heroSubtitle;
 
     @ManyToMany
     @OrderBy("name")
@@ -116,6 +140,18 @@ public class Blog {
     public void replaceTags(Set<Tag> newTags) {
         tags.clear();
         tags.addAll(newTags);
+    }
+
+    public void changeTheme(Theme theme, String accent, Font font, String heroTitle, String heroSubtitle) {
+        this.theme = theme;
+        this.themeAccent = accent;
+        this.themeFont = font;
+        this.heroTitle = heroTitle;
+        this.heroSubtitle = heroSubtitle;
+    }
+
+    public void changeCover(Long imageId) {
+        this.coverImageId = imageId;
     }
 
     public boolean isClosed() {
@@ -177,5 +213,29 @@ public class Blog {
 
     public Set<Tag> getTags() {
         return tags;
+    }
+
+    public Long getCoverImageId() {
+        return coverImageId;
+    }
+
+    public Theme getTheme() {
+        return theme;
+    }
+
+    public String getThemeAccent() {
+        return themeAccent;
+    }
+
+    public Font getThemeFont() {
+        return themeFont;
+    }
+
+    public String getHeroTitle() {
+        return heroTitle;
+    }
+
+    public String getHeroSubtitle() {
+        return heroSubtitle;
     }
 }

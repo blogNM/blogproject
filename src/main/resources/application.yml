@@ -103,3 +103,13 @@ upload:
   max-file-size: ${UPLOAD_MAX_FILE_SIZE:3MB}
   # 글 하나에 넣을 수 있는 사진 수
   max-images-per-post: ${UPLOAD_MAX_IMAGES_PER_POST:10}
+
+# 댓글·좋아요·검색·피드 (004 4단계)
+board:
+  # 좋아요 연타로 알림을 쏟아내지 않도록 회원당 1분에 30번 (추천안 #11)
+  reactions-per-minute: ${BOARD_REACTIONS_PER_MINUTE:30}
+  comments-per-minute: ${BOARD_COMMENTS_PER_MINUTE:10}
+  # 피드 인기 글: 최근 7일 안에 쓴 글 중 좋아요 많은 순 (추천안 #15)
+  popular-window: ${BOARD_POPULAR_WINDOW:7d}
+  recent-search-max: ${BOARD_RECENT_SEARCH_MAX:10}
+  feed-notice-count: ${BOARD_FEED_NOTICE_COUNT:5}

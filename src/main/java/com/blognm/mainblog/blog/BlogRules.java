@@ -26,6 +26,10 @@ public final class BlogRules {
     public static final int NAME_MAX = 30;
     public static final int DESCRIPTION_MAX = 200;
     public static final int TAGS_MAX = 5;
+    public static final String DEFAULT_ACCENT = "#7C0CB4";
+    public static final int HERO_TITLE_MAX = 40;
+    public static final int HERO_SUBTITLE_MAX = 100;
+    private static final Pattern ACCENT = Pattern.compile("^#[0-9A-Fa-f]{6}$");
 
     private BlogRules() {
     }
@@ -39,6 +43,30 @@ public final class BlogRules {
             throw ApiException.badRequest("RESERVED_SLUG", "쓸 수 없는 주소입니다. 다른 주소를 정해 주세요.");
         }
         return slug;
+    }
+
+    /** 강조 색은 #RRGGBB만 받는다. 화면은 이 값을 CSS 변수로만 넣는다 (D-89). */
+    public static String normalizeAccent(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return DEFAULT_ACCENT;
+        }
+        String accent = raw.strip();
+        if (!ACCENT.matcher(accent).matches()) {
+            throw ApiException.badRequest("INVALID_ACCENT", "색은 #과 16진수 6자리로 골라 주세요.");
+        }
+        return accent.toUpperCase(Locale.ROOT);
+    }
+
+    /** 머리 사진 위 문구. 비워 두면 블로그 이름·소개를 쓴다. */
+    public static String normalizeHeroText(String raw, int max, String label) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        String text = raw.strip();
+        if (text.codePointCount(0, text.length()) > max || hasControlChars(text)) {
+            throw ApiException.badRequest("INVALID_HERO_TEXT", "%s는 %d자까지 쓸 수 있습니다.".formatted(label, max));
+        }
+        return text;
     }
 
     /** 이름은 중복을 허용하고 1~30자 (추천안 #7). */
