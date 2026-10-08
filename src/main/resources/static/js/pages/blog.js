@@ -64,11 +64,72 @@ async function load() {
     $('status-badge').textContent = '폐쇄 예정인 블로그입니다.';
     $('status-badge').hidden = false;
   }
+  renderBanners(blog);
   renderActions(blog);
   $('blog').hidden = false;
   renderLook(blog);
   $('blog-shell').hidden = false;
   return blog;
+}
+
+// ----- 알림 띠: 폐쇄 예정, 숨김, 나에게 온 블로그장 위임 (BLG-09, ADM-02, 6단계) -----
+
+const CLOSE_BY = {
+  OWNER: '블로그장이 블로그를 닫기로 했어요.',
+  ADMIN: '운영 정책에 따라 메인 관리자가 블로그를 닫기로 했어요.',
+  OWNER_KICKED: '블로그장 권한 박탈로 인한 폐쇄 조치예요.',
+};
+
+function banner(text, cls = '') {
+  const div = el('div', { class: 'blog-banner ' + cls, role: 'status' });
+  div.append(el('p', {}, text));
+  return div;
+}
+
+function renderBanners(blog) {
+  const base = `/api/blogs/${encodeURIComponent(blog.slug)}`;
+  const box = $('blog-banners');
+  box.replaceChildren();
+  if (blog.status === 'CLOSING' && blog.closeScheduledAt) {
+    const when = String(blog.closeScheduledAt).replace('T', ' ').substring(0, 16);
+    const extra = blog.myRole === 'OWNER' ? ' 블로그 관리에서 철회할 수 있어요.' : '';
+    box.append(banner(`${CLOSE_BY[blog.closeRequestedBy] || ''} ${when}에 닫혀요.${extra}`, 'warn'));
+  }
+  if (blog.hidden && blog.myRole) {
+    box.append(banner('운영 정책에 따라 숨겨진 블로그예요. 목록·검색에 나오지 않고 멤버만 볼 수 있어요.', 'warn'));
+  }
+  if (blog.transfer && blog.transfer.toMe) {
+    const div = banner(`${blog.transfer.fromNickname}님이 나에게 블로그장을 넘기려고 해요. 수락하면 이 블로그의 블로그장이 돼요.`);
+    const row = el('div', { class: 'banner-actions' });
+    const respond = (decision) => async () => {
+      if (decision === 'accept' && !confirm('블로그장 위임을 수락할까요?')) return;
+      await api.post(`${base}/transfer/${decision}`);
+      location.reload();
+    };
+    row.append(button('수락', respond('accept'), 'primary inline'), button('거절', respond('reject')));
+    div.append(row);
+    box.append(div);
+  }
+}
+
+/** 블랙리스트에 막혔을 때 해제 문의 (BLG-13, D-79). 블로그장이 받아 주면 다시 참여할 수 있다. */
+function appealForm(base) {
+  const form = el('form', { class: 'appeal-form' });
+  const area = el('textarea', { maxlength: '500', rows: '3', placeholder: '왜 잘못 막혔다고 생각하는지 적어 주세요 (500자까지)', 'aria-label': '해제 문의 내용' });
+  const send = el('button', { type: 'submit', class: 'primary inline' }, '해제 문의 보내기');
+  form.append(area, send);
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    send.disabled = true;
+    try {
+      await api.post(base + '/blacklist-appeals', { key, message: area.value });
+      form.replaceWith(el('p', { class: 'info' }, '해제 문의를 보냈어요. 블로그장이 확인하면 알림으로 알려 드려요.'));
+    } catch (err) {
+      $('action-message').textContent = err.message;
+      send.disabled = false;
+    }
+  });
+  return form;
 }
 
 // ----- 테마 틀과 꾸미기 (D-89) -----
@@ -242,7 +303,15 @@ function renderActions(blog) {
   }
   const label = blog.joinPolicy === 'FREE' ? '참여하기' : '참여 신청하기';
   actions.append(button(label, async () => {
-    const res = await api.post(base + '/join', key ? { key } : {});
+    let res;
+    try {
+      res = await api.post(base + '/join', key ? { key } : {});
+    } catch (err) {
+      if (err.code === 'JOIN_BLACKLISTED' && err.details.canAppeal && !actions.querySelector('.appeal-form')) {
+        actions.after(appealForm(base));
+      }
+      throw err;
+    }
     await load();
     $('action-message').textContent = res.joined ? '멤버가 되었습니다.' : '참여를 신청했습니다. 블로그장이 승인하면 멤버가 됩니다.';
   }, 'primary inline'));

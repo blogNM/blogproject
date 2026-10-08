@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>관리자 - Creat_</title>
+  <link rel="icon" href="/img/creat-mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/common.css">
+  <link rel="stylesheet" href="/css/admin.css">
+  <script type="module" src="/js/admin/index.js"></script>
+</head>
+<body class="adm">
+  <header class="adm-bar">
+    <a class="adm-brand" href="/admin/index.html"><span class="wordmark"><span class="word">Creat</span><span class="cursor" aria-hidden="true">_</span></span><span class="adm-brand-label">관리자</span></a>
+    <div class="adm-user" id="user" hidden>
+      <span class="adm-user-name" id="user-name"></span>
+      <button type="button" class="adm-logout" id="logout">로그아웃</button>
+    </div>
+  </header>
+
+  <main class="adm-main">
+    <p id="loading" class="adm-loading">불러오는 중…</p>
+
+    <section id="password-panel" class="adm-card adm-narrow" hidden>
+      <h1>임시 비밀번호 바꾸기</h1>
+      <p class="adm-note">임시 비밀번호로 들어왔습니다. 새 비밀번호로 바꿔야 관리 화면을 쓸 수 있어요.</p>
+      <form id="password-form" class="adm-form" novalidate>
+        <label for="currentPassword">지금 비밀번호</label>
+        <input id="currentPassword" name="currentPassword" type="password" autocomplete="current-password" required>
+        <label for="newPassword">새 비밀번호</label>
+        <input id="newPassword" name="newPassword" type="password" autocomplete="new-password" required>
+        <label for="newPassword2">새 비밀번호 확인</label>
+        <input id="newPassword2" name="newPassword2" type="password" autocomplete="new-password" required>
+        <p class="adm-note" id="password-rule"></p>
+        <p id="password-error" class="adm-error" role="alert"></p>
+        <button type="submit" class="primary">바꾸기</button>
+      </form>
+    </section>
+
+    <div id="app" hidden>
+      <nav class="adm-tabs" id="tabs" aria-label="관리 메뉴"></nav>
+      <section id="panel" aria-live="polite"></section>
+    </div>
+  </main>
+
+  <dialog id="reason-dialog" class="adm-dialog">
+    <form method="dialog" id="reason-form">
+      <h2 id="reason-title"></h2>
+      <p id="reason-message"></p>
+      <label for="reason-input">사유</label>
+      <input id="reason-input" type="text" maxlength="200" placeholder="200자까지 (선택)">
+      <div class="adm-dialog-buttons">
+        <button type="button" id="reason-cancel">취소</button>
+        <button type="submit" id="reason-ok" class="adm-go">확인</button>
+      </div>
+    </form>
+  </dialog>
+</body>
+</html>

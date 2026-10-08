@@ -8,7 +8,7 @@
 | [002-blog-management](002-blog-management/spec.md) | 블로그 생성·참여·운영·폐쇄 | BLG-01~13 | 1편 2장, 3.2, 3.7 / 2편 6.5 |
 | [003-social-notification](003-social-notification/spec.md) ([plan](003-social-notification/plan.md), [tasks](003-social-notification/tasks.md)) | 팔로우·구독·프로필·차단·신고·알림 | SOC-01~07 | 1편 3.3, 3.6 |
 | [004-board](004-board/spec.md) | 글·댓글·태그·이미지·검색·피드·조회수 | BRD-01~11 | 1편 3.4 / 2편 6.1~6.4, 6.6 |
-| [005-admin-moderation](005-admin-moderation/spec.md) | 메인 관리자와 제재 | ADM-01~07, SEC-09 | 1편 3.5, 3.7 |
+| [005-admin-moderation](005-admin-moderation/spec.md) ([plan](005-admin-moderation/plan.md), [tasks](005-admin-moderation/tasks.md)) | 메인 관리자와 제재 | ADM-01~07, SEC-09 | 1편 3.5, 3.7 |
 
 보안(SEC)·확장성(SCL)·기술 스택(7장)처럼 모든 기능에 걸리는 규칙은 헌법에 모았습니다. spec의 요구사항 번호는 Spec Kit 기본값(`FR-001`) 대신 원래 요구사항 ID(`USR-01` 등)를 그대로 씁니다.
 
@@ -48,8 +48,9 @@ spec 안의 `[NEEDS CLARIFICATION]`을 모은 목록입니다. 항목별 추천�
 | 좋아요·팔로우·구독 요청 제한 수치 | 003 |
 | 비회원 조회수의 "같은 사람" 기준 | 004 |
 | 본문 1000자를 세는 기준 | 004 |
-| 관리자 계정 만드는 방법 | 005 |
-| 블로그 숨김의 동작 | 005 |
+| 관리자 계정 만드는 방법 (6단계는 추천안 #16) | 005 |
+| 블로그 숨김의 동작 (6단계는 추천안 #17) | 005 |
+| 위임 뒤 전 블로그장의 자리 (6단계는 일반 멤버) | 002 |
 
 ## 정한 항목 (2026-10-07)
 

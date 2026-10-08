@@ -638,3 +638,33 @@ em, i, .toastui-editor-md-emph, .toastui-editor-contents em {
 .color-popup { display: flex; gap: 6px; align-items: center; padding: 6px; }
 .color-popup .color-swatch { width: 24px; min-width: 0; margin: 0; height: 24px; padding: 0; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px var(--line); }
 .color-popup .color-clear { padding: 4px 10px; font-size: 0.8rem; margin-left: 4px; }
+
+/* ----- 블로그 관리: 멤버·신고·블랙리스트·위임·폐쇄 (6단계) ----- */
+.sub-title { font-size: 0.95rem; margin: 18px 0 6px; }
+.member-list { margin: 0; }
+.member-card, .report-item { padding: 14px 0; border-bottom: 1px solid var(--line); }
+.member-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.member-info { margin: 6px 0 0; font-size: 0.86rem; overflow-wrap: anywhere; }
+.member-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 10px; }
+.member-actions select, .member-actions input { width: auto; min-width: 0; margin: 0; }
+.member-actions input { flex: 1 1 160px; }
+.perm-box { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin-top: 10px; padding: 10px 12px; border-radius: var(--radius-sm); background: var(--soft); }
+.perm-box select { width: auto; margin: 0; }
+.perm-checks { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.perm-checks .checkbox { margin: 0; font-size: 0.86rem; }
+.badge.danger-badge { background: #FBE4E8; color: var(--error); }
+.report-target { margin: 8px 0 0; overflow-wrap: anywhere; }
+.report-detail { margin: 6px 0 0; padding: 8px 12px; border-radius: var(--radius-sm); background: var(--soft); font-size: 0.88rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+.sanction-reason { flex-basis: 100%; font-size: 0.86rem; color: var(--muted); overflow-wrap: anywhere; }
+#owner-section button + button { margin-left: 6px; }
+#transfer-form select { flex: 1 1 200px; width: auto; margin: 0; }
+
+/* 블로그 화면 알림 띠: 폐쇄 예정·숨김·위임 요청 */
+.blog-banners { display: grid; gap: 8px; max-width: 1080px; margin: 12px auto 0; padding: 0 16px; }
+.blog-banners:empty { display: none; }
+.blog-banner { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; padding: 12px 16px; border-radius: var(--radius-sm); background: var(--highlight); color: var(--primary-dark); font-size: 0.92rem; }
+.blog-banner p { margin: 0; }
+.blog-banner.warn { background: #FBEDE3; color: #A0522D; }
+.banner-actions { display: flex; gap: 6px; }
+.appeal-form { display: grid; gap: 8px; margin-top: 12px; text-align: left; }
+.appeal-form textarea { margin: 0; }

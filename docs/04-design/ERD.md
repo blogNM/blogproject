@@ -132,7 +132,8 @@ erDiagram
         enum status "ACTIVE, CLOSING, CLOSED"
         boolean is_hidden "관리자 숨김 (ADM-02)"
         datetime close_scheduled_at "누른 날짜 + 7일 04:00, 철회하면 NULL"
-        enum close_requested_by "OWNER, ADMIN (D-86)"
+        enum close_requested_by "OWNER, ADMIN (D-86), OWNER_KICKED (V7)"
+        datetime purged_at "30일 뒤 지운 시각 (V7)"
         datetime closed_at "30일 뒤 완전 삭제"
         tinyint notification_retention_days "블로그 알림 보관"
         enum theme "테마 틀 7가지 (D-89)"
@@ -188,10 +189,12 @@ erDiagram
     blacklist_entries {
         bigint id PK
         bigint blog_id FK
+        bigint member_id FK "강제 퇴장된 회원 (V7)"
         char name_hash
         char email_hash
         char phone_hash
         datetime created_at "수정·삭제 없음 (D-55)"
+        datetime lifted_at "해제 문의를 받아들인 시각 (V7)"
     }
     blacklist_appeals {
         bigint id PK
@@ -412,6 +415,7 @@ erDiagram
         bigint actor_id FK "알림을 만든 회원"
         varchar target_type "POST, COMMENT, BLOG, NOTICE 등"
         bigint target_id
+        varchar detail "정지 기간·폐쇄 날짜 등 (V7)"
         boolean is_read
         datetime created_at "30일 또는 7일 뒤 삭제"
     }
@@ -450,14 +454,17 @@ erDiagram
         varchar login_id UK "회원 이메일과 별개"
         varchar password_hash "bcrypt"
         varchar name
+        boolean must_change_password "임시 비밀번호면 TRUE (V7, 추천안 #16)"
+        datetime password_changed_at "이전 로그인 무효 (V7)"
+        bigint created_by "만든 관리자 (V7)"
         datetime created_at
         datetime last_login_at
     }
     admin_action_logs {
         bigint id PK
         bigint admin_id FK
-        enum action "WARN, KICK, DELETE, HIDE, CLOSE, RESTORE, VIEW_PII"
-        varchar target_type "MEMBER, BLOG, POST, COMMENT"
+        enum action "WARN, KICK, DELETE, HIDE, UNHIDE, CLOSE, RESTORE, VIEW_PII, REPORT, CREATE_ADMIN"
+        enum target_type "MEMBER, BLOG, POST, COMMENT, REPORT, ADMIN"
         bigint target_id
         varchar reason
         datetime created_at "1년 보관 (D-60)"

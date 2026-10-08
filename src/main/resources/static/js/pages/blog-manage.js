@@ -1,10 +1,10 @@
 import { api } from '../api.js';
-import { roleName } from '../blog-card.js';
 import { el, requireLogin } from '../layout.js';
+import { setupModeration } from './blog-moderation.js';
 import { IMAGE_EXTENSIONS, IMAGE_MAX_BYTES, parseTags } from '../rules.js';
 import { FONTS, SWATCHES, THEMES, isAccent } from '../theme.js';
 
-await requireLogin();
+const me = await requireLogin();
 
 const $ = (id) => document.getElementById(id);
 const slug = decodeURIComponent(location.pathname.split('/')[2] || '');
@@ -69,21 +69,11 @@ async function loadRequests() {
   $('requests-section').hidden = false;
 }
 
-async function loadMembers() {
-  let members;
-  try {
-    members = await api.get(base + '/members');
-  } catch {
-    $('members-section').hidden = true;
-    return;
-  }
-  $('members').replaceChildren(...members.map((m) => {
-    const tr = el('tr');
-    [m.nickname, m.name || '', m.email || '', m.phone || '', roleName(m.role), m.joinedAt]
-      .forEach((v) => tr.append(el('td', {}, v)));
-    return tr;
-  }));
-  $('members-section').hidden = false;
+let moderation = null;
+
+// 멤버·신고·블랙리스트·위임·폐쇄는 blog-moderation.js가 그린다.
+function loadMembers() {
+  return moderation ? moderation.refresh() : Promise.resolve();
 }
 
 // 카테고리 (BRD-03). 블로그장 또는 글 관리 권한이 있는 부블로그장.
@@ -274,7 +264,8 @@ if (blog) {
     fillTheme();
     setupTheme();
   }
-  await Promise.all([loadRequests(), loadMembers(), loadCategories()]);
+  moderation = setupModeration({ blog, base, me, reloadBlog: () => api.get(base) });
+  await Promise.all([loadRequests(), moderation.ready, loadCategories()]);
 
   $('category-form').addEventListener('submit', async (e) => {
     e.preventDefault();

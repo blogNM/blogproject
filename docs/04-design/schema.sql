@@ -111,6 +111,7 @@ CREATE TABLE blogs (
   theme_font VARCHAR(10) NOT NULL DEFAULT 'SANS' COMMENT '글꼴',
   hero_title VARCHAR(40) NULL COMMENT '머리 사진 위 큰 문구',
   hero_subtitle VARCHAR(100) NULL COMMENT '머리 사진 위 작은 문구',
+  purged_at DATETIME NULL COMMENT '폐쇄 30일 뒤 글·사진을 지우고 주소를 풀어 준 시각 (V7)',
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   UNIQUE KEY uk_blogs_slug (slug),
@@ -120,7 +121,7 @@ CREATE TABLE blogs (
   CONSTRAINT ck_blogs_visibility CHECK (visibility IN ('PUBLIC', 'LINK_ONLY', 'PRIVATE')),
   CONSTRAINT ck_blogs_join_policy CHECK (join_policy IN ('FREE', 'APPROVAL')),
   CONSTRAINT ck_blogs_status CHECK (status IN ('ACTIVE', 'CLOSING', 'CLOSED')),
-  CONSTRAINT ck_blogs_close_requested_by CHECK (close_requested_by IN ('OWNER', 'ADMIN')),
+  CONSTRAINT ck_blogs_close_requested_by CHECK (close_requested_by IN ('OWNER', 'ADMIN', 'OWNER_KICKED')),
   CONSTRAINT ck_blogs_theme CHECK (theme IN ('ODYSSEY', 'POSTER', 'WHATEVER', 'LETTER', 'BOOK_CLUB', 'MAGAZINE', 'PORTFOLIO')),
   CONSTRAINT ck_blogs_theme_font CHECK (theme_font IN ('SANS', 'SERIF', 'MONO')),
   CONSTRAINT ck_blogs_theme_accent CHECK (theme_accent REGEXP '^#[0-9A-Fa-f]{6}$'),
@@ -203,14 +204,17 @@ CREATE TABLE member_sanctions (
 CREATE TABLE blacklist_entries (
   id BIGINT NOT NULL AUTO_INCREMENT,
   blog_id BIGINT NOT NULL,
+  member_id BIGINT NULL COMMENT '강제 퇴장된 회원. 화면에 닉네임만 (V7)',
   name_hash CHAR(64) NOT NULL COMMENT 'HMAC-SHA256',
   email_hash CHAR(64) NOT NULL COMMENT 'HMAC-SHA256',
   phone_hash CHAR(64) NOT NULL COMMENT 'HMAC-SHA256',
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '수정·삭제 없음 (D-55)',
+  lifted_at DATETIME NULL COMMENT '해제 문의를 받아들인 시각 (BLG-12, V7)',
   PRIMARY KEY (id),
   KEY idx_blacklist_entries_email (blog_id, email_hash),
   KEY idx_blacklist_entries_phone (blog_id, phone_hash),
-  CONSTRAINT fk_blacklist_entries_blog FOREIGN KEY (blog_id) REFERENCES blogs (id)
+  CONSTRAINT fk_blacklist_entries_blog FOREIGN KEY (blog_id) REFERENCES blogs (id),
+  CONSTRAINT fk_blacklist_entries_member FOREIGN KEY (member_id) REFERENCES members (id)
 ) COMMENT '블로그 블랙리스트 (BLG-11, D-34)';
 
 CREATE TABLE blacklist_appeals (
@@ -447,6 +451,7 @@ CREATE TABLE notifications (
   actor_id BIGINT NULL COMMENT '알림을 만든 회원',
   target_type VARCHAR(20) NULL COMMENT 'POST, COMMENT, BLOG, NOTICE 등',
   target_id BIGINT NULL,
+  detail VARCHAR(100) NULL COMMENT '문구에 넣는 짧은 값: 정지 기간, 폐쇄 날짜, 신고 처리 결과 (V7)',
   is_read BOOLEAN NOT NULL DEFAULT FALSE,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '30일 또는 7일 뒤 삭제',
   PRIMARY KEY (id),
@@ -475,6 +480,9 @@ CREATE TABLE admins (
   login_id VARCHAR(50) NOT NULL COMMENT '회원 이메일과 별개',
   password_hash VARCHAR(100) NOT NULL COMMENT 'bcrypt',
   name VARCHAR(50) NOT NULL,
+  must_change_password BOOLEAN NOT NULL DEFAULT TRUE COMMENT '임시 비밀번호면 TRUE. 바꾸기 전에는 다른 기능 못 씀 (V7, 추천안 #16)',
+  password_changed_at DATETIME NULL COMMENT '이전에 받은 관리자 로그인 무효 (V7)',
+  created_by BIGINT NULL COMMENT '만든 관리자. 첫 관리자(환경변수)는 NULL (V7)',
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   last_login_at DATETIME NULL,
   PRIMARY KEY (id),
@@ -485,13 +493,15 @@ CREATE TABLE admin_action_logs (
   id BIGINT NOT NULL AUTO_INCREMENT,
   admin_id BIGINT NOT NULL,
   action VARCHAR(20) NOT NULL COMMENT '조치 종류',
-  target_type VARCHAR(20) NOT NULL COMMENT 'MEMBER, BLOG, POST, COMMENT',
+  target_type VARCHAR(20) NOT NULL COMMENT '대상 종류',
   target_id BIGINT NOT NULL,
   reason VARCHAR(500) NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '1년 보관 (D-60)',
   PRIMARY KEY (id),
   KEY idx_admin_action_logs_created (created_at),
-  CONSTRAINT ck_admin_action_logs_action CHECK (action IN ('WARN', 'KICK', 'DELETE', 'HIDE', 'CLOSE', 'RESTORE', 'VIEW_PII')),
+  CONSTRAINT ck_admin_action_logs_action CHECK (action IN ('WARN', 'KICK', 'DELETE', 'HIDE', 'UNHIDE', 'CLOSE',
+    'RESTORE', 'VIEW_PII', 'REPORT', 'CREATE_ADMIN')),
+  CONSTRAINT ck_admin_action_logs_target CHECK (target_type IN ('MEMBER', 'BLOG', 'POST', 'COMMENT', 'REPORT', 'ADMIN')),
   CONSTRAINT fk_admin_action_logs_admin FOREIGN KEY (admin_id) REFERENCES admins (id)
 ) COMMENT '관리자 활동 기록, 개인정보 전체 보기 포함 (ADM-06, SEC-09)';
 
