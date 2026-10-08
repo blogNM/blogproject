@@ -91,6 +91,23 @@ if (post && post.blogSlug !== slug) {
   $('post').hidden = false;
 }
 
+/** 인스타그램처럼 하트가 커졌다 돌아오고, 작은 하트들이 둘레로 퍼진다. */
+function heartBurst(button) {
+  const heart = button.querySelector('.heart');
+  heart.classList.remove('pop');
+  void heart.offsetWidth; // 연달아 눌러도 처음부터 다시
+  heart.classList.add('pop');
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  for (let i = 0; i < 7; i += 1) {
+    const angle = (Math.PI * 2 * i) / 7 - Math.PI / 2;
+    const bit = el('span', { class: 'heart-bit', 'aria-hidden': 'true' }, '♥');
+    bit.style.setProperty('--dx', `${Math.cos(angle) * 30}px`);
+    bit.style.setProperty('--dy', `${Math.sin(angle) * 30}px`);
+    heart.append(bit);
+    bit.addEventListener('animationend', () => bit.remove());
+  }
+}
+
 // ----- 좋아요 (BRD-06): 누르면 좋아요, 한 번 더 누르면 취소 -----
 function setupLike() {
   const button = $('like');
@@ -105,6 +122,8 @@ function setupLike() {
       return;
     }
     button.disabled = true;
+    // 누르는 순간 하트가 튀어 오른다. 취소할 때는 효과 없음
+    if (button.getAttribute('aria-pressed') !== 'true') heartBurst(button);
     try {
       const res = await api.post(`/api/posts/${post.id}/like${keyQuery}`);
       render(res.liked, res.likes);

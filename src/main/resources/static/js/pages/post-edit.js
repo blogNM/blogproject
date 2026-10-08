@@ -128,6 +128,33 @@ if (blog) {
     editor.focus();
   }
 
+  /**
+   * 번호 목록에서 Tab: 쓴 줄이면 다음 번호 줄을 만들고, 빈 번호 줄이면 번호를 지운다 (사용자 요청).
+   * Enter는 에디터 기본 동작(다음 번호, 빈 줄에서 끝내기) 그대로다.
+   */
+  function listTab(e) {
+    if (e.key !== 'Tab' || e.shiftKey || e.altKey || e.ctrlKey || e.metaKey || e.isComposing) return;
+    const [start, end] = editor.getSelection();
+    if (start[0] !== end[0] || start[1] !== end[1]) return;
+    const line = start[0];
+    const text = editor.getMarkdown().split('\n')[line - 1] ?? '';
+    const m = /^(\s*)(\d+)([.)])(\s+)(.*)$/.exec(text) || /^(\s*)(\d+)([.)])()()$/.exec(text);
+    if (!m) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const [, indent, num, mark, , body] = m;
+    const lineEnd = [line, text.length + 1];
+    if (!body.trim()) {
+      editor.replaceSelection(indent, [line, 1], lineEnd);
+      editor.setSelection([line, indent.length + 1]);
+    } else {
+      const next = `${indent}${Number(num) + 1}${mark} `;
+      editor.replaceSelection('\n' + next, lineEnd, lineEnd);
+      editor.setSelection([line + 1, next.length + 1]);
+    }
+    editor.focus();
+  }
+
   function fill(values) {
     $('title').value = values.title || '';
     $('category').value = values.categoryId ? String(values.categoryId) : '';
@@ -174,6 +201,7 @@ if (blog) {
     }, 1000);
   }
   editor.on('change', () => { updateLength(); scheduleDraft(); });
+  editor.getEditorElements().mdEditor.addEventListener('keydown', listTab, true);
   ['title', 'tags', 'category', 'notice'].forEach((id) => $(id).addEventListener('input', scheduleDraft));
 
   async function uploadImage(blob, callback) {

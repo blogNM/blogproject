@@ -443,6 +443,15 @@ select { padding: 10px 14px; border: 1px solid var(--line); border-radius: 999px
 /* ----- 4단계: 글 상세의 좋아요·공유·댓글 ----- */
 .post-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--line); }
 .like-button[aria-pressed="true"] { background: var(--highlight); border-color: var(--purple); color: var(--primary-dark); }
+/* 좋아요 하트 효과 */
+.like-button .heart { position: relative; display: inline-block; color: var(--muted); transition: color 0.15s; }
+.like-button[aria-pressed="true"] .heart, .like-button .heart.pop { color: #E0245E; }
+.like-button .heart.pop { animation: heart-pop 0.45s cubic-bezier(.17,.89,.32,1.49); }
+.heart-bit { position: absolute; left: 50%; top: 50%; font-size: 0.6em; color: #E0245E; pointer-events: none; transform: translate(-50%, -50%); animation: heart-bit 0.6s ease-out forwards; }
+.heart-bit:nth-child(even) { color: var(--purple); }
+@keyframes heart-pop { 0% { transform: scale(1); } 30% { transform: scale(1.6); } 60% { transform: scale(0.9); } 100% { transform: scale(1); } }
+@keyframes heart-bit { 0% { opacity: 1; transform: translate(-50%, -50%) scale(0.4); } 100% { opacity: 0; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1); } }
+@media (prefers-reduced-motion: reduce) { .like-button .heart.pop { animation: none; } }
 .comments { margin-top: 32px; }
 .comment-form textarea { min-height: 84px; }
 .comment-form .actions { justify-content: space-between; margin-top: 8px; }

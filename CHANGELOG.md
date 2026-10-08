@@ -7,9 +7,14 @@
 
 ## 2026-10-08
 
+### 좋아요 하트 효과 ([PR #3](https://github.com/blogNM/blogproject/pull/3))
+
+- **화면** 글의 [♥ 좋아요]를 누르면 하트가 톡 커졌다 돌아오고 작은 하트들이 둘레로 퍼짐. 좋아요 한 글은 하트가 빨갛게, 움직임 줄이기 설정이면 효과 없음 (사용자 요청)
+
 ### 번호 매기기 정리 ([PR #3](https://github.com/blogNM/blogproject/pull/3))
 
-- **문서** 번호 매기기에서 Tab으로 들여 쓴 안쪽 목록은 1번부터 다시 시작하기로 함, 동작은 그대로 (004 spec Clarifications, 사용자 결정)
+- **수정** 번호 목록에서 Tab을 누르면 다음 번호 줄로 넘어가고, 빈 번호 줄에서 Tab을 누르면 번호가 지워짐. 전에는 줄 맨 앞에서만 들여쓰기로 동작했음 (사용자 요청)
+- **문서** 004 spec Clarifications에 번호 목록 Tab·Enter 동작 기록 (사용자 결정)
 
 ### 내 활동: 쓴 댓글 ([PR #3](https://github.com/blogNM/blogproject/pull/3))
 
