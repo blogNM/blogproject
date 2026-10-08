@@ -1,0 +1,44 @@
+package com.blognm.mainblog.auth;
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import org.hamcrest.Matchers;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+import com.blognm.mainblog.support.IntegrationTest;
+
+/** SEC-12 보안 헤더, SEC-10 CSRF 쿠키 */
+class SecurityHeadersTest extends IntegrationTest {
+
+    @Test
+    @DisplayName("화면 응답에 보안 헤더가 붙는다")
+    void securityHeaders() throws Exception {
+        mvc.perform(get("/index.html").secure(true))
+                .andExpect(status().isOk())
+                .andExpect(header().string("X-Frame-Options", "DENY"))
+                .andExpect(header().string("X-Content-Type-Options", "nosniff"))
+                .andExpect(header().string("Referrer-Policy", "strict-origin-when-cross-origin"))
+                .andExpect(header().string("Content-Security-Policy", Matchers.containsString("default-src 'self'")))
+                .andExpect(header().string("Strict-Transport-Security", Matchers.containsString("max-age=")));
+    }
+
+    @Test
+    @DisplayName("/api/csrf를 부르면 화면 JS가 읽을 수 있는 XSRF-TOKEN 쿠키가 생긴다")
+    void csrfCookie() throws Exception {
+        mvc.perform(get("/api/csrf"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Set-Cookie", Matchers.allOf(
+                        Matchers.startsWith("XSRF-TOKEN="), Matchers.not(Matchers.containsString("HttpOnly")))));
+    }
+
+    @Test
+    @DisplayName("로그인 없이 /api/me를 부르면 401 JSON이다")
+    void unauthenticated() throws Exception {
+        mvc.perform(get("/api/me"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(header().string("Content-Type", Matchers.containsString("application/json")));
+    }
+}

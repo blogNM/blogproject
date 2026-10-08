@@ -25,6 +25,12 @@
 - 검색: MySQL FULLTEXT + ngram
 - 블로그 주소: `/blog/{주소}`
 
+## 빌드·실행·테스트
+
+- 실행: `./gradlew bootRun --args='--spring.profiles.active=local'` (메일은 콘솔에 찍힘)
+- 테스트: `./gradlew test` (MySQL `blog_test` 필요)
+- 자세한 준비 방법: [docs/05-guides/로컬-실행.md](docs/05-guides/로컬-실행.md)
+
 ## 꼭 지킬 규칙
 
 - XSS: 글 본문만 서버가 마크다운→HTML 변환 후 jsoup으로 걸러서 보내고, 화면은 본문에만 `innerHTML`을 씁니다. 닉네임·댓글·태그 등 나머지는 모두 `textContent`.

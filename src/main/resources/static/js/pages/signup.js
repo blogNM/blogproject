@@ -1,0 +1,127 @@
+import { api } from '../api.js';
+import { initLayout } from '../layout.js';
+
+const me = await initLayout();
+if (me) {
+  location.replace('/');
+}
+
+const $ = (id) => document.getElementById(id);
+const state = { email: null, password: null, nicknameChecked: null };
+
+function showStep(n) {
+  [1, 2, 3].forEach((i) => { $('step' + i).hidden = i !== n; });
+  document.querySelectorAll('.steps li').forEach((li) => {
+    li.classList.toggle('active', Number(li.dataset.step) === n);
+    li.classList.toggle('done', Number(li.dataset.step) < n);
+  });
+}
+
+// ① 이메일 인증 (USR-02)
+let resendTimer = null;
+function startResendCooldown(seconds) {
+  const button = $('send-code');
+  let left = seconds;
+  button.disabled = true;
+  clearInterval(resendTimer);
+  resendTimer = setInterval(() => {
+    left -= 1;
+    button.textContent = left > 0 ? `다시 보내기 (${left}초)` : '다시 보내기';
+    if (left <= 0) {
+      clearInterval(resendTimer);
+      button.disabled = false;
+    }
+  }, 1000);
+}
+
+$('send-code').addEventListener('click', async () => {
+  $('step1-error').textContent = '';
+  try {
+    const res = await api.post('/api/auth/signup/code', { email: $('email').value });
+    state.email = $('email').value;
+    $('send-message').textContent = res.message;
+    $('code-box').hidden = false;
+    $('code').focus();
+    startResendCooldown(60);
+  } catch (err) {
+    $('step1-error').textContent = err.message;
+  }
+});
+
+$('step1').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  $('step1-error').textContent = '';
+  try {
+    await api.post('/api/auth/signup/verify', { email: state.email, code: $('code').value });
+    $('email').readOnly = true;
+    showStep(2);
+    $('password').focus();
+  } catch (err) {
+    $('step1-error').textContent = err.message;
+  }
+});
+
+// ② 비밀번호 (SEC-02). 서버도 같은 규칙으로 다시 확인한다.
+const PASSWORD_RULE = /^(?=.*[A-Za-z])(?=.*[0-9])(?=.*[^A-Za-z0-9])[\x21-\x7E]{8,15}$/;
+
+$('step2').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const pw = $('password').value;
+  if (!PASSWORD_RULE.test(pw)) {
+    $('step2-error').textContent = '비밀번호는 8~15자로 영문·숫자·특수문자를 모두 넣어 주세요.';
+    return;
+  }
+  if (pw !== $('password2').value) {
+    $('step2-error').textContent = '비밀번호가 서로 다릅니다.';
+    return;
+  }
+  $('step2-error').textContent = '';
+  state.password = pw;
+  showStep(3);
+  $('name').focus();
+});
+
+// ③ 이름·닉네임·전화번호와 동의
+$('check-nickname').addEventListener('click', async () => {
+  const nickname = $('nickname').value;
+  try {
+    const res = await api.get('/api/auth/signup/nickname-available?nickname=' + encodeURIComponent(nickname));
+    $('nickname-message').textContent = res.available ? '쓸 수 있는 닉네임입니다.' : '이미 사용 중인 닉네임입니다.';
+    state.nicknameChecked = res.available ? nickname : null;
+  } catch (err) {
+    $('nickname-message').textContent = err.message;
+    state.nicknameChecked = null;
+  }
+});
+
+const consents = document.querySelectorAll('.consent');
+$('agree-all').addEventListener('change', (e) => {
+  consents.forEach((c) => { c.checked = e.target.checked; });
+});
+consents.forEach((c) => c.addEventListener('change', () => {
+  $('agree-all').checked = [...consents].every((x) => x.checked);
+}));
+
+$('step3').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  $('step3-error').textContent = '';
+  try {
+    await api.post('/api/auth/signup', {
+      email: state.email,
+      password: state.password,
+      name: $('name').value,
+      nickname: $('nickname').value,
+      phone: $('phone').value,
+      agreeTerms: $('agree-terms').checked,
+      agreePrivacy: $('agree-privacy').checked,
+      age14: $('age14').checked,
+    });
+    location.href = '/login.html?joined';
+  } catch (err) {
+    $('step3-error').textContent = err.message;
+    if (err.code === 'EMAIL_NOT_VERIFIED') {
+      $('email').readOnly = false;
+      showStep(1);
+    }
+  }
+});
