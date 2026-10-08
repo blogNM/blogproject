@@ -52,7 +52,20 @@ async function loadRequests() {
           b.disabled = true;
           try {
             await api.post(`${base}/join-requests/${r.id}/${action}`);
-            await Promise.all([loadRequests(), loadMembers()]);
+            await Promise.all([loadRequests(), loadMembers(), loadCategories()]);
+
+  $('category-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const msg = $('category-message');
+    try {
+      await api.post(base + '/categories', { name: $('category-name').value });
+      $('category-name').value = '';
+      msg.textContent = '';
+      await loadCategories();
+    } catch (err) {
+      msg.textContent = err.message;
+    }
+  });
           } catch (err) {
             alert(err.message);
             b.disabled = false;
@@ -85,6 +98,48 @@ async function loadMembers() {
   $('members-section').hidden = false;
 }
 
+// 카테고리 (BRD-03). 블로그장 또는 글 관리 권한이 있는 부블로그장.
+async function loadCategories() {
+  if (!blog.canManagePosts) return;
+  const categories = await api.get(base + '/categories');
+  const msg = $('category-message');
+  const list = $('category-list');
+  if (categories.length === 0) {
+    list.replaceChildren(el('li', { class: 'muted' }, '아직 카테고리가 없습니다.'));
+  } else {
+    list.replaceChildren(...categories.map((c) => {
+      const li = el('li', { class: 'list-row' });
+      li.append(el('span', { class: 'strong' }, c.name), el('span', { class: 'muted' }, `글 ${c.postCount}개`));
+      const rename = el('button', { type: 'button' }, '이름 바꾸기');
+      rename.addEventListener('click', async () => {
+        const name = prompt('새 이름', c.name);
+        if (name === null) return;
+        try {
+          await api.put(`${base}/categories/${c.id}`, { name });
+          msg.textContent = '';
+          await loadCategories();
+        } catch (err) {
+          msg.textContent = err.message;
+        }
+      });
+      const remove = el('button', { type: 'button', class: 'danger-outline' }, '삭제');
+      remove.addEventListener('click', async () => {
+        if (!confirm(`"${c.name}" 카테고리를 지울까요? 글은 "분류 없음"이 됩니다.`)) return;
+        try {
+          await api.del(`${base}/categories/${c.id}`);
+          msg.textContent = '';
+          await loadCategories();
+        } catch (err) {
+          msg.textContent = err.message;
+        }
+      });
+      li.append(rename, remove);
+      return li;
+    }));
+  }
+  $('categories-section').hidden = false;
+}
+
 function shareUrl(token) {
   return `${location.origin}/blog/${encodeURIComponent(slug)}?key=${token}`;
 }
@@ -109,7 +164,20 @@ if (blog) {
   $('back-link').href = '/blog/' + encodeURIComponent(slug);
   $('manage').hidden = false;
   fillSettings();
-  await Promise.all([loadRequests(), loadMembers()]);
+  await Promise.all([loadRequests(), loadMembers(), loadCategories()]);
+
+  $('category-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const msg = $('category-message');
+    try {
+      await api.post(base + '/categories', { name: $('category-name').value });
+      $('category-name').value = '';
+      msg.textContent = '';
+      await loadCategories();
+    } catch (err) {
+      msg.textContent = err.message;
+    }
+  });
 
   $('settings-form').addEventListener('submit', async (e) => {
     e.preventDefault();

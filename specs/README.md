@@ -16,7 +16,7 @@
 
 1. 001 회원관리 → 2. 002 블로그 관리 → 3. 004 게시판 → 4. 003 소셜·알림 → 5. 005 관리자
 
-실제 구현은 테스트할 수 있는 6단계로 나눠 진행합니다. 단계별 내용·테스트 방법·먼저 정할 항목은 [구현-단계-계획.md](구현-단계-계획.md)에 있습니다. 1단계(뼈대 + 001 가입·로그인)의 계획과 작업 목록은 [001 plan.md](001-member-account/plan.md), [001 tasks.md](001-member-account/tasks.md)에, 2단계(계정 나머지 + 블로그 만들기·참여)는 [002 plan.md](002-blog-management/plan.md), [002 tasks.md](002-blog-management/tasks.md)에 있습니다.
+실제 구현은 테스트할 수 있는 6단계로 나눠 진행합니다. 단계별 내용·테스트 방법·먼저 정할 항목은 [구현-단계-계획.md](구현-단계-계획.md)에 있습니다. 1단계(뼈대 + 001 가입·로그인)의 계획과 작업 목록은 [001 plan.md](001-member-account/plan.md), [001 tasks.md](001-member-account/tasks.md)에, 2단계(계정 나머지 + 블로그 만들기·참여)는 [002 plan.md](002-blog-management/plan.md), [002 tasks.md](002-blog-management/tasks.md)에, 3단계(글쓰기·읽기)는 [004 plan.md](004-board/plan.md), [004 tasks.md](004-board/tasks.md)에 있습니다. 단계마다 끝낸 내용은 [진행-기록.md](진행-기록.md)에 정리합니다.
 
 계정과 블로그별 역할이 있어야 글쓰기·알림·제재를 만들 수 있기 때문입니다. 각 기능은 `/speckit-clarify`로 남은 질문을 정리한 뒤 `/speckit-plan`으로 들어갑니다. DB 설계(ERD)는 `/speckit-plan`의 data-model 단계에서 합니다(D-47).
 

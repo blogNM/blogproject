@@ -14,3 +14,6 @@ app:
     jwt-secret: test-only-jwt-secret-0123456789-abcdefghij
     code-hash-secret: test-only-code-secret
     cookie-secure: true
+
+upload:
+  dir: ${java.io.tmpdir}/mainblog-test-uploads

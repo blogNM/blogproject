@@ -29,6 +29,17 @@
         </table>
       </section>
 
+      <section class="card" id="categories-section" hidden>
+        <h2 class="section-title">카테고리</h2>
+        <p class="hint">카테고리를 지우면 그 글은 "분류 없음"이 됩니다. 글은 지워지지 않습니다.</p>
+        <ul id="category-list" class="plain-list"></ul>
+        <form id="category-form" class="row" novalidate>
+          <input id="category-name" maxlength="20" placeholder="새 카테고리 이름 (1~20자)">
+          <button type="submit">추가</button>
+        </form>
+        <p id="category-message" class="error" role="alert"></p>
+      </section>
+
       <section class="card" id="settings-section" hidden>
         <h2 class="section-title">블로그 정보</h2>
         <form id="settings-form" novalidate>

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>글 - 메인블로그</title>
+<!--OG-->
+  <link rel="stylesheet" href="/css/common.css">
+  <script type="module" src="/js/pages/post.js"></script>
+</head>
+<body>
+  <header class="site-header"></header>
+  <main class="container">
+    <p id="error" class="notice" hidden></p>
+    <article id="post" class="card post" hidden>
+      <p class="post-blog"><a id="blog-link" href="/"></a></p>
+      <div class="post-item-head">
+        <span id="notice-badge" class="badge" hidden>공지</span>
+        <span id="category" class="post-category" hidden></span>
+      </div>
+      <h1 id="title" class="post-heading"></h1>
+      <p id="meta" class="muted"></p>
+      <div id="actions" class="actions"></div>
+      <!-- 서버가 마크다운을 HTML로 바꾸고 jsoup으로 거른 본문. innerHTML은 여기에만 쓴다 (헌법 III). -->
+      <div id="content" class="post-content"></div>
+      <ul id="tags" class="tags post-tags"></ul>
+      <p id="counts" class="muted counts"></p>
+      <p class="hint">공감과 댓글은 4단계에서 열립니다.</p>
+    </article>
+  </main>
+  <footer class="site-footer"></footer>
+</body>
+</html>

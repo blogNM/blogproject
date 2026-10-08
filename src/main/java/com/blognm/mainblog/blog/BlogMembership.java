@@ -104,6 +104,11 @@ public class BlogMembership {
         return role == Role.OWNER || (role == Role.SUB_OWNER && permManageMembers);
     }
 
+    /** 다른 멤버의 글 삭제, 카테고리 관리, 블로그 공지. 블로그장 또는 글 관리 권한이 있는 부블로그장 (002 4장, D-71). */
+    public boolean canManagePosts() {
+        return role == Role.OWNER || (role == Role.SUB_OWNER && permManagePosts);
+    }
+
     public boolean isActive() {
         return status == Status.ACTIVE;
     }

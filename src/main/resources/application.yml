@@ -28,6 +28,12 @@ spring:
       mail.smtp.timeout: 5000
       mail.smtp.writetimeout: 5000
 
+  servlet:
+    multipart:
+      # 사진 한 장 3MB, 한 번에 10MB (6.3)
+      max-file-size: ${UPLOAD_MAX_FILE_SIZE:3MB}
+      max-request-size: ${UPLOAD_MAX_REQUEST_SIZE:10MB}
+
 server:
   forward-headers-strategy: ${FORWARD_HEADERS_STRATEGY:none}
 
@@ -89,3 +95,11 @@ blog:
   page-size: ${BLOG_PAGE_SIZE:12}
   # 참여 신청이 거절된 뒤 다시 신청할 수 있을 때까지 (BLG-04)
   rejoin-after-reject: ${BLOG_REJOIN_AFTER_REJECT:7d}
+
+# 사진 올리기 (004 6.3, SEC-08, D-75)
+upload:
+  # 1차는 서버 디스크. 이중화하면 S3로 바꾼다
+  dir: ${UPLOAD_DIR:./data/uploads}
+  max-file-size: ${UPLOAD_MAX_FILE_SIZE:3MB}
+  # 글 하나에 넣을 수 있는 사진 수
+  max-images-per-post: ${UPLOAD_MAX_IMAGES_PER_POST:10}

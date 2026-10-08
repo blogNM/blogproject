@@ -40,14 +40,16 @@ async function send(method, url, body) {
   if (method !== 'GET') {
     headers['X-XSRF-TOKEN'] = await csrfToken();
   }
-  if (body !== undefined) {
+  // 파일(FormData)은 브라우저가 Content-Type(경계값 포함)을 정한다.
+  const isForm = body instanceof FormData;
+  if (body !== undefined && !isForm) {
     headers['Content-Type'] = 'application/json';
   }
   return fetch(url, {
     method,
     headers,
     credentials: 'same-origin',
-    body: body === undefined ? undefined : JSON.stringify(body),
+    body: body === undefined ? undefined : isForm ? body : JSON.stringify(body),
   });
 }
 
@@ -85,6 +87,8 @@ export const api = {
   post: (url, body = {}) => request('POST', url, body),
   put: (url, body = {}) => request('PUT', url, body),
   del: (url) => request('DELETE', url),
+  /** 사진 올리기. FormData에 file을 담아 보낸다. */
+  upload: (url, formData) => request('POST', url, formData),
 };
 
 let heartbeatStarted = false;

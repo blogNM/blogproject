@@ -12,6 +12,7 @@
 | [기능 명세 목록](../specs/README.md) | 기능별 spec 5개와 확인이 필요한 항목 |
 | [변경 기록](../CHANGELOG.md) | 날짜별로 추가된 기능, 화면·디자인 변경, 수정, 문서 변경 |
 | [구현 단계 계획](../specs/구현-단계-계획.md) | 6단계로 나눈 구현 순서, 단계별 테스트 방법과 먼저 정할 항목 |
+| [구현 진행 기록](../specs/진행-기록.md) | 단계마다 끝낸 것, 테스트 결과, 직접 확인할 곳, 남은 질문 |
 | [001 회원관리](../specs/001-member-account/spec.md) | USR, SEC-01~05·13 |
 | [002 블로그 관리](../specs/002-blog-management/spec.md) | BLG |
 | [003 소셜·알림](../specs/003-social-notification/spec.md) | SOC, 알림 |

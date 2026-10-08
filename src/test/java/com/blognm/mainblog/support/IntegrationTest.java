@@ -58,6 +58,10 @@ public abstract class IntegrationTest {
     @BeforeEach
     void resetState() {
         jdbc.update("DELETE FROM notifications");
+        jdbc.update("DELETE FROM post_tags");
+        jdbc.update("DELETE FROM images");
+        jdbc.update("DELETE FROM posts");
+        jdbc.update("DELETE FROM categories");
         jdbc.update("DELETE FROM join_requests");
         jdbc.update("DELETE FROM blog_tags");
         jdbc.update("DELETE FROM blog_memberships");

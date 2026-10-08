@@ -86,12 +86,13 @@ public final class BlogRules {
         return List.copyOf(tags);
     }
 
-    /** 맞지 않으면 null. 검색어에서 태그를 고를 때도 쓴다. */
+    /** 앞의 #과 앞뒤 공백을 지우고 가운데 공백은 _로 바꾼다 (6.4). 맞지 않으면 null. 검색어에서 태그를 고를 때도 쓴다. */
     public static String normalizeTag(String raw) {
         String tag = raw.strip();
         if (tag.startsWith("#")) {
-            tag = tag.substring(1);
+            tag = tag.substring(1).strip();
         }
+        tag = tag.replaceAll("\\s+", "_");
         tag = tag.toLowerCase(Locale.ROOT);
         return TAG.matcher(tag).matches() ? tag : null;
     }

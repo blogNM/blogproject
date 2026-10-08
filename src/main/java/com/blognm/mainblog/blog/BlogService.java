@@ -119,14 +119,10 @@ public class BlogService {
      */
     @Transactional(readOnly = true)
     public BlogView view(String slug, String key, Long viewerId) {
-        Blog blog = findVisible(slug, key, viewerId);
+        Blog blog = visibleBlog(slug, key, viewerId);
         Optional<BlogMembership> mine = viewerId == null ? Optional.empty()
                 : memberships.findByBlogIdAndMemberId(blog.getId(), viewerId).filter(BlogMembership::isActive);
         LocalDateTime now = LocalDateTime.now(clock);
-        if (mine.isPresent() && mine.get().getSuspendedUntil() != null && mine.get().getSuspendedUntil().isAfter(now)) {
-            throw new DetailedApiException(HttpStatus.FORBIDDEN, "SUSPENDED",
-                    "이 블로그에서 활동이 정지되었습니다.", Map.of("suspendedUntil", mine.get().getSuspendedUntil().toString()));
-        }
         String requestStatus = null;
         LocalDateTime canRequestAt = null;
         if (viewerId != null && mine.isEmpty()) {
@@ -143,13 +139,34 @@ public class BlogService {
         }
         String role = mine.map(m -> m.getRole().name()).orElse(null);
         boolean owner = mine.filter(m -> m.getRole() == BlogMembership.Role.OWNER).isPresent();
+        boolean managePosts = mine.filter(BlogMembership::canManagePosts).isPresent();
         Member ownerMember = members.findById(blog.getOwnerId()).orElseThrow();
         return new BlogView(blog.getSlug(), blog.getName(), blog.getDescription(), blog.getVisibility().name(),
                 blog.getJoinPolicy().name(), blog.getStatus().name(), blog.getCloseScheduledAt(),
                 ownerMember.getNickname(), memberships.countActive(blog.getId()), tagNames(blog),
                 blog.getCreatedAt().format(DATE), role, requestStatus,
                 canRequestAt == null ? null : canRequestAt.format(DATE),
-                owner ? blog.getShareToken() : null);
+                owner ? blog.getShareToken() : null, managePosts);
+    }
+
+    /**
+     * 이 사람이 볼 수 있는 블로그. 글 화면(004)도 이것으로 확인한다.
+     * 볼 수 없으면 404, 그 블로그에서 정지 중인 멤버는 403 SUSPENDED.
+     */
+    @Transactional(readOnly = true)
+    public Blog visibleBlog(String slug, String key, Long viewerId) {
+        Blog blog = findVisible(slug, key, viewerId);
+        if (viewerId != null) {
+            LocalDateTime now = LocalDateTime.now(clock);
+            Optional<BlogMembership> mine = memberships.findByBlogIdAndMemberId(blog.getId(), viewerId)
+                    .filter(BlogMembership::isActive);
+            if (mine.isPresent() && mine.get().getSuspendedUntil() != null
+                    && mine.get().getSuspendedUntil().isAfter(now)) {
+                throw new DetailedApiException(HttpStatus.FORBIDDEN, "SUSPENDED", "이 블로그에서 활동이 정지되었습니다.",
+                        Map.of("suspendedUntil", mine.get().getSuspendedUntil().toString()));
+            }
+        }
+        return blog;
     }
 
     private Blog findVisible(String slug, String key, Long viewerId) {
@@ -341,6 +358,8 @@ public class BlogService {
                     "블로그장은 블로그장을 넘기거나 블로그를 닫은 뒤에만 나갈 수 있습니다.");
         }
         membership.leave(LocalDateTime.now(clock));
+        // 나간 멤버의 글은 남기고 작성자를 "탈퇴한 계정"으로 보인다 (D-33)
+        blogs.markPostsAuthorLeft(blog.getId(), memberId);
     }
 
     // ----- 공통 -----
@@ -374,7 +393,8 @@ public class BlogService {
 
     public record BlogView(String slug, String name, String description, String visibility, String joinPolicy,
             String status, LocalDateTime closeScheduledAt, String ownerNickname, long memberCount, List<String> tags,
-            String createdAt, String myRole, String myRequest, String canRequestAt, String shareToken) {
+            String createdAt, String myRole, String myRequest, String canRequestAt, String shareToken,
+            boolean canManagePosts) {
     }
 
     public record PendingRequest(long id, String nickname, LocalDateTime requestedAt) {

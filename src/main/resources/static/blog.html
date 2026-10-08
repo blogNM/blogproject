@@ -21,8 +21,28 @@
       <div id="actions" class="actions"></div>
       <p id="action-message" class="info" role="status"></p>
     </article>
-    <section class="card empty">
-      <p class="muted">글쓰기와 글 목록은 3단계에서 열립니다.</p>
+    <section id="posts-section" class="card" hidden>
+      <div class="posts-head">
+        <h2 class="section-title">글</h2>
+        <a id="write-link" class="button primary inline" hidden>글쓰기</a>
+      </div>
+      <div class="posts-layout">
+        <nav id="categories" class="category-nav" aria-label="카테고리"></nav>
+        <div class="posts-main">
+          <p id="filter-label" class="filter-label" hidden></p>
+          <ul id="notices" class="post-list notices"></ul>
+          <ul id="post-list" class="post-list"></ul>
+          <div class="list-foot">
+            <label class="inline-label" for="page-size">한 번에 보기</label>
+            <select id="page-size">
+              <option value="10">10개</option>
+              <option value="20">20개</option>
+              <option value="30">30개</option>
+            </select>
+          </div>
+          <div id="post-pager" class="pager"></div>
+        </div>
+      </div>
     </section>
   </main>
   <footer class="site-footer"></footer>

@@ -11,6 +11,8 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -43,6 +45,18 @@ public class GlobalExceptionHandler {
             MissingServletRequestParameterException.class, MethodArgumentTypeMismatchException.class})
     public ResponseEntity<ErrorResponse> handleBadInput(Exception e) {
         return ResponseEntity.badRequest().body(ErrorResponse.of("INVALID_INPUT", "입력값을 확인해 주세요."));
+    }
+
+    /** 사진 한 장 3MB, 한 번에 10MB를 넘으면 서버가 받기 전에 끊는다 (6.3). */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrorResponse> handleTooLarge(MaxUploadSizeExceededException e) {
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
+                .body(ErrorResponse.of("FILE_TOO_LARGE", "사진은 한 장에 3MB, 한 번에 10MB까지 올릴 수 있습니다."));
+    }
+
+    @ExceptionHandler(MultipartException.class)
+    public ResponseEntity<ErrorResponse> handleMultipart(MultipartException e) {
+        return ResponseEntity.badRequest().body(ErrorResponse.of("NO_FILE", "올릴 사진을 골라 주세요."));
     }
 
     @ExceptionHandler(Exception.class)

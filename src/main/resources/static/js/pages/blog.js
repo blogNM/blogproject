@@ -1,6 +1,7 @@
 import { api } from '../api.js';
 import { JOIN_POLICY, VISIBILITY, roleName } from '../blog-card.js';
 import { el, initLayout } from '../layout.js';
+import { initPostList } from '../post-list.js';
 
 const me = await initLayout();
 
@@ -55,6 +56,7 @@ async function load() {
   }
   renderActions(blog);
   $('blog').hidden = false;
+  return blog;
 }
 
 function renderActions(blog) {
@@ -70,6 +72,7 @@ function renderActions(blog) {
   if (blog.myRole) {
     actions.append(el('span', { class: 'badge' }, '내 역할: ' + roleName(blog.myRole)));
     if (blog.myRole === 'OWNER' || blog.myRole === 'SUB_OWNER') {
+      // 부블로그장은 받은 권한이 있을 때 관리 화면에서 그 부분만 보인다.
       actions.append(el('a', { class: 'button', href: `/blog/${encodeURIComponent(blog.slug)}/manage` }, '블로그 관리'));
     }
     if (blog.myRole !== 'OWNER') {
@@ -78,7 +81,8 @@ function renderActions(blog) {
           throw new Error('');
         }
         await api.post(base + '/leave');
-        await load();
+        const loaded = await load();
+if (loaded) await initPostList(loaded, key);
       }, 'danger-outline'));
     }
     return;
@@ -88,7 +92,8 @@ function renderActions(blog) {
     actions.append(el('span', { class: 'badge' }, '참여 승인을 기다리는 중'));
     actions.append(button('신청 취소', async () => {
       await api.del(base + '/join');
-      await load();
+      const loaded = await load();
+if (loaded) await initPostList(loaded, key);
     }));
     return;
   }
@@ -99,9 +104,11 @@ function renderActions(blog) {
   const label = blog.joinPolicy === 'FREE' ? '참여하기' : '참여 신청하기';
   actions.append(button(label, async () => {
     const res = await api.post(base + '/join', key ? { key } : {});
-    await load();
+    const loaded = await load();
+if (loaded) await initPostList(loaded, key);
     $('action-message').textContent = res.joined ? '멤버가 되었습니다.' : '참여를 신청했습니다. 블로그장이 승인하면 멤버가 됩니다.';
   }, 'primary inline'));
 }
 
-await load();
+const loaded = await load();
+if (loaded) await initPostList(loaded, key);

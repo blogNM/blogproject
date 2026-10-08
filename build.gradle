@@ -20,6 +20,7 @@ repositories {
 ext {
     jjwtVersion = '0.13.0'
     shedlockVersion = '7.10.1'
+    commonmarkVersion = '0.24.0'
 }
 
 dependencies {
@@ -38,6 +39,13 @@ dependencies {
 
     implementation "net.javacrumbs.shedlock:shedlock-spring:${shedlockVersion}"
     implementation "net.javacrumbs.shedlock:shedlock-provider-jdbc-template:${shedlockVersion}"
+
+    // 글 본문: 마크다운 → HTML 변환 후 jsoup으로 거른다 (헌법 III, D-64)
+    implementation "org.commonmark:commonmark:${commonmarkVersion}"
+    implementation "org.commonmark:commonmark-ext-gfm-tables:${commonmarkVersion}"
+    implementation "org.commonmark:commonmark-ext-gfm-strikethrough:${commonmarkVersion}"
+    implementation "org.commonmark:commonmark-ext-autolink:${commonmarkVersion}"
+    implementation 'org.jsoup:jsoup:1.18.3'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'

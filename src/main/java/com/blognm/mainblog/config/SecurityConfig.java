@@ -16,7 +16,13 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
+import org.springframework.security.web.header.writers.DelegatingRequestMatcherHeaderWriter;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
+import org.springframework.security.web.header.writers.StaticHeadersWriter;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import org.springframework.security.web.util.matcher.NegatedRequestMatcher;
+import org.springframework.security.web.util.matcher.OrRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 
 import com.blognm.mainblog.auth.AccessTokenValidator;
 import com.blognm.mainblog.auth.JwtAuthenticationFilter;
@@ -30,18 +36,33 @@ import com.blognm.mainblog.auth.JwtProvider;
 @EnableMethodSecurity
 public class SecurityConfig {
 
-    /** Turnstile 스크립트·iframe만 바깥 주소를 허용한다. 3단계에서 Toast UI Editor를 붙일 때 늘린다. */
-    static final String CSP = String.join("; ",
-            "default-src 'self'",
-            "script-src 'self' https://challenges.cloudflare.com",
-            "frame-src https://challenges.cloudflare.com",
-            "style-src 'self'",
-            "img-src 'self' data:",
-            "connect-src 'self'",
-            "object-src 'none'",
-            "base-uri 'self'",
-            "form-action 'self'",
-            "frame-ancestors 'none'");
+    /** Turnstile 스크립트·iframe만 바깥 주소를 허용한다. 스크립트는 어느 화면에서도 인라인을 허용하지 않는다. */
+    static final String CSP = csp("'self'");
+
+    /**
+     * 글쓰기 화면만 인라인 style을 허용한다. Toast UI Editor가 style 속성으로 화면을 그리기 때문이다.
+     * 에디터 파일은 서버에 두고(/vendor/toastui) 바깥 주소에서 받지 않는다. 스크립트 규칙은 같다.
+     */
+    static final String EDITOR_CSP = csp("'self' 'unsafe-inline'");
+
+    static final RequestMatcher EDITOR_PAGES = new OrRequestMatcher(
+            PathPatternRequestMatcher.withDefaults().matcher("/blog/*/write"),
+            PathPatternRequestMatcher.withDefaults().matcher("/blog/*/posts/*/edit"),
+            PathPatternRequestMatcher.withDefaults().matcher("/post-edit.html"));
+
+    private static String csp(String styleSrc) {
+        return String.join("; ",
+                "default-src 'self'",
+                "script-src 'self' https://challenges.cloudflare.com",
+                "frame-src https://challenges.cloudflare.com",
+                "style-src " + styleSrc,
+                "img-src 'self' data:",
+                "connect-src 'self'",
+                "object-src 'none'",
+                "base-uri 'self'",
+                "form-action 'self'",
+                "frame-ancestors 'none'");
+    }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtProvider jwtProvider,
@@ -65,11 +86,17 @@ public class SecurityConfig {
                         })
                         .httpStrictTransportSecurity(hsts -> hsts.includeSubDomains(true).maxAgeInSeconds(31536000))
                         .referrerPolicy(r -> r.policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
-                        .contentSecurityPolicy(c -> c.policyDirectives(CSP)))
+                        .addHeaderWriter(new DelegatingRequestMatcherHeaderWriter(EDITOR_PAGES,
+                                new StaticHeadersWriter("Content-Security-Policy", EDITOR_CSP)))
+                        .addHeaderWriter(new DelegatingRequestMatcherHeaderWriter(new NegatedRequestMatcher(EDITOR_PAGES),
+                                new StaticHeadersWriter("Content-Security-Policy", CSP))))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**", "/api/csrf").permitAll()
                         // 블로그 목록·검색·블로그 정보는 비회원도 본다. 비공개 여부는 서비스가 다시 확인한다.
                         .requestMatchers(HttpMethod.GET, "/api/blogs", "/api/blogs/*").permitAll()
+                        // 글 목록·카테고리·글 상세도 공개 범위 안에서 비회원이 읽는다 (004).
+                        .requestMatchers(HttpMethod.GET, "/api/blogs/*/posts", "/api/blogs/*/categories",
+                                "/api/posts/*").permitAll()
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll())
                 .exceptionHandling(e -> e

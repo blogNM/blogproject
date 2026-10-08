@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class NotificationWriter {
 
-    public enum Type { JOIN_REQUESTED, JOIN_APPROVED, JOIN_REJECTED }
+    public enum Type { JOIN_REQUESTED, JOIN_APPROVED, JOIN_REJECTED, POST_DELETED }
 
     private final JdbcTemplate jdbc;
     private final Clock clock;
@@ -29,5 +29,13 @@ public class NotificationWriter {
                 INSERT INTO notifications (recipient_id, type, tab, blog_id, actor_id, target_type, target_id, created_at)
                 VALUES (?, ?, 'BLOG', ?, ?, 'BLOG', ?, ?)
                 """, recipientId, type.name(), blogId, actorId, blogId, LocalDateTime.now(clock));
+    }
+
+    /** 블로그 탭 알림. 대상은 글이다. 블로그장이 내 글을 지웠을 때 등 (D-58). */
+    public void post(long recipientId, Type type, long blogId, Long actorId, long postId) {
+        jdbc.update("""
+                INSERT INTO notifications (recipient_id, type, tab, blog_id, actor_id, target_type, target_id, created_at)
+                VALUES (?, ?, 'BLOG', ?, ?, 'POST', ?, ?)
+                """, recipientId, type.name(), blogId, actorId, postId, LocalDateTime.now(clock));
     }
 }

@@ -11,3 +11,16 @@ export const SLUG_RULE = /^[a-z0-9-]{3,30}$/;
 export function parseTags(text) {
   return text.split(',').map((t) => t.trim().replace(/^#/, '')).filter((t) => t.length > 0);
 }
+
+// 글 (004 6.6). 제목 1~30자, 본문 1000자(사진 문법 ![](주소)는 빼고 셈, 추천안 #14), 태그 10개
+export const POST_TITLE_MAX = 30;
+export const POST_CONTENT_MAX = 1000;
+export const POST_TAGS_MAX = 10;
+
+export function contentLength(markdown) {
+  return [...markdown.replace(/\r\n/g, '\n').replace(/!\[[^\]\n]*\]\([^)\n]*\)/g, '')].length;
+}
+
+// 사진: jpg·jpeg·png·gif·webp, 한 장 3MB (SEC-08). 서버가 확장자·MIME·시그니처를 다시 본다.
+export const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+export const IMAGE_MAX_BYTES = 3 * 1024 * 1024;

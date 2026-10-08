@@ -12,6 +12,9 @@
 
 * { box-sizing: border-box; }
 
+/* display를 준 요소(.badge, .button 등)도 hidden이면 숨긴다 */
+[hidden] { display: none !important; }
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
@@ -187,3 +190,56 @@ button.danger-outline { color: var(--error); border-color: var(--error); }
 .table th { color: var(--muted); font-weight: 600; }
 #share-url { margin-bottom: 8px; }
 .card > .section-title:first-child { margin-top: 0; }
+
+/* ----- 3단계: 글 ----- */
+.container.wide { max-width: 1100px; }
+select { padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; font-size: 0.95rem; background: var(--card); }
+.posts-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.posts-head .section-title { margin: 0; }
+.posts-layout { display: grid; grid-template-columns: 180px 1fr; gap: 24px; margin-top: 16px; }
+.category-nav { display: flex; flex-direction: column; gap: 4px; }
+.category { text-align: left; border: none; background: none; padding: 6px 8px; white-space: normal; overflow-wrap: anywhere; }
+.category.active { background: var(--bg); font-weight: 700; color: var(--primary-dark); }
+.filter-label { margin: 0 0 8px; font-size: 0.9rem; }
+.post-list { list-style: none; padding: 0; margin: 0; }
+.post-list.notices:not(:empty) { margin-bottom: 8px; border-bottom: 2px solid var(--line); }
+.post-item { padding: 14px 0; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px; }
+.post-item:last-child { border-bottom: none; }
+.post-item-head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.post-category { font-size: 0.8rem; color: var(--muted); }
+.post-title { position: relative; font-weight: 700; text-decoration: none; overflow-wrap: anywhere; }
+.post-title:hover { color: var(--primary); }
+/* 제목에 마우스를 올리면 첫 사진을 원본 그대로 줄여 보여준다 (US3-5) */
+.post-thumb { display: none; position: absolute; left: 0; top: 100%; z-index: 5; width: 200px; height: 140px; object-fit: cover;
+  border: 1px solid var(--line); border-radius: 8px; background: var(--card); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12); }
+.post-title:hover .post-thumb, .post-title:focus .post-thumb { display: block; }
+.tag-button { border: none; background: none; padding: 0; color: var(--info); font-size: 0.85rem; }
+.tag-button:hover { text-decoration: underline; }
+.list-foot { display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin-top: 12px; }
+.inline-label { display: inline; margin: 0; font-weight: 400; color: var(--muted); }
+.empty-row { padding: 24px 0; text-align: center; }
+
+.post-blog { margin: 0 0 8px; font-size: 0.9rem; }
+.post-blog a { color: var(--muted); text-decoration: none; }
+.post-heading { font-size: 1.7rem; margin: 6px 0; overflow-wrap: anywhere; }
+.post-content { margin-top: 24px; line-height: 1.75; overflow-wrap: anywhere; }
+.post-content img { max-width: 100%; height: auto; border-radius: 8px; }
+.post-content pre { background: #f2f4f7; padding: 12px; border-radius: 8px; overflow-x: auto; }
+.post-content code { background: #f2f4f7; padding: 1px 4px; border-radius: 4px; font-size: 0.9em; }
+.post-content pre code { background: none; padding: 0; }
+.post-content blockquote { margin: 12px 0; padding: 4px 16px; border-left: 4px solid var(--line); color: var(--muted); }
+.post-content table { border-collapse: collapse; }
+.post-content th, .post-content td { border: 1px solid var(--line); padding: 6px 10px; }
+.post-tags { margin-top: 24px; }
+.post-tags a { text-decoration: none; }
+.counts { margin-top: 16px; }
+.form-row { display: flex; gap: 24px; align-items: flex-end; flex-wrap: wrap; }
+.form-row .checkbox { margin-bottom: 8px; }
+#editor { margin-top: 6px; }
+
+@media (max-width: 720px) {
+  .card { padding: 20px; }
+  .posts-layout { grid-template-columns: 1fr; }
+  .category-nav { flex-direction: row; flex-wrap: wrap; }
+  .post-thumb { display: none !important; }
+}

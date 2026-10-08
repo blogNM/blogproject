@@ -49,7 +49,7 @@ INSERT INTO admins (id, login_id, password_hash, name, created_at, last_login_at
 
 -- members 11행
 INSERT INTO members (id, email, password_hash, name, nickname, phone, profile_image_id, bio, status, notification_retention_days, terms_agreed_at, privacy_agreed_at, age14_confirmed_at, created_at, withdrawn_at) VALUES
-  (1, 'chaerim.dev@example.com', '$2a$10$fMbOdhlmxkas/E3fgYOsXe.VAPCtQI7.PLEr..rSuq5qailHZlzTy', '김채림', '채림', '01012345678', NULL, '블로그 플랫폼을 만드는 개발자', 'ACTIVE', 30, '2026-09-02 10:00:00', '2026-09-02 10:00:00', '2026-09-02 10:00:00', '2026-09-02 10:00:00', NULL),
+  (1, 'chaerim.dev@example.com', '$2a$10$fMbOdhlmxkas/E3fgYOsXe.VAPCtQI7.PLEr..rSuq5qailHZlzTy', '김채림', '채림', '01012345678', 6, '블로그 플랫폼을 만드는 개발자', 'ACTIVE', 30, '2026-09-02 10:00:00', '2026-09-02 10:00:00', '2026-09-02 10:00:00', '2026-09-02 10:00:00', NULL),
   (2, 'minsu.park@example.com', '$2a$10$fMbOdhlmxkas/E3fgYOsXe.VAPCtQI7.PLEr..rSuq5qailHZlzTy', '박민수', '민수네밥상', '01023456789', NULL, '맛집 기록', 'ACTIVE', 30, '2026-09-03 10:00:00', '2026-09-03 10:00:00', '2026-09-03 10:00:00', '2026-09-03 10:00:00', NULL),
   (3, 'jiyoung.lee@example.com', '$2a$10$fMbOdhlmxkas/E3fgYOsXe.VAPCtQI7.PLEr..rSuq5qailHZlzTy', '이지영', '지영여행', '01034567890', NULL, '주말마다 떠나는 여행', 'ACTIVE', 30, '2026-09-04 10:00:00', '2026-09-04 10:00:00', '2026-09-04 10:00:00', '2026-09-04 10:00:00', NULL),
   (4, 'hyunwoo.choi@example.com', '$2a$10$fMbOdhlmxkas/E3fgYOsXe.VAPCtQI7.PLEr..rSuq5qailHZlzTy', '최현우', '현우코딩', '01045678901', NULL, '자바·스프링 공부', 'ACTIVE', 30, '2026-09-05 10:00:00', '2026-09-05 10:00:00', '2026-09-05 10:00:00', '2026-09-05 10:00:00', NULL),
@@ -76,7 +76,7 @@ INSERT INTO tags (id, name) VALUES
 
 -- blogs 5행
 INSERT INTO blogs (id, slug, name, description, owner_id, visibility, join_policy, share_token, status, close_scheduled_at, close_requested_by, created_at, cover_image_id, is_hidden, closed_at, notification_retention_days) VALUES
-  (1, 'foodie-seoul', '서울 맛집 탐방', '서울 구석구석 맛집 기록', 2, 'PUBLIC', 'FREE', NULL, 'ACTIVE', NULL, NULL, '2026-09-05 12:00:00', NULL, FALSE, NULL, 30),
+  (1, 'foodie-seoul', '서울 맛집 탐방', '서울 구석구석 맛집 기록', 2, 'PUBLIC', 'FREE', NULL, 'ACTIVE', NULL, NULL, '2026-09-05 12:00:00', 7, FALSE, NULL, 30),
   (2, 'weekend-trip', '주말 여행 클럽', '함께 다닌 여행 이야기', 3, 'PUBLIC', 'APPROVAL', NULL, 'ACTIVE', NULL, NULL, '2026-09-06 12:00:00', NULL, FALSE, NULL, 30),
   (3, 'java-study', '자바 스터디', '스프링 부트 스터디 기록', 4, 'LINK_ONLY', 'APPROVAL', '9f2c4a7b1e6d3f80a5c2b7e4d1f6a3c9', 'ACTIVE', NULL, NULL, '2026-09-07 12:00:00', NULL, FALSE, NULL, 30),
   (4, 'book-club', '유나의 책방', '한 달에 두 권', 7, 'PRIVATE', 'APPROVAL', NULL, 'CLOSING', '2026-10-13 04:00:00', 'OWNER', '2026-09-08 12:00:00', NULL, FALSE, NULL, 30),
@@ -118,29 +118,39 @@ INSERT INTO categories (id, blog_id, name, sort_order) VALUES
 INSERT INTO posts (id, blog_id, author_id, category_id, title, content_md, is_notice, author_left, status, deleted_by, deleted_at, view_count, like_count, comment_count, created_at, updated_at) VALUES
   (1, 1, 2, 1, '을지로 노포 국밥집', '## 을지로 국밥
 
-새벽에도 문을 여는 국밥집. **깍두기**가 맛있다.', FALSE, FALSE, 'NORMAL', NULL, NULL, 4, 3, 3, '2026-10-02 09:00:00', '2026-10-02 09:00:00'),
-  (2, 1, 1, 2, '성수동 카페 세 곳', '성수동에서 들른 카페 세 곳을 정리했다.', FALSE, FALSE, 'NORMAL', NULL, NULL, 0, 0, 0, '2026-10-03 09:00:00', '2026-10-03 09:00:00'),
+새벽에도 문을 여는 국밥집. **깍두기**가 맛있다.
+
+![국밥](/uploads/00000000-0000-0000-0000-000000000001)
+
+![깍두기](/uploads/00000000-0000-0000-0000-000000000002)', FALSE, FALSE, 'NORMAL', NULL, NULL, 4, 3, 3, '2026-10-02 09:00:00', '2026-10-02 09:00:00'),
+  (2, 1, 1, 2, '성수동 카페 세 곳', '성수동에서 들른 카페 세 곳을 정리했다.
+
+![카페1](/uploads/00000000-0000-0000-0000-000000000003)', FALSE, FALSE, 'NORMAL', NULL, NULL, 0, 0, 0, '2026-10-03 09:00:00', '2026-10-03 09:00:00'),
   (3, 1, 5, 1, '맛집 블로그 이용 안내', '글을 쓰기 전에 꼭 읽어 주세요.', TRUE, FALSE, 'NORMAL', NULL, NULL, 0, 0, 0, '2026-10-04 09:00:00', '2026-10-04 09:00:00'),
   (4, 1, 6, 2, '연남동 브런치', '주말 브런치 사진 모음', FALSE, FALSE, 'DELETED', 'OWNER', '2026-10-05 15:00:00', 0, 0, 0, '2026-10-05 09:00:00', '2026-10-05 09:00:00'),
-  (5, 2, 3, 3, '제주 동쪽 2박 3일', '성산일출봉부터 우도까지', FALSE, FALSE, 'NORMAL', NULL, NULL, 1, 3, 1, '2026-10-06 09:00:00', '2026-10-06 09:00:00'),
+  (5, 2, 3, 3, '제주 동쪽 2박 3일', '성산일출봉부터 우도까지
+
+![성산](/uploads/00000000-0000-0000-0000-000000000004)', FALSE, FALSE, 'NORMAL', NULL, NULL, 1, 3, 1, '2026-10-06 09:00:00', '2026-10-06 09:00:00'),
   (6, 2, 1, 3, '강릉 당일치기', 'KTX로 다녀온 강릉', FALSE, FALSE, 'NORMAL', NULL, NULL, 0, 0, 0, '2026-10-01 09:00:00', '2026-10-01 09:00:00'),
   (7, 3, 4, 4, '스프링 시큐리티 CSRF 정리', 'X-XSRF-TOKEN 헤더를 쓰는 이유', FALSE, FALSE, 'NORMAL', NULL, NULL, 0, 2, 1, '2026-10-02 09:00:00', '2026-10-02 09:00:00'),
   (8, 3, 1, 4, 'JPA N+1 문제', 'fetch join으로 해결한 기록', FALSE, FALSE, 'NORMAL', NULL, NULL, 0, 0, 0, '2026-10-03 09:00:00', '2026-10-03 09:00:00'),
   (9, 4, 7, 5, '10월에 읽은 책', '소설 두 권 후기', FALSE, FALSE, 'NORMAL', NULL, NULL, 0, 0, 0, '2026-10-04 09:00:00', '2026-10-04 09:00:00'),
-  (10, 5, 9, 6, '첫째 고양이 소개', '치즈 고양이 ''보리''', FALSE, FALSE, 'NORMAL', NULL, NULL, 1, 2, 1, '2026-10-05 09:00:00', '2026-10-05 09:00:00'),
+  (10, 5, 9, 6, '첫째 고양이 소개', '치즈 고양이 ''보리''
+
+![보리](/uploads/00000000-0000-0000-0000-000000000005)', FALSE, FALSE, 'NORMAL', NULL, NULL, 1, 2, 1, '2026-10-05 09:00:00', '2026-10-05 09:00:00'),
   (11, 5, 2, 6, '고양이 간식 추천', '직접 먹여 본 간식', FALSE, FALSE, 'NORMAL', NULL, NULL, 0, 0, 0, '2026-10-06 09:00:00', '2026-10-06 09:00:00'),
   (12, 5, 11, 6, '우리 동네 길고양이', '탈퇴한 회원이 남긴 글', FALSE, TRUE, 'NORMAL', NULL, NULL, 0, 0, 0, '2026-10-01 09:00:00', '2026-10-01 09:00:00'),
   (13, 1, 10, 1, '광장시장 빈대떡', '강퇴된 멤버가 쓴 글', FALSE, TRUE, 'NORMAL', NULL, NULL, 0, 0, 0, '2026-10-02 09:00:00', '2026-10-02 09:00:00');
 
 -- images 7행
 INSERT INTO images (id, uploader_id, post_id, sort_order, stored_name, original_name, mime_type, size_bytes, created_at) VALUES
-  (1, 2, 1, 0, '00000000-0000-0000-0000-000000000001', '국밥.jpg', 'image/jpeg', 812345, '2026-10-02 09:00:00'),
-  (2, 2, 1, 1, '00000000-0000-0000-0000-000000000002', '깍두기.jpg', 'image/jpeg', 523411, '2026-10-02 09:00:00'),
-  (3, 1, 2, 0, '00000000-0000-0000-0000-000000000003', '카페1.webp', 'image/webp', 301222, '2026-10-02 09:00:00'),
-  (4, 3, 5, 0, '00000000-0000-0000-0000-000000000004', '성산.png', 'image/png', 2048000, '2026-10-02 09:00:00'),
-  (5, 9, 10, 0, '00000000-0000-0000-0000-000000000005', '보리.gif', 'image/gif', 1500000, '2026-10-02 09:00:00'),
-  (6, 1, NULL, 0, '00000000-0000-0000-0000-000000000006', 'profile.png', 'image/png', 120000, '2026-10-02 09:00:00'),
-  (7, 2, NULL, 0, '00000000-0000-0000-0000-000000000007', 'blog_cover.jpg', 'image/jpeg', 900000, '2026-10-02 09:00:00');
+  (1, 2, 1, 0, '00000000-0000-0000-0000-000000000001', '국밥.jpg', 'image/jpeg', 30928, '2026-10-02 09:00:00'),
+  (2, 2, 1, 1, '00000000-0000-0000-0000-000000000002', '깍두기.jpg', 'image/jpeg', 31010, '2026-10-02 09:00:00'),
+  (3, 1, 2, 0, '00000000-0000-0000-0000-000000000003', '카페1.webp', 'image/webp', 11552, '2026-10-02 09:00:00'),
+  (4, 3, 5, 0, '00000000-0000-0000-0000-000000000004', '성산.png', 'image/png', 6343, '2026-10-02 09:00:00'),
+  (5, 9, 10, 0, '00000000-0000-0000-0000-000000000005', '보리.gif', 'image/gif', 68780, '2026-10-02 09:00:00'),
+  (6, 1, NULL, 0, '00000000-0000-0000-0000-000000000006', 'profile.png', 'image/png', 6408, '2026-10-02 09:00:00'),
+  (7, 2, NULL, 0, '00000000-0000-0000-0000-000000000007', 'blog_cover.jpg', 'image/jpeg', 30809, '2026-10-02 09:00:00');
 
 -- post_tags 13행
 INSERT INTO post_tags (post_id, tag_id) VALUES
