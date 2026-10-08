@@ -84,7 +84,7 @@ public class PostService {
         BlogMembership me = activeMembership(blog, actorId)
                 .orElseThrow(() -> forbidden("NOT_MEMBER", "이 블로그의 멤버만 글을 쓸 수 있습니다."));
         if (req.wantsNotice() && !me.canManagePosts()) {
-            throw forbidden("FORBIDDEN", "공지는 블로그장만 쓸 수 있습니다.");
+            throw forbidden("FORBIDDEN", "공지는 블로그장과 글 관리 권한이 있는 부블로그장만 쓸 수 있습니다.");
         }
         LocalDateTime now = LocalDateTime.now(clock);
         Post post = Post.write(blog.getId(), actorId, now);
