@@ -25,6 +25,7 @@
 - **설정** `UPLOAD_DIR`(기본 `./data/uploads`), `UPLOAD_MAX_FILE_SIZE`, `UPLOAD_MAX_REQUEST_SIZE`, `UPLOAD_MAX_IMAGES_PER_POST`
 - **설정** 테스트 데이터: 글 본문에 사진 5장을 넣고 `load.sh`가 사진 파일도 복사함. 이미 넣은 DB에는 `add-photos.sql`로 사진만 더함(회원은 그대로)
 - **화면** 멤버가 공지를 쓰려 할 때 문구를 "공지는 블로그장과 글 관리 권한이 있는 부블로그장만 쓸 수 있습니다"로 고침 (부블로그장도 쓸 수 있는데 블로그장만 된다고 나왔음)
+- **설정** 테스트 데이터: `join-blog.py <주소> [공유 키]`로 테스트 계정 5명이 원하는 블로그에 참여 신청함 (사용자 요청)
 - **설정** 테스트 데이터: `activity-3.py`로 테스트 계정 10명이 3단계 기능(글·사진·카테고리·공지·삭제·막히는 경우 20가지)을 실제 API로 써 봄. 회원은 건드리지 않음
 - **문서** 004 [plan.md](specs/004-board/plan.md)·[tasks.md](specs/004-board/tasks.md), 단계별 [진행 기록](specs/진행-기록.md) 새로 만듦(1~3단계, 사용자 요청), [로컬 실행 안내](docs/05-guides/로컬-실행.md) 6장(3단계 확인 목록), [테스트 데이터](docs/05-guides/테스트-데이터.md) 글 안내
 
