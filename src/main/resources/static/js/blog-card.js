@@ -41,3 +41,9 @@ export function blogCard(b) {
     `블로그장 ${b.ownerNickname} · 멤버 ${b.memberCount}명 · 구독 ${b.subscriberCount}명 · ${b.createdAt} 개설`));
   return li;
 }
+
+/** 그 블로그에서 정지된 멤버에게 보이는 안내. 기간과 사유를 함께 보인다 (BLG-13). */
+export function suspendedText(details = {}) {
+  const until = details.suspendedUntil === '영구' ? '영구 정지되어' : `활동이 정지되어 ${details.suspendedUntil}까지`;
+  return `이 블로그에서 ${until} 들어갈 수 없습니다.` + (details.reason ? ` 사유: ${details.reason}` : '');
+}

@@ -140,12 +140,6 @@ public class BlogController {
         return Map.of("rejected", true);
     }
 
-    @GetMapping("/api/blogs/{slug}/members")
-    @PreAuthorize("@blogAuth.canManageMembers(#slug)")
-    public List<BlogQueryService.MemberRow> members(@PathVariable String slug) {
-        return queryService.members(slug);
-    }
-
     @GetMapping("/api/me/blogs")
     public BlogQueryService.MyBlogs myBlogs(@AuthenticationPrincipal MemberPrincipal me) {
         return queryService.myBlogs(me.memberId());

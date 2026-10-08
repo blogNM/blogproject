@@ -1,4 +1,5 @@
 import { api, ApiError } from '../api.js';
+import { suspendedText } from '../blog-card.js';
 import { el, initLayout, renderNotFound, toast } from '../layout.js';
 import { openReport } from '../report.js';
 import { applyBlogLook } from '../theme.js';
@@ -25,7 +26,7 @@ try {
   post = await api.get(`/api/posts/${postId}` + (key ? '?key=' + encodeURIComponent(key) : ''));
 } catch (err) {
   if (err.code === 'SUSPENDED') {
-    showError(`이 블로그에서 활동이 정지되어 ${err.details.suspendedUntil.replace('T', ' ')}까지 들어갈 수 없습니다.`);
+    showError(suspendedText(err.details));
   } else {
     if (err.status === 404) {
       renderNotFound('글을 찾을 수 없어요. 지워졌거나 볼 수 없는 글이에요.');

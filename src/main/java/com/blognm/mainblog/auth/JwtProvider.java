@@ -26,6 +26,8 @@ public class JwtProvider {
 
     private static final String TYPE_CLAIM = "typ";
     private static final String MEMBER_TYPE = "member";
+    /** 관리자 토큰은 회원 토큰과 종류가 달라 서로 대신 쓸 수 없다 (SEC-09). */
+    private static final String ADMIN_TYPE = "admin";
 
     private final SecretKey key;
     private final AppProperties.Auth props;
@@ -52,6 +54,22 @@ public class JwtProvider {
                 .compact();
     }
 
+    public String createAdminToken(long adminId, java.time.Duration ttl) {
+        Date now = Date.from(clock.instant());
+        return Jwts.builder()
+                .subject(Long.toString(adminId))
+                .claim(TYPE_CLAIM, ADMIN_TYPE)
+                .issuedAt(now)
+                .expiration(Date.from(clock.instant().plus(ttl)))
+                .signWith(key)
+                .compact();
+    }
+
+    /** 서명·만료가 맞는 관리자 토큰이면 관리자 번호와 발급 시각을 돌려준다. */
+    public Optional<MemberToken> parseAdminToken(String token) {
+        return parse(token, ADMIN_TYPE);
+    }
+
     /** 서명·만료가 맞는 회원 토큰이면 회원 번호를 돌려준다. */
     public Optional<Long> parseMemberId(String token) {
         return parseMemberToken(token).map(MemberToken::memberId);
@@ -59,6 +77,10 @@ public class JwtProvider {
 
     /** 서명·만료가 맞는 회원 토큰이면 회원 번호와 발급 시각을 돌려준다. */
     public Optional<MemberToken> parseMemberToken(String token) {
+        return parse(token, MEMBER_TYPE);
+    }
+
+    private Optional<MemberToken> parse(String token, String type) {
         try {
             Claims claims = Jwts.parser()
                     .verifyWith(key)
@@ -66,7 +88,7 @@ public class JwtProvider {
                     .build()
                     .parseSignedClaims(token)
                     .getPayload();
-            if (!MEMBER_TYPE.equals(claims.get(TYPE_CLAIM, String.class))) {
+            if (!type.equals(claims.get(TYPE_CLAIM, String.class))) {
                 return Optional.empty();
             }
             Instant issuedAt = claims.getIssuedAt() == null ? Instant.EPOCH : claims.getIssuedAt().toInstant();
@@ -76,6 +98,7 @@ public class JwtProvider {
         }
     }
 
+    /** memberId: 회원 토큰이면 회원 번호, 관리자 토큰이면 관리자 번호. */
     public record MemberToken(long memberId, Instant issuedAt) {
     }
 }

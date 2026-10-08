@@ -134,3 +134,13 @@ social:
   # 알림 기본 보관 일수 (4.5). 회원·블로그장이 7일로 줄일 수 있다
   notification-retention-days: ${SOCIAL_NOTIFICATION_RETENTION_DAYS:30}
   bio-max: ${SOCIAL_BIO_MAX:150}
+
+admin:
+  # 첫 관리자 (추천안 #16, 확인 대기). 관리자가 하나도 없을 때만 이 값으로 만들고, 첫 로그인에서 비밀번호를 바꾸게 한다.
+  # 값은 .env 등 환경변수로만 넣는다. 비워 두면 관리자를 만들지 않는다.
+  initial-login-id: ${ADMIN_INITIAL_LOGIN_ID:}
+  initial-password: ${ADMIN_INITIAL_PASSWORD:}
+  # 관리자 로그인 유지 시간. 쿠키는 브라우저를 닫으면 사라진다 (SEC-09)
+  session-ttl: ${ADMIN_SESSION_TTL:2h}
+  # IP마다 1분에 받는 관리자 로그인 시도 수
+  login-per-minute: ${ADMIN_LOGIN_PER_MINUTE:10}

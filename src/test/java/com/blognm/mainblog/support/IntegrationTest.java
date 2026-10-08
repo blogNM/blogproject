@@ -57,9 +57,17 @@ public abstract class IntegrationTest {
 
     @BeforeEach
     void resetState() {
+        jdbc.update("DELETE FROM admin_action_logs");
+        jdbc.update("DELETE FROM owner_warnings");
+        jdbc.update("DELETE FROM member_sanctions");
+        jdbc.update("DELETE FROM blacklist_appeals");
+        jdbc.update("DELETE FROM blacklist_entries");
+        jdbc.update("DELETE FROM blog_closing_notices");
+        jdbc.update("DELETE FROM ownership_transfers");
         jdbc.update("DELETE FROM notifications");
         jdbc.update("DELETE FROM notification_settings");
         jdbc.update("DELETE FROM reports");
+        jdbc.update("DELETE FROM admins");
         jdbc.update("DELETE FROM comments WHERE parent_id IS NOT NULL");
         jdbc.update("DELETE FROM comments");
         jdbc.update("DELETE FROM post_likes");

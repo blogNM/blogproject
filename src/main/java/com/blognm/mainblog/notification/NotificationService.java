@@ -45,7 +45,7 @@ public class NotificationService {
         int current = Math.max(page, 1);
         params.addValue("size", PAGE_SIZE).addValue("offset", (current - 1) * PAGE_SIZE);
         List<Item> items = jdbc.query("""
-                SELECT n.id, n.type, n.tab, n.target_type, n.target_id, n.is_read, n.created_at,
+                SELECT n.id, n.type, n.tab, n.target_type, n.target_id, n.detail, n.is_read, n.created_at,
                        a.nickname AS actor, a.status AS actor_status, b.slug, b.name AS blog_name,
                        CASE n.target_type
                          WHEN 'POST' THEN (SELECT p.title FROM posts p WHERE p.id = n.target_id)
@@ -65,7 +65,7 @@ public class NotificationService {
                     Long postId = rs.getObject("post_id", Long.class);
                     Text text = text(rs.getString("type"), actor, rs.getString("slug"), rs.getString("blog_name"),
                             rs.getString("post_title"), postId, rs.getString("target_type"),
-                            rs.getObject("target_id", Long.class));
+                            rs.getObject("target_id", Long.class), rs.getString("detail"));
                     return new Item(rs.getLong("id"), rs.getString("tab"), text.message(), text.link(),
                             rs.getBoolean("is_read"), rs.getObject("created_at", LocalDateTime.class).format(DATE_TIME));
                 });
@@ -188,6 +188,12 @@ public class NotificationService {
     /** 알림 문구와 누르면 갈 주소. 대상이 지워졌으면 주소 없이 문구만 남는다. */
     static Text text(String type, String actor, String slug, String blogName, String postTitle, Long postId,
             String targetType, Long targetId) {
+        return text(type, actor, slug, blogName, postTitle, postId, targetType, targetId, null);
+    }
+
+    static Text text(String type, String actor, String slug, String blogName, String postTitle, Long postId,
+            String targetType, Long targetId, String detail) {
+        String d = detail == null ? "" : detail;
         String who = actor == null ? "누군가가" : actor + "님이";
         String blog = blogName == null ? "블로그" : "'" + blogName + "'";
         String title = postTitle == null ? "글" : "'" + postTitle + "'";
@@ -206,7 +212,33 @@ public class NotificationService {
             case "JOIN_APPROVED" -> new Text(blog + " 블로그 참여가 승인되었습니다.", blogLink);
             case "JOIN_REJECTED" -> new Text(blog + " 블로그 참여 신청이 거절되었습니다.", blogLink);
             case "POST_DELETED" -> new Text(blog + " 블로그에서 내 글이 삭제되었습니다: " + title, null);
-            case "REPORT_RESULT" -> new Text("신고하신 내용의 처리가 끝났습니다.", null);
+            case "REPORT_RESULT" -> new Text(detail == null ? "신고하신 내용의 처리가 끝났습니다."
+                    : "신고하신 내용을 처리했습니다: " + d, null);
+            case "POST_HIDDEN" -> new Text("운영 정책에 따라 내 글 " + title + "이(가) 숨겨졌습니다.", null);
+            case "TRANSFER_REQUESTED" -> new Text(who + " " + blog + " 블로그의 블로그장을 넘기려고 합니다. 7일 안에 수락하거나 거절해 주세요.", blogLink);
+            case "TRANSFER_ACCEPTED" -> new Text(who + " " + blog + " 블로그장 위임을 수락했습니다.", blogLink);
+            case "TRANSFER_REJECTED" -> new Text(who + " " + blog + " 블로그장 위임을 거절했습니다.", blogLink);
+            case "TRANSFER_EXPIRED" -> new Text(blog + " 블로그장 위임 요청이 7일 동안 답이 없어 취소되었습니다.", blogLink);
+            case "OWNER_PROMOTED" -> new Text("이제 내가 " + blog + " 블로그의 블로그장입니다.", blogLink);
+            case "BLOG_CLOSING" -> new Text(blog + " 블로그가 " + d + " 04:00에 폐쇄됩니다.", blogLink);
+            case "BLOG_CLOSING_D3" -> new Text(blog + " 블로그가 3일 뒤(" + d + " 04:00) 폐쇄됩니다.", blogLink);
+            case "BLOG_CLOSING_D1" -> new Text(blog + " 블로그가 내일(" + d + " 04:00) 폐쇄됩니다.", blogLink);
+            case "BLOG_CLOSING_ADMIN" -> new Text("운영 정책에 따라 " + blog + " 블로그가 " + d + " 04:00에 폐쇄됩니다.", blogLink);
+            case "BLOG_CLOSING_KICK" -> new Text("블로그장 권한 박탈로 인한 폐쇄 조치: " + blog + " 블로그가 " + d
+                    + " 04:00에 폐쇄됩니다.", blogLink);
+            case "BLOG_CLOSE_CANCELLED" -> new Text(blog + " 블로그 폐쇄가 철회되었습니다.", blogLink);
+            case "MEMBER_WARNED" -> new Text(blog + " 블로그에서 경고를 받았습니다.", blogLink);
+            case "MEMBER_SUSPENDED" -> new Text(blog + " 블로그에서 활동이 정지되었습니다 (" + d + ").", null);
+            case "MEMBER_UNSUSPENDED" -> new Text(blog + " 블로그의 활동 정지가 풀렸습니다.", blogLink);
+            case "MEMBER_KICKED" -> new Text(blog + " 블로그에서 강제 퇴장되었습니다.", null);
+            case "OWNER_WARNED" -> new Text(blog + " 블로그장으로서 운영 경고를 받았습니다 (" + d + "). 3번이면 블로그장 권한이 박탈됩니다.", blogLink);
+            case "OWNER_KICKED" -> new Text(blog + " 블로그의 블로그장 권한이 박탈되었습니다. 일반 멤버로 남습니다.", blogLink);
+            case "BLOG_HIDDEN" -> new Text("운영 정책에 따라 " + blog + " 블로그가 숨겨졌습니다. 멤버만 볼 수 있습니다.", blogLink);
+            case "BLOG_UNHIDDEN" -> new Text(blog + " 블로그 숨김이 풀렸습니다.", blogLink);
+            case "BLACKLIST_APPEAL" -> new Text(who + " " + blog + " 블로그 블랙리스트 해제를 문의했습니다.",
+                    blogLink == null ? null : blogLink + "/manage#blacklist");
+            case "BLACKLIST_LIFTED" -> new Text(blog + " 블로그 블랙리스트에서 해제되었습니다. 다시 참여를 신청할 수 있습니다.", blogLink);
+            case "BLACKLIST_REJECTED" -> new Text(blog + " 블로그 블랙리스트 해제 문의가 거절되었습니다.", null);
             case "NOTICE" -> new Text("새 공지사항이 있습니다.", "/");
             default -> new Text("새 알림이 있습니다.", null);
         };

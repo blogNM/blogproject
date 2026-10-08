@@ -25,6 +25,7 @@ import org.springframework.security.web.util.matcher.OrRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 
 import com.blognm.mainblog.auth.AccessTokenValidator;
+import com.blognm.mainblog.auth.AdminTokenCheck;
 import com.blognm.mainblog.auth.JwtAuthenticationFilter;
 import com.blognm.mainblog.auth.JwtProvider;
 
@@ -66,7 +67,7 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtProvider jwtProvider,
-            AccessTokenValidator tokenValidator, AppProperties props)
+            AccessTokenValidator tokenValidator, AdminTokenCheck adminCheck, AppProperties props)
             throws Exception {
         CookieCsrfTokenRepository csrfRepository = CookieCsrfTokenRepository.withHttpOnlyFalse();
         csrfRepository.setCookieCustomizer(c -> c.secure(props.auth().cookieSecure()).sameSite("Lax"));
@@ -91,6 +92,9 @@ public class SecurityConfig {
                         .addHeaderWriter(new DelegatingRequestMatcherHeaderWriter(new NegatedRequestMatcher(EDITOR_PAGES),
                                 new StaticHeadersWriter("Content-Security-Policy", CSP))))
                 .authorizeHttpRequests(auth -> auth
+                        // 관리자 페이지는 주소 단위로 관리자만 (SEC-11). 로그인 화면과 로그인 요청만 열어 둔다.
+                        .requestMatchers("/admin/login.html", "/api/admin/auth/login").permitAll()
+                        .requestMatchers("/admin", "/admin/**", "/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/auth/**", "/api/csrf").permitAll()
                         // 블로그 목록·검색·블로그 정보는 비회원도 본다. 비공개 여부는 서비스가 다시 확인한다.
                         .requestMatchers(HttpMethod.GET, "/api/blogs", "/api/blogs/*").permitAll()
@@ -104,11 +108,17 @@ public class SecurityConfig {
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll())
                 .exceptionHandling(e -> e
-                        .authenticationEntryPoint((req, res, ex) -> writeError(res, HttpStatus.UNAUTHORIZED,
-                                "LOGIN_REQUIRED", "로그인이 필요합니다."))
+                        .authenticationEntryPoint((req, res, ex) -> {
+                            String uri = req.getRequestURI();
+                            if (uri.equals("/admin") || uri.startsWith("/admin/")) {
+                                res.sendRedirect("/admin/login.html");
+                            } else {
+                                writeError(res, HttpStatus.UNAUTHORIZED, "LOGIN_REQUIRED", "로그인이 필요합니다.");
+                            }
+                        })
                         .accessDeniedHandler((req, res, ex) -> writeError(res, HttpStatus.FORBIDDEN,
                                 "FORBIDDEN", "요청을 처리할 수 없습니다. 페이지를 새로고침한 뒤 다시 시도해 주세요.")))
-                .addFilterBefore(new JwtAuthenticationFilter(jwtProvider, tokenValidator), UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(new JwtAuthenticationFilter(jwtProvider, tokenValidator, adminCheck), UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 

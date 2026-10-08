@@ -21,3 +21,8 @@ upload:
 # 테스트는 이 컴퓨터에 띄운 가짜 사이트에서 미리보기를 받는다
 link-preview:
   allow-private-hosts: true
+
+# 첫 관리자 만들기를 시험할 값. 테스트마다 관리자를 지우므로 AdminTest가 직접 다시 만든다.
+admin:
+  initial-login-id: rootadmin
+  initial-password: Temp1234!

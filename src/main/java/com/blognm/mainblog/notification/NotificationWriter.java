@@ -25,6 +25,30 @@ public class NotificationWriter {
         JOIN_APPROVED("BLOG", "JOIN_RESULT", true, "참여 승인·거절"),
         JOIN_REJECTED("BLOG", "JOIN_RESULT", true, "참여 승인·거절"),
         POST_DELETED("ADMIN", "POST_DELETED", false, "내 글 삭제됨"),
+        POST_HIDDEN("ADMIN", "POST_DELETED", false, "내 글 삭제됨"),
+        // 6단계: 위임·폐쇄 (BLG-08·09), 제재 (BLG-11~13, ADM-02·07). 모두 끌 수 없다 (3.6)
+        TRANSFER_REQUESTED("BLOG", "TRANSFER", false, "위임 요청·결과"),
+        TRANSFER_ACCEPTED("BLOG", "TRANSFER", false, "위임 요청·결과"),
+        TRANSFER_REJECTED("BLOG", "TRANSFER", false, "위임 요청·결과"),
+        TRANSFER_EXPIRED("BLOG", "TRANSFER", false, "위임 요청·결과"),
+        OWNER_PROMOTED("BLOG", "TRANSFER", false, "위임 요청·결과"),
+        BLOG_CLOSING("BLOG", "CLOSING", false, "폐쇄 예정·철회"),
+        BLOG_CLOSING_D3("BLOG", "CLOSING", false, "폐쇄 예정·철회"),
+        BLOG_CLOSING_D1("BLOG", "CLOSING", false, "폐쇄 예정·철회"),
+        BLOG_CLOSING_ADMIN("BLOG", "CLOSING", false, "폐쇄 예정·철회"),
+        BLOG_CLOSING_KICK("BLOG", "CLOSING", false, "폐쇄 예정·철회"),
+        BLOG_CLOSE_CANCELLED("BLOG", "CLOSING", false, "폐쇄 예정·철회"),
+        MEMBER_WARNED("ADMIN", "SANCTION", false, "경고·정지·강제 퇴장"),
+        MEMBER_SUSPENDED("ADMIN", "SANCTION", false, "경고·정지·강제 퇴장"),
+        MEMBER_UNSUSPENDED("ADMIN", "SANCTION", false, "경고·정지·강제 퇴장"),
+        MEMBER_KICKED("ADMIN", "SANCTION", false, "경고·정지·강제 퇴장"),
+        OWNER_WARNED("ADMIN", "OWNER_SANCTION", false, "블로그장 경고·권한 박탈"),
+        OWNER_KICKED("ADMIN", "OWNER_SANCTION", false, "블로그장 경고·권한 박탈"),
+        BLOG_HIDDEN("ADMIN", "OWNER_SANCTION", false, "블로그장 경고·권한 박탈"),
+        BLOG_UNHIDDEN("ADMIN", "OWNER_SANCTION", false, "블로그장 경고·권한 박탈"),
+        BLACKLIST_APPEAL("BLOG", "JOIN_REQUESTED", true, "참여 신청"),
+        BLACKLIST_LIFTED("ADMIN", "APPEAL_RESULT", false, "블랙리스트 해제 문의 결과"),
+        BLACKLIST_REJECTED("ADMIN", "APPEAL_RESULT", false, "블랙리스트 해제 문의 결과"),
         REPORT_RESULT("ADMIN", "REPORT_RESULT", true, "신고 처리 결과"),
         NOTICE("ADMIN", "NOTICE", true, "공지사항");
 
@@ -56,6 +80,16 @@ public class NotificationWriter {
     /** 블로그 탭 알림. 대상은 그 블로그다. */
     public void blog(long recipientId, Type type, long blogId, Long actorId) {
         save(recipientId, type, blogId, actorId, "BLOG", blogId);
+    }
+
+    /** 블로그 탭 알림에 문구용 짧은 값(정지 기간, 폐쇄 날짜 등)을 붙인다. */
+    public void blog(long recipientId, Type type, long blogId, Long actorId, String detail) {
+        save(recipientId, type, blogId, actorId, "BLOG", blogId, detail);
+    }
+
+    /** 신고 처리 결과. detail은 결과 이름 (ADM-04, BLG-13). */
+    public void reportResult(long recipientId, Long blogId, long reportId, String detail) {
+        save(recipientId, Type.REPORT_RESULT, blogId, null, "REPORT", reportId, detail);
     }
 
     /** 대상이 글인 알림. 블로그장이 내 글을 지웠을 때 등 (D-58). */
@@ -108,12 +142,19 @@ public class NotificationWriter {
     }
 
     private void save(long recipientId, Type type, Long blogId, Long actorId, String targetType, long targetId) {
+        save(recipientId, type, blogId, actorId, targetType, targetId, null);
+    }
+
+    private void save(long recipientId, Type type, Long blogId, Long actorId, String targetType, long targetId,
+            String detail) {
         if (!enabled(recipientId, type)) {
             return;
         }
         jdbc.update("""
-                INSERT INTO notifications (recipient_id, type, tab, blog_id, actor_id, target_type, target_id, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                """, recipientId, type.name(), type.tab, blogId, actorId, targetType, targetId, LocalDateTime.now(clock));
+                INSERT INTO notifications (recipient_id, type, tab, blog_id, actor_id, target_type, target_id, detail,
+                                           created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, recipientId, type.name(), type.tab, blogId, actorId, targetType, targetId, detail,
+                LocalDateTime.now(clock));
     }
 }

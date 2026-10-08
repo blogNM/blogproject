@@ -11,7 +11,6 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
-import com.blognm.mainblog.common.Masking;
 
 /** 블로그 목록·검색 (BLG-02, BLG-03), 내 블로그 (BLG-06), 멤버 목록. 읽기만 하므로 SQL로 바로 읽는다. */
 @Service
@@ -124,20 +123,6 @@ public class BlogQueryService {
                 pending);
     }
 
-    /** 멤버 관리 화면. 이메일·전화번호는 가린다 (4.4). 권한은 컨트롤러가 먼저 확인한다. */
-    public List<MemberRow> members(String slug) {
-        return jdbc.query("""
-                SELECT m.nickname, m.name, m.email, m.phone, bm.role, bm.joined_at
-                FROM blog_memberships bm
-                JOIN blogs b ON b.id = bm.blog_id
-                JOIN members m ON m.id = bm.member_id
-                WHERE b.slug = :slug AND bm.status = 'ACTIVE'
-                ORDER BY FIELD(bm.role, 'OWNER', 'SUB_OWNER', 'MEMBER'), bm.joined_at
-                """, Map.of("slug", slug), (rs, i) -> new MemberRow(rs.getString("nickname"), rs.getString("name"),
-                Masking.email(rs.getString("email")), Masking.phone(rs.getString("phone")), rs.getString("role"),
-                rs.getObject("joined_at", LocalDateTime.class).format(DATE)));
-    }
-
     private static String coverUrl(String storedName) {
         return storedName == null ? null : "/uploads/" + storedName;
     }
@@ -171,6 +156,4 @@ public class BlogQueryService {
     public record MyBlogs(List<BlogSummary> owned, List<BlogSummary> joined, List<PendingBlog> pending) {
     }
 
-    public record MemberRow(String nickname, String name, String email, String phone, String role, String joinedAt) {
-    }
 }

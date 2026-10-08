@@ -39,12 +39,14 @@ public class BlogService {
     private final NotificationWriter notifications;
     private final BlogProperties props;
     private final BlockService blocks;
+    private final SanctionService sanctions;
     private final JdbcTemplate jdbc;
     private final Clock clock;
 
     public BlogService(BlogRepository blogs, BlogMembershipRepository memberships, JoinRequestRepository joinRequests,
             TagRepository tags, MemberRepository members, NotificationWriter notifications, BlogProperties props,
-            BlockService blocks, JdbcTemplate jdbc, Clock clock) {
+            BlockService blocks, SanctionService sanctions, JdbcTemplate jdbc, Clock clock) {
+        this.sanctions = sanctions;
         this.blogs = blogs;
         this.memberships = memberships;
         this.joinRequests = joinRequests;
@@ -108,6 +110,14 @@ public class BlogService {
         }
     }
 
+    /** 위임을 받는 사람도 블로그 개수 제한을 넘을 수 없다 (BLG-10). 받는 사람 행을 잠그고 센다. */
+    @Transactional
+    public void checkOwnerLimit(long memberId, long blogId) {
+        Blog blog = blogs.findById(blogId).orElseThrow(BlogService::notFound);
+        members.findForUpdate(memberId);
+        checkLimit(memberId, blog.getVisibility(), blogId);
+    }
+
     private Set<Tag> findOrCreateTags(List<String> names) {
         Set<Tag> result = new LinkedHashSet<>();
         for (String name : names) {
@@ -148,6 +158,19 @@ public class BlogService {
         boolean managePosts = mine.filter(BlogMembership::canManagePosts).isPresent();
         boolean editInfo = mine.filter(BlogMembership::canEditInfo).isPresent();
         Member ownerMember = members.findById(blog.getOwnerId()).orElseThrow();
+        // 기다리는 위임 요청: 받는 사람에게는 [수락]·[거절], 블로그장에게는 누구에게 보냈는지 (BLG-08)
+        TransferView transfer = null;
+        if (mine.isPresent()) {
+            transfer = jdbc.query("""
+                    SELECT t.to_member_id, f.nickname AS from_name, m.nickname AS to_name
+                    FROM ownership_transfers t JOIN members m ON m.id = t.to_member_id JOIN members f ON f.id = t.from_member_id
+                    WHERE t.blog_id = ? AND t.status = 'PENDING' ORDER BY t.id DESC LIMIT 1
+                    """, (rs, i) -> new TransferView(rs.getString("from_name"), rs.getString("to_name"),
+                    rs.getLong("to_member_id") == viewerId), blog.getId()).stream()
+                    .filter(t -> t.toMe() || owner).findFirst().orElse(null);
+        }
+        String closeBy = jdbc.queryForObject("SELECT close_requested_by FROM blogs WHERE id = ?", String.class,
+                blog.getId());
         return new BlogView(blog.getSlug(), blog.getName(), blog.getDescription(), blog.getVisibility().name(),
                 blog.getJoinPolicy().name(), blog.getStatus().name(), blog.getCloseScheduledAt(),
                 ownerMember.getNickname(), memberships.countActive(blog.getId()), tagNames(blog),
@@ -156,7 +179,7 @@ public class BlogService {
                 owner ? blog.getShareToken() : null, managePosts, editInfo, themeView(blog), blog.getOwnerId(),
                 count("SELECT COUNT(*) FROM subscriptions WHERE blog_id = ?", blog.getId()),
                 viewerId != null && count("SELECT COUNT(*) FROM subscriptions WHERE blog_id = ? AND member_id = ?",
-                        blog.getId(), viewerId) > 0);
+                        blog.getId(), viewerId) > 0, closeBy, transfer, blog.isHidden());
     }
 
     private long count(String sql, Object... args) {
@@ -207,8 +230,11 @@ public class BlogService {
                     .filter(BlogMembership::isActive);
             if (mine.isPresent() && mine.get().getSuspendedUntil() != null
                     && mine.get().getSuspendedUntil().isAfter(now)) {
+                Map<String, Object> details = new java.util.HashMap<>();
+                details.put("suspendedUntil", SanctionService.untilText(mine.get().getSuspendedUntil()));
+                sanctions.lastSuspendReason(blog.getId(), viewerId).ifPresent(r -> details.put("reason", r));
                 throw new DetailedApiException(HttpStatus.FORBIDDEN, "SUSPENDED", "이 블로그에서 활동이 정지되었습니다.",
-                        Map.of("suspendedUntil", mine.get().getSuspendedUntil().toString()));
+                        details);
             }
         }
         return blog;
@@ -305,6 +331,8 @@ public class BlogService {
         if (existing.isPresent() && existing.get().isActive()) {
             throw new ApiException(HttpStatus.CONFLICT, "ALREADY_MEMBER", "이미 이 블로그의 멤버입니다.");
         }
+        // 강제 퇴장된 사람의 이메일·전화번호로는 다시 가입해도 신청할 수 없다 (BLG-11)
+        sanctions.requireNotBlacklisted(blog.getId(), memberId);
         if (existing.isPresent() && existing.get().getStatus() == BlogMembership.Status.KICKED) {
             throw new ApiException(HttpStatus.FORBIDDEN, "JOIN_BLOCKED", "이 블로그에는 참여할 수 없습니다.");
         }
@@ -444,7 +472,11 @@ public class BlogService {
             String status, LocalDateTime closeScheduledAt, String ownerNickname, long memberCount, List<String> tags,
             String createdAt, String myRole, String myRequest, String canRequestAt, String shareToken,
             boolean canManagePosts, boolean canEditInfo, ThemeView theme, long ownerId, long subscribers,
-            boolean subscribed) {
+            boolean subscribed, String closeRequestedBy, TransferView transfer, boolean hidden) {
+    }
+
+    /** toMe면 내가 받은 요청. 아니면 블로그장이 보낸 요청. */
+    public record TransferView(String fromNickname, String toNickname, boolean toMe) {
     }
 
     public record ThemeView(String theme, String accent, String font, String heroTitle, String heroSubtitle,

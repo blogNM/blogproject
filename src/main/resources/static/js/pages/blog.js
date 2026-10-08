@@ -1,5 +1,5 @@
 import { api } from '../api.js';
-import { JOIN_POLICY, VISIBILITY, roleName } from '../blog-card.js';
+import { JOIN_POLICY, VISIBILITY, roleName, suspendedText } from '../blog-card.js';
 import { renderShowcase, renderSideRecent } from '../blog-theme.js';
 import { el, initLayout, renderNotFound, toast } from '../layout.js';
 import { initPostList, postUrl } from '../post-list.js';
@@ -40,7 +40,7 @@ async function load() {
     blog = await api.get(`/api/blogs/${encodeURIComponent(slug)}` + (key ? '?key=' + encodeURIComponent(key) : ''));
   } catch (err) {
     if (err.code === 'SUSPENDED') {
-      showError(`이 블로그에서 활동이 정지되어 ${err.details.suspendedUntil.replace('T', ' ')}까지 들어갈 수 없습니다.`);
+      showError(suspendedText(err.details));
     } else {
       if (err.status === 404) {
         renderNotFound('블로그를 찾을 수 없어요. 주소를 확인하거나, 비공개 블로그라면 멤버만 볼 수 있어요.');

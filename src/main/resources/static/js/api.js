@@ -70,7 +70,7 @@ export function refreshLogin() {
 
 async function request(method, url, body) {
   let res = await send(method, url, body);
-  if (res.status === 401 && !url.startsWith('/api/auth/')) {
+  if (res.status === 401 && !url.startsWith('/api/auth/') && !url.startsWith('/api/admin/')) {
     if (await refreshLogin()) {
       res = await send(method, url, body);
     }
