@@ -12,7 +12,7 @@
 - **설정** `app/Dockerfile`: jar 하나를 Java 21 JRE 이미지에 담음. 사진은 `/app/data/uploads`, 메모리 512MB
 - **설정** `app/deploy/deploy.sh`: 서버에서 이미지를 읽어 컨테이너를 새로 띄우고, 사이트가 열리는지 확인. 안 열리면 전 이미지로 되돌림. 서명 키는 서버에서 한 번 만들어 보관, 사진 폴더는 컨테이너 밖에 둠, http 주소면 로그인 쿠키 Secure를 끔 (사용자 요청)
 - **설정** `.github/workflows/deploy.yml`: `main`에 `app/`이 바뀌면 테스트(MySQL 8) → 이미지 → SSH로 서버에 올려 `deploy.sh` 실행. 포트는 `APP_PORT` 변수 하나로 정함
-- **설정** 앱 포트 기본값 8340 (학교 서버에서 받은 8340~8349의 첫 번호, `APP_PORT` 변수로 바꿀 수 있음)
+- **설정** 앱 포트 기본값 8340 (학교 서버에서 받은 8340~8349의 첫 번호). 배포 설정과 `deploy.sh` 둘 다, `APP_PORT`로 바꿀 수 있음
 - **문서** [도커-배포.md](docs/05-guides/도커-배포.md) 새로 씀, docs/README·app/README·배포-계획
 
 ### 소스코드와 문서 폴더 나누기 ([PR #3](https://github.com/blogNM/blogproject/pull/3))

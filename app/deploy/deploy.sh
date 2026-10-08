@@ -4,7 +4,8 @@
 #   bash deploy.sh <이미지 파일(.tar.gz)>
 #
 # 받는 환경변수 (GitHub 시크릿·변수에서 넘어옴)
-#   꼭: APP_PORT, DB_ADDRESS, DB_PORT, DB_NAME, DB_USERNAME, DB_PASSWORD
+#   APP_PORT (기본 8340)
+#   꼭: DB_ADDRESS, DB_PORT, DB_NAME, DB_USERNAME, DB_PASSWORD
 #   선택: APP_BASE_URL, MAIL_USERNAME, MAIL_PASSWORD, ADMIN_INITIAL_LOGIN_ID, ADMIN_INITIAL_PASSWORD,
 #         TURNSTILE_SITE_KEY, TURNSTILE_SECRET_KEY, COOKIE_SECURE, JAVA_OPTS
 #
@@ -15,13 +16,14 @@
 set -euo pipefail
 
 IMAGE_FILE="${1:?이미지 파일 경로를 넘겨 주세요}"
+APP_PORT="${APP_PORT:-8340}"
 APP_NAME="${APP_NAME:-creat-blog}"
 APP_HOME="${APP_HOME:-$HOME/creat-blog}"
 IMAGE="${APP_NAME}:latest"
 DOCKER="${DOCKER:-docker}"
 
 need() { [ -n "${!1:-}" ] || { echo "환경변수 $1 이(가) 비어 있습니다. GitHub 시크릿을 확인해 주세요." >&2; exit 1; }; }
-for v in APP_PORT DB_ADDRESS DB_PORT DB_NAME DB_USERNAME DB_PASSWORD; do need "$v"; done
+for v in DB_ADDRESS DB_PORT DB_NAME DB_USERNAME DB_PASSWORD; do need "$v"; done
 case "$APP_PORT" in ''|*[!0-9]*) echo "APP_PORT는 숫자여야 합니다." >&2; exit 1 ;; esac
 
 if ! $DOCKER info >/dev/null 2>&1; then
