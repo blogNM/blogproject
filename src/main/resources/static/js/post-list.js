@@ -1,6 +1,7 @@
 // 블로그 안 글 목록 (BRD-02·03·04). 사용자 입력(제목·닉네임·카테고리·태그)은 모두 textContent로 넣는다 (SEC-06).
 import { api } from './api.js';
 import { el } from './layout.js';
+import { renderPager } from './pager.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -96,22 +97,12 @@ export async function initPostList(blog, key) {
       li.append(tags);
     }
     li.append(el('p', { class: 'muted' },
-      `${p.authorName} · ${p.createdAt} · 조회 ${p.views} · 공감 ${p.likes} · 댓글 ${p.comments}`));
+      `${p.authorName} · ${p.createdAt} · 조회 ${p.views} · 좋아요 ${p.likes} · 댓글 ${p.comments}`));
     return li;
   }
 
-  function renderPager(current, totalPages) {
-    const pager = $('post-pager');
-    pager.replaceChildren();
-    if (totalPages <= 1) return;
-    const start = Math.max(1, current - 4);
-    const end = Math.min(totalPages, start + 9);
-    for (let p = start; p <= end; p++) {
-      const b = el('button', { type: 'button', class: p === current ? 'page active' : 'page' }, String(p));
-      if (p === current) b.setAttribute('aria-current', 'page');
-      b.addEventListener('click', () => { state.page = p; load(); });
-      pager.append(b);
-    }
+  function showPager(current, totalPages) {
+    renderPager($('post-pager'), current, totalPages, (p) => { state.page = p; load(); });
   }
 
   async function load() {
@@ -141,7 +132,7 @@ export async function initPostList(blog, key) {
     $('post-list').replaceChildren(...(res.items.length
       ? res.items.map(postItem)
       : [el('li', { class: 'muted empty-row' }, state.category || state.tag ? '이 조건에 맞는 글이 없습니다.' : '아직 글이 없습니다.')]));
-    renderPager(res.page, res.totalPages);
+    showPager(res.page, res.totalPages);
   }
 
   $('posts-section').hidden = false;

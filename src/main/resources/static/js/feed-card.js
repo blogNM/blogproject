@@ -26,13 +26,4 @@ export function feedCard(p) {
 }
 
 /** 번호 페이지 (D-76). */
-export function renderPager(pager, current, total, go) {
-  pager.replaceChildren();
-  if (total <= 1) return;
-  for (let p = 1; p <= total; p += 1) {
-    const b = el('button', { type: 'button', class: p === current ? 'page active' : 'page' }, String(p));
-    if (p === current) b.setAttribute('aria-current', 'page');
-    b.addEventListener('click', () => go(p));
-    pager.append(b);
-  }
-}
+export { renderPager } from './pager.js';
