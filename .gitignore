@@ -8,3 +8,4 @@ out/
 .env
 backups/
 data/
+backup-*.sql
