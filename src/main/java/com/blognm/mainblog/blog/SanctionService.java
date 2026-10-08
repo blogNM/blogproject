@@ -131,8 +131,8 @@ public class SanctionService {
      * 신고에서 시작했으면 reportId를 남긴다.
      */
     @Transactional
-    public Result sanction(String slug, long actorId, long memberId, Action action, Duration duration, String rawReason,
-            Long reportId) {
+    public Result sanction(String slug, long actorId, long memberId, Action action, Duration duration,
+            SanctionReason code, String rawReason, Long reportId) {
         long blogId = blogId(slug);
         if (memberId == actorId) {
             throw ApiException.badRequest("SELF_SANCTION", "자기 자신은 제재할 수 없습니다.");
@@ -150,8 +150,11 @@ public class SanctionService {
         if (action == null) {
             throw ApiException.badRequest("INVALID_ACTION", "조치를 골라 주세요.");
         }
+        // 정지 풀기 말고는 사유 항목을 꼭 고른다 (D-95)
+        SanctionReason why = action == Action.LIFT ? null : SanctionReason.require(code);
+        String whyText = why == null ? null : "사유: " + why.label;
         switch (action) {
-            case WARNING -> notifications.blog(memberId, Type.MEMBER_WARNED, blogId, actorId, null);
+            case WARNING -> notifications.blog(memberId, Type.MEMBER_WARNED, blogId, actorId, whyText);
             case SUSPEND -> {
                 if (duration == null) {
                     throw ApiException.badRequest("INVALID_DURATION", "정지 기간을 골라 주세요.");
@@ -160,7 +163,7 @@ public class SanctionService {
                 jdbc.update("UPDATE blog_memberships SET suspended_until = ? WHERE blog_id = ? AND member_id = ?",
                         until, blogId, memberId);
                 notifications.blog(memberId, Type.MEMBER_SUSPENDED, blogId, actorId,
-                        duration == Duration.FOREVER ? "영구" : untilText(until) + "까지");
+                        (duration == Duration.FOREVER ? "영구" : untilText(until) + "까지") + " · " + whyText);
             }
             case LIFT -> {
                 if (t.suspendedUntil() == null || !t.suspendedUntil().isAfter(now)) {
@@ -170,13 +173,14 @@ public class SanctionService {
                         blogId, memberId);
                 notifications.blog(memberId, Type.MEMBER_UNSUSPENDED, blogId, actorId, null);
             }
-            case KICK -> kick(blogId, memberId, actorId, now);
+            case KICK -> kick(blogId, memberId, actorId, now, whyText);
         }
         jdbc.update("""
-                INSERT INTO member_sanctions (blog_id, member_id, actor_id, report_id, type, duration, reason, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO member_sanctions (blog_id, member_id, actor_id, report_id, type, duration, reason_code, reason,
+                       created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, blogId, memberId, actorId, reportId, action.name(),
-                action == Action.SUSPEND ? duration.name() : null, reason, now);
+                action == Action.SUSPEND ? duration.name() : null, why == null ? null : why.name(), reason, now);
         int suspensions = count("""
                 SELECT COUNT(*) FROM member_sanctions WHERE blog_id = ? AND member_id = ? AND type = 'SUSPEND'
                   AND created_at >= ?""", blogId, memberId, now.minusYears(1));
@@ -187,7 +191,7 @@ public class SanctionService {
      * 강제 퇴장: 멤버에서 빼고 글은 "탈퇴한 계정"으로, 이름·이메일·전화번호는 해시로만 블랙리스트에 남긴다 (BLG-11, D-33, D-34).
      * 다시 들어오려면 해제 문의(BLG-12)를 거쳐야 한다.
      */
-    private void kick(long blogId, long memberId, long actorId, LocalDateTime now) {
+    private void kick(long blogId, long memberId, long actorId, LocalDateTime now, String whyText) {
         jdbc.update("""
                 UPDATE blog_memberships SET status = 'KICKED', role = 'MEMBER', left_at = ?, suspended_until = NULL,
                        perm_edit_info = FALSE, perm_manage_members = FALSE, perm_manage_posts = FALSE, sub_owner_since = NULL
@@ -201,22 +205,30 @@ public class SanctionService {
                     """, blogId, memberId, hash(normalizeName(rs.getString("name"))),
                     hash(normalizeEmail(rs.getString("email"))), hash(normalizePhone(rs.getString("phone"))), now);
         }, memberId);
-        notifications.blog(memberId, Type.MEMBER_KICKED, blogId, actorId, null);
+        notifications.blog(memberId, Type.MEMBER_KICKED, blogId, actorId, whyText);
     }
 
-    /** 이 블로그에서 받은 경고·정지·강제 퇴장 기록. 최근 1년 (D-60). */
+    /** 이 블로그에서 받은 경고·정지·강제 퇴장 기록. 최근 1년 (D-60). code를 주면 그 사유 항목만 (D-95). */
     @Transactional(readOnly = true)
-    public List<SanctionRow> history(String slug) {
+    public List<SanctionRow> history(String slug, SanctionReason code) {
         long blogId = blogId(slug);
+        List<Object> args = new java.util.ArrayList<>(List.of(blogId, LocalDateTime.now(clock).minusYears(1)));
+        String filter = "";
+        if (code != null) {
+            filter = " AND s.reason_code = ?";
+            args.add(code.name());
+        }
         return jdbc.query("""
-                SELECT s.id, s.type, s.duration, s.reason, s.created_at, s.report_id, t.nickname AS target, a.nickname AS actor
+                SELECT s.id, s.type, s.duration, s.reason_code, s.reason, s.created_at, s.report_id,
+                       t.nickname AS target, a.nickname AS actor
                 FROM member_sanctions s JOIN members t ON t.id = s.member_id JOIN members a ON a.id = s.actor_id
-                WHERE s.blog_id = ? AND s.created_at >= ? ORDER BY s.created_at DESC, s.id DESC LIMIT 100
-                """, (rs, i) -> new SanctionRow(rs.getLong("id"), rs.getString("type"),
+                WHERE s.blog_id = ? AND s.created_at >= ?""" + filter + " ORDER BY s.created_at DESC, s.id DESC LIMIT 100",
+                (rs, i) -> new SanctionRow(rs.getLong("id"), rs.getString("type"),
                 rs.getString("duration") == null ? null : Duration.valueOf(rs.getString("duration")).label,
+                rs.getString("reason_code"), SanctionReason.labelOf(rs.getString("reason_code")),
                 rs.getString("reason"), rs.getObject("created_at", LocalDateTime.class).format(DATE_TIME),
                 rs.getString("target"), rs.getString("actor"), rs.getObject("report_id", Long.class) != null),
-                blogId, LocalDateTime.now(clock).minusYears(1));
+                args.toArray());
     }
 
     // ----- 블랙리스트 (BLG-11, BLG-12) -----
@@ -404,7 +416,8 @@ public class SanctionService {
     public record Result(String action, int suspensions, boolean kickSuggested) {
     }
 
-    public record SanctionRow(long id, String type, String duration, String reason, String createdAt, String target,
+    public record SanctionRow(long id, String type, String duration, String reasonCode, String reasonLabel,
+            String reason, String createdAt, String target,
             String actor, boolean fromReport) {
     }
 

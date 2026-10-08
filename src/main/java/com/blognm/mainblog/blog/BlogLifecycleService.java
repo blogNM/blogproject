@@ -315,16 +315,19 @@ public class BlogLifecycleService {
      * @return 이번 경고를 포함한 최근 1년 경고 수
      */
     @Transactional
-    public OwnerWarning warnOwner(long blogId, long adminId, String reason, Long reportId) {
+    public OwnerWarning warnOwner(long blogId, long adminId, SanctionReason code, String reason, Long reportId) {
+        SanctionReason why = SanctionReason.require(code);
         BlogRow b = lockBlog(blogId);
         LocalDateTime now = LocalDateTime.now(clock);
         jdbc.update("""
-                INSERT INTO owner_warnings (blog_id, member_id, admin_id, report_id, reason, created_at) VALUES (?, ?, ?, ?, ?, ?)
-                """, blogId, b.ownerId(), adminId, reportId, SanctionService.reason(reason), now);
+                INSERT INTO owner_warnings (blog_id, member_id, admin_id, report_id, reason_code, reason, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """, blogId, b.ownerId(), adminId, reportId, why.name(), SanctionService.reason(reason), now);
         Integer n = jdbc.queryForObject("SELECT COUNT(*) FROM owner_warnings WHERE blog_id = ? AND member_id = ? AND created_at >= ?",
                 Integer.class, blogId, b.ownerId(), now.minusYears(1));
         int count = n == null ? 0 : n;
-        notifications.blog(b.ownerId(), Type.OWNER_WARNED, blogId, null, count + "/" + OWNER_WARNING_LIMIT);
+        notifications.blog(b.ownerId(), Type.OWNER_WARNED, blogId, null,
+                count + "/" + OWNER_WARNING_LIMIT + " · 사유: " + why.label);
         boolean kicked = false;
         if (count >= OWNER_WARNING_LIMIT) {
             kickOwner(b);

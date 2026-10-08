@@ -11,12 +11,13 @@ export async function mount(panel) {
 
   function actions(b) {
     const box = el('div', { class: 'adm-actions' });
-    const post = (action) => (reason) => api.post(`/api/admin/blogs/${b.id}/${action}`, { reason });
+    const post = (action) => (answer) => api.post(`/api/admin/blogs/${b.id}/${action}`,
+      typeof answer === 'string' ? { reason: answer } : { reason: answer.reason, reasonCode: answer.code });
     const name = `"${b.name}"`;
 
     const hide = button(b.hidden ? '숨김 풀기' : '숨기기', '', () => act(hide,
       { title: `${name} ${b.hidden ? '숨김 풀기' : '숨기기'}`,
-        message: b.hidden ? '다시 목록과 검색에 보입니다.' : '메인 목록과 검색에서 빠집니다. 주소로는 들어갈 수 있습니다.' },
+        message: b.hidden ? '다시 목록과 검색에 보입니다.' : '목록·검색·피드에서 빠지고, 멤버가 아니면 주소로도 들어갈 수 없습니다. 블로그장에게 알림이 갑니다.' },
       post(b.hidden ? 'unhide' : 'hide'),
       async () => { toast(b.hidden ? '숨김을 풀었습니다.' : '숨겼습니다.'); await load(); }));
 
@@ -28,7 +29,7 @@ export async function mount(panel) {
 
     const warn = button('블로그장 경고', '', () => act(warn,
       { title: `${b.ownerNickname || '블로그장'}님에게 경고`,
-        message: `지금 경고 ${b.ownerWarnings}/3. 3번이 되면 블로그장에서 강퇴됩니다.`, danger: b.ownerWarnings >= 2, okText: '경고' },
+        message: `지금 경고 ${b.ownerWarnings}/3. 3번이 되면 블로그장에서 강퇴됩니다.`, danger: b.ownerWarnings >= 2, okText: '경고', withCode: true },
       post('warn-owner'),
       async (r) => { toast(r.kicked ? `경고 ${r.warnings}/3. 블로그장이 강퇴되었습니다.` : `경고 ${r.warnings}/3`); await load(); }));
 

@@ -1,4 +1,5 @@
 // 관리자 화면 공통 도구. 사용자 입력은 모두 textContent로 넣는다 (SEC-06).
+import { SANCTION_REASONS } from '../sanction-reasons.js';
 import { el, toast } from '../layout.js';
 
 export { el, toast };
@@ -124,8 +125,17 @@ const dialog = document.getElementById('reason-dialog');
  * 조치 전에 사유를 받는다. 취소하면 null, 확인하면 사유(빈 문자열일 수 있음).
  * danger면 확인 단추를 빨갛게 하고 되돌리기 어렵다는 말을 붙인다.
  */
-export function askReason({ title, message, danger = false, okText = '확인', withReason = true }) {
+export function askReason({ title, message, danger = false, okText = '확인', withReason = true, withCode = false }) {
   const input = document.getElementById('reason-input');
+  // 제재 사유 항목 (D-95). withCode면 {code, reason}을 돌려준다.
+  const codeBox = document.getElementById('reason-code-box');
+  const code = document.getElementById('reason-code');
+  codeBox.hidden = !withCode;
+  if (code.options.length === 0) {
+    code.append(el('option', { value: '' }, '제재 사유 고르기'),
+      ...SANCTION_REASONS.map(([v, text]) => el('option', { value: v }, text)));
+  }
+  code.value = '';
   input.hidden = !withReason;
   document.querySelector('label[for=reason-input]').hidden = !withReason;
   const ok = document.getElementById('reason-ok');
@@ -148,7 +158,14 @@ export function askReason({ title, message, danger = false, okText = '확인', w
     };
     const onSubmit = (e) => {
       e.preventDefault();
-      finish(input.value.trim());
+      if (withCode && !code.value) {
+        msg.hidden = false;
+        msg.className = 'adm-dialog-warn';
+        msg.textContent = '제재 사유를 골라 주세요.';
+        code.focus();
+        return;
+      }
+      finish(withCode ? { code: code.value, reason: input.value.trim() } : input.value.trim());
     };
     const onCancel = () => finish(null);
     const onClose = () => finish(null);

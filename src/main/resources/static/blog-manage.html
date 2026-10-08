@@ -82,6 +82,7 @@
           <button type="button" class="tab active" data-status="PENDING" role="tab">처리 대기<span class="count" id="reports-pending-count"></span></button>
           <button type="button" class="tab" data-status="DONE" role="tab">처리 완료</button>
         </div>
+        <div id="report-reasons" class="tabs reason-chips" role="group" aria-label="제재 사유별로 보기" hidden></div>
         <ul id="reports" class="plain-list"></ul>
         <nav id="reports-pager" class="pager" aria-label="신고 쪽"></nav>
       </section>
@@ -89,6 +90,7 @@
       <section class="card" id="sanctions-section" hidden>
         <h2 class="section-title">제재 기록</h2>
         <p class="hint">누가 언제 누구에게 어떤 조치를 했는지 1년 동안 남겨요.</p>
+        <select id="sanction-reason-filter" class="reason-filter" aria-label="제재 사유로 거르기"></select>
         <ul id="sanctions" class="plain-list"></ul>
       </section>
 

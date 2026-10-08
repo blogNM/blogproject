@@ -183,6 +183,7 @@ erDiagram
         bigint report_id FK "신고에서 시작했으면"
         enum type "WARNING, SUSPEND, LIFT, KICK"
         enum duration "D3, D14, D30, FOREVER"
+        enum reason_code "제재 사유 항목 (D-95, V8)"
         varchar reason
         datetime created_at "최근 1년 정지 3번이면 표시 (D-87)"
     }
@@ -401,6 +402,7 @@ erDiagram
         varchar detail
         enum status "PENDING, DONE"
         enum result "NONE, WARNING, SUSPEND, KICK, OWNER_WARNING, OWNER_KICK, BLOG_CLOSE"
+        enum sanction_reason "제재 사유 항목, 문제 없음이면 NULL (D-95, V8)"
         bigint processed_by_member_id FK "블로그장이 처리하면"
         bigint processed_by_admin_id FK "관리자가 처리하면"
         datetime processed_at
@@ -475,6 +477,7 @@ erDiagram
         bigint member_id FK "경고받은 블로그장"
         bigint admin_id FK
         bigint report_id FK "신고에서 시작했으면"
+        enum reason_code "제재 사유 항목 (D-95, V8)"
         varchar reason
         datetime created_at "블로그별 최근 1년 3번이면 권한 박탈 (D-87)"
     }

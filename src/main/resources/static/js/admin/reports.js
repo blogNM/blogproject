@@ -1,6 +1,7 @@
 // 신고 처리 (ADM-04). 기다리는 신고는 결과·사유를 골라 처리한다.
 import { api } from '../api.js';
 import { renderPager } from '../pager.js';
+import { SANCTION_REASONS, sanctionReasonSelect } from '../sanction-reasons.js';
 import { TARGET_TYPE, askReason, badge, blogLink, el, errorLine, filter, label, link, query, showError } from './common.js';
 
 const RESULTS = [
@@ -16,6 +17,7 @@ const CONFIRM = {
 
 let status = 'PENDING';
 let page = 1;
+let reasonFilter = '';
 
 function processBox(r, reload) {
   const box = el('div', { class: 'adm-process' });
@@ -23,12 +25,21 @@ function processBox(r, reload) {
   RESULTS.filter(([v]) => r.blogSlug || v === 'NONE').forEach(([v, text]) => {
     select.append(el('option', { value: v }, text));
   });
+  // 조치를 고르면 제재 사유 항목도 고른다 (D-95). 신고 사유와 같은 항목을 먼저 골라 둔다.
+  const code = sanctionReasonSelect(r.reason, 'adm-select');
+  code.hidden = true;
+  select.addEventListener('change', () => { code.hidden = select.value === 'NONE'; });
   const reason = el('input', { type: 'text', maxlength: '200', placeholder: '처리 사유 (200자까지)', 'aria-label': '처리 사유' });
   const go = el('button', { type: 'button', class: 'adm-go' }, '처리');
   const msg = el('p', { class: 'adm-error', role: 'alert' });
   go.addEventListener('click', async () => {
     msg.textContent = '';
     const result = select.value;
+    if (result !== 'NONE' && !code.value) {
+      msg.textContent = '제재 사유를 골라 주세요.';
+      code.focus();
+      return;
+    }
     if (CONFIRM[result]) {
       const name = r.blogName ? `"${r.blogName}" ` : '';
       const ok = await askReason({
@@ -42,14 +53,16 @@ function processBox(r, reload) {
     }
     go.disabled = true;
     try {
-      await api.post(`/api/admin/reports/${r.id}`, { result, reason: reason.value.trim() });
+      await api.post(`/api/admin/reports/${r.id}`, {
+        result, sanctionReason: result === 'NONE' ? null : code.value, reason: reason.value.trim(),
+      });
       await reload();
     } catch (err) {
       showError(err, msg);
       go.disabled = false;
     }
   });
-  box.append(select, reason, go);
+  box.append(select, code, reason, go);
   const wrap = el('div');
   wrap.append(box, msg);
   return wrap;
@@ -64,6 +77,7 @@ function reportItem(r, reload) {
   if (r.targetGone) badges.append(badge('이미 지워짐·숨겨짐', 'adm-grey'));
   if (r.sameTargetPending > 1) badges.append(badge(`같은 대상 신고 ${r.sameTargetPending}건`, 'adm-bad'));
   if (r.status !== 'PENDING' && r.resultLabel) badges.append(badge(r.resultLabel, 'adm-ok'));
+  if (r.sanctionReasonLabel) badges.append(badge('제재 사유: ' + r.sanctionReasonLabel, 'adm-bad'));
   head.append(badges, el('span', { class: 'adm-report-time' }, r.createdAt));
 
   const summary = el('p', { class: 'adm-report-summary' });
@@ -90,7 +104,7 @@ export async function mount(panel, ctx) {
   async function load() {
     let data;
     try {
-      data = await api.get('/api/admin/reports' + query({ status, page }));
+      data = await api.get('/api/admin/reports' + query({ status, page, reason: status === 'DONE' ? reasonFilter : '' }));
     } catch (err) {
       panel.replaceChildren(errorLine(err));
       return;
@@ -103,8 +117,21 @@ export async function mount(panel, ctx) {
     toolbar.append(filter([['PENDING', '기다리는 신고'], ['DONE', '처리한 신고']], status, (v) => {
       status = v;
       page = 1;
+      reasonFilter = '';
       load();
     }));
+    // 처리한 신고는 제재 사유 항목으로 나눠 본다 (D-95)
+    if (status === 'DONE') {
+      const counts = data.reasonCounts || {};
+      const all = Object.values(counts).reduce((a, b) => a + b, 0);
+      const options = [['', `전체 ${all}`], ...SANCTION_REASONS.filter(([v]) => counts[v])
+        .map(([v, text]) => [v, `${text} ${counts[v]}`])];
+      toolbar.append(filter(options, reasonFilter, (v) => {
+        reasonFilter = v;
+        page = 1;
+        load();
+      }));
+    }
     const list = el('ul', { class: 'adm-reports' });
     if (data.items.length === 0) {
       list.append(el('li', { class: 'adm-card adm-empty' }, status === 'PENDING' ? '기다리는 신고가 없습니다.' : '처리한 신고가 없습니다.'));

@@ -1,5 +1,6 @@
 // 관리자 화면 (005 ADM). 탭은 주소의 # 로 고른다 (#stats, #reports …).
 import { api } from '../api.js';
+import { addPasswordToggles } from '../layout.js';
 import { PASSWORD_MESSAGE, PASSWORD_RULE } from '../rules.js';
 import { el, handleAuthError, showError } from './common.js';
 import * as stats from './stats.js';
@@ -52,6 +53,7 @@ $('logout').addEventListener('click', async () => {
 // ----- 임시 비밀번호 바꾸기 (추천안 #16) -----
 function showPasswordForm() {
   $('password-panel').hidden = false;
+  addPasswordToggles();
   $('password-rule').textContent = PASSWORD_MESSAGE;
   const form = $('password-form');
   const errorBox = $('password-error');

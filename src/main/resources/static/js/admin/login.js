@@ -1,5 +1,8 @@
 // 관리자 로그인 (ADM-01). 회원 로그인과 따로 쓴다.
 import { api } from '../api.js';
+import { addPasswordToggles } from '../layout.js';
+
+addPasswordToggles();
 
 const form = document.getElementById('login-form');
 const errorBox = document.getElementById('error');

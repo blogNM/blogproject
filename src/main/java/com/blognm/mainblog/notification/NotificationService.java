@@ -227,10 +227,10 @@ public class NotificationService {
             case "BLOG_CLOSING_KICK" -> new Text("블로그장 권한 박탈로 인한 폐쇄 조치: " + blog + " 블로그가 " + d
                     + " 04:00에 폐쇄됩니다.", blogLink);
             case "BLOG_CLOSE_CANCELLED" -> new Text(blog + " 블로그 폐쇄가 철회되었습니다.", blogLink);
-            case "MEMBER_WARNED" -> new Text(blog + " 블로그에서 경고를 받았습니다.", blogLink);
+            case "MEMBER_WARNED" -> new Text(blog + " 블로그에서 경고를 받았습니다" + (d.isEmpty() ? "." : " (" + d + ")."), blogLink);
             case "MEMBER_SUSPENDED" -> new Text(blog + " 블로그에서 활동이 정지되었습니다 (" + d + ").", null);
             case "MEMBER_UNSUSPENDED" -> new Text(blog + " 블로그의 활동 정지가 풀렸습니다.", blogLink);
-            case "MEMBER_KICKED" -> new Text(blog + " 블로그에서 강제 퇴장되었습니다.", null);
+            case "MEMBER_KICKED" -> new Text(blog + " 블로그에서 강제 퇴장되었습니다" + (d.isEmpty() ? "." : " (" + d + ")."), null);
             case "OWNER_WARNED" -> new Text(blog + " 블로그장으로서 운영 경고를 받았습니다 (" + d + "). 3번이면 블로그장 권한이 박탈됩니다.", blogLink);
             case "OWNER_KICKED" -> new Text(blog + " 블로그의 블로그장 권한이 박탈되었습니다. 일반 멤버로 남습니다.", blogLink);
             case "BLOG_HIDDEN" -> new Text("운영 정책에 따라 " + blog + " 블로그가 숨겨졌습니다. 멤버만 볼 수 있습니다.", blogLink);

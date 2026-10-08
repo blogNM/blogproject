@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.blognm.mainblog.auth.AdminPrincipal;
 import com.blognm.mainblog.auth.AuthCookies;
 import com.blognm.mainblog.blog.BlogLifecycleService;
+import com.blognm.mainblog.blog.SanctionReason;
 import com.blognm.mainblog.common.ApiException;
 import com.blognm.mainblog.common.ClientIp;
 import com.blognm.mainblog.report.ReportReviewService;
@@ -133,7 +134,8 @@ public class AdminController {
                 yield Map.of("closeAt", closeAt);
             }
             case "warn-owner" -> {
-                BlogLifecycleService.OwnerWarning w = lifecycle.warnOwner(id, adminId, reason, null);
+                BlogLifecycleService.OwnerWarning w = lifecycle.warnOwner(id, adminId, body == null ? null : body.reasonCode(),
+                        reason, null);
                 adminLog.write(adminId, AdminLog.Action.WARN, "BLOG", id, reason);
                 if (w.kicked()) {
                     adminLog.write(adminId, AdminLog.Action.KICK, "BLOG", id, "경고 " + w.count() + "번");
@@ -181,8 +183,8 @@ public class AdminController {
 
     @GetMapping("/reports")
     public ReportReviewService.Page reports(@RequestParam(defaultValue = "PENDING") String status,
-            @RequestParam(defaultValue = "1") int page) {
-        return reports.forAdmin(!"DONE".equals(status), page);
+            @RequestParam(required = false) SanctionReason reason, @RequestParam(defaultValue = "1") int page) {
+        return reports.forAdmin(!"DONE".equals(status), reason, page);
     }
 
     @PostMapping("/reports/{id}")
@@ -195,7 +197,7 @@ public class AdminController {
         } catch (RuntimeException e) {
             throw ApiException.badRequest("INVALID_RESULT", "처리 결과를 골라 주세요.");
         }
-        String done = reports.processByAdmin(id, me.adminId(), result, body.reason());
+        String done = reports.processByAdmin(id, me.adminId(), result, body.sanctionReason(), body.reason());
         adminLog.write(me.adminId(), AdminLog.Action.REPORT, "REPORT", id, result.name()
                 + (body.reason() == null || body.reason().isBlank() ? "" : ": " + body.reason().strip()));
         return Map.of("result", done);
@@ -242,9 +244,9 @@ public class AdminController {
     public record CreateAdminBody(String loginId, String name, String tempPassword) {
     }
 
-    public record ReasonBody(String reason) {
+    public record ReasonBody(String reason, SanctionReason reasonCode) {
     }
 
-    public record ReportBody(String result, String reason) {
+    public record ReportBody(String result, SanctionReason sanctionReason, String reason) {
     }
 }

@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.blognm.mainblog.blog.BlogLifecycleService;
+import com.blognm.mainblog.blog.SanctionReason;
 import com.blognm.mainblog.blog.SanctionService;
 import com.blognm.mainblog.common.ApiException;
 import com.blognm.mainblog.notification.NotificationWriter;
@@ -56,24 +57,42 @@ public class ReportReviewService {
 
     /** 블로그장 화면: 그 블로그로 접수된 신고만. 관리자에게 간 신고(블로그장 관련)는 보이지 않는다 (US2-2). */
     @Transactional(readOnly = true)
-    public Page forBlog(String slug, boolean pending, int page) {
+    public Page forBlog(String slug, boolean pending, SanctionReason code, int page) {
         MapSqlParameterSource p = new MapSqlParameterSource("slug", slug);
-        return list(" r.handler = 'BLOG_OWNER' AND r.blog_id = (SELECT id FROM blogs WHERE slug = :slug)", pending, page, p);
+        return list(" r.handler = 'BLOG_OWNER' AND r.blog_id = (SELECT id FROM blogs WHERE slug = :slug)", pending, code,
+                page, p);
     }
 
     /** 메인 관리자 화면: 관리자에게 접수된 신고만. 블로그 안의 일반 멤버 신고는 보이지 않는다. */
     @Transactional(readOnly = true)
-    public Page forAdmin(boolean pending, int page) {
-        return list(" r.handler = 'ADMIN'", pending, page, new MapSqlParameterSource());
+    public Page forAdmin(boolean pending, SanctionReason code, int page) {
+        return list(" r.handler = 'ADMIN'", pending, code, page, new MapSqlParameterSource());
     }
 
-    private Page list(String where, boolean pending, int page, MapSqlParameterSource p) {
-        String w = " WHERE" + where + " AND r.status = " + (pending ? "'PENDING'" : "'DONE'");
+    /**
+     * 처리한 신고는 제재 사유 항목으로 나눠 본다 (D-95). reasonCounts는 항목별 건수. NONE은 문제 없음,
+     * UNSET은 사유 항목이 생기기 전에 처리한 제재.
+     */
+    private Page list(String where, boolean pending, SanctionReason code, int page, MapSqlParameterSource p) {
+        String base = " WHERE" + where + " AND r.status = " + (pending ? "'PENDING'" : "'DONE'");
+        Map<String, Integer> counts = new java.util.LinkedHashMap<>();
+        if (!pending) {
+            jdbc.query("SELECT CASE WHEN r.result = 'NONE' THEN 'NONE' ELSE COALESCE(r.sanction_reason, 'UNSET') END AS k,"
+                    + " COUNT(*) AS n FROM reports r" + base
+                    + " GROUP BY k", p, rs -> {
+                        counts.put(rs.getString("k"), rs.getInt("n"));
+                    });
+        }
+        String w = base;
+        if (!pending && code != null) {
+            w += " AND r.sanction_reason = :code";
+            p.addValue("code", code.name());
+        }
         Long total = jdbc.queryForObject("SELECT COUNT(*) FROM reports r" + w, p, Long.class);
         int current = Math.max(page, 1);
         p.addValue("size", PAGE_SIZE).addValue("offset", (current - 1) * PAGE_SIZE);
         List<Item> items = jdbc.query("""
-                SELECT r.id, r.target_type, r.target_id, r.reason_code, r.detail, r.status, r.result, r.created_at,
+                SELECT r.id, r.target_type, r.target_id, r.reason_code, r.detail, r.status, r.result, r.sanction_reason, r.created_at,
                        r.processed_at, b.slug, b.name AS blog_name, b.owner_id,
                        CASE r.target_type
                          WHEN 'MEMBER' THEN r.target_id
@@ -117,11 +136,12 @@ public class ReportReviewService {
                             rs.getString("detail"), rs.getObject("created_at", LocalDateTime.class).format(DATE_TIME),
                             rs.getString("status"), rs.getString("result"),
                             rs.getString("result") == null ? null : RESULT_LABEL.get(rs.getString("result")),
+                            rs.getString("sanction_reason"), SanctionReason.labelOf(rs.getString("sanction_reason")),
                             processed == null ? null : processed.format(DATE_TIME), slug, rs.getString("blog_name"),
                             rs.getInt("same_target"));
                 });
         long count = total == null ? 0 : total;
-        return new Page(items, current, (int) ((count + PAGE_SIZE - 1) / PAGE_SIZE), count);
+        return new Page(items, current, (int) ((count + PAGE_SIZE - 1) / PAGE_SIZE), count, counts);
     }
 
     private String nickname(long memberId) {
@@ -134,7 +154,7 @@ public class ReportReviewService {
     /** 블로그장이 처리한다. 경고·정지·강제 퇴장은 신고된 사람(글·댓글이면 그 작성자)에게 한다. */
     @Transactional
     public void processByOwner(String slug, long reportId, long actorId, OwnerResult result,
-            SanctionService.Duration duration, String reason) {
+            SanctionService.Duration duration, SanctionReason code, String reason) {
         Report r = lock(reportId);
         Long blogId = jdbc.queryForObject("SELECT id FROM blogs WHERE slug = :slug", Map.of("slug", slug), Long.class);
         if (!"BLOG_OWNER".equals(r.handler()) || r.blogId() == null || !r.blogId().equals(blogId)) {
@@ -146,15 +166,15 @@ public class ReportReviewService {
         }
         if (result != OwnerResult.NONE) {
             long target = authorOf(r);
-            sanctions.sanction(slug, actorId, target, SanctionService.Action.valueOf(result.name()), duration, reason,
-                    reportId);
+            sanctions.sanction(slug, actorId, target, SanctionService.Action.valueOf(result.name()), duration,
+                    SanctionReason.require(code), reason, reportId);
         }
-        finish(r, result.name(), actorId, null);
+        finish(r, result.name(), result == OwnerResult.NONE ? null : code, actorId, null);
     }
 
     /** 메인 관리자가 처리한다. 블로그장 경고·권한 박탈·블로그 폐쇄는 신고가 걸린 블로그에 한다. */
     @Transactional
-    public String processByAdmin(long reportId, long adminId, AdminResult result, String reason) {
+    public String processByAdmin(long reportId, long adminId, AdminResult result, SanctionReason code, String reason) {
         Report r = lock(reportId);
         if (!"ADMIN".equals(r.handler())) {
             throw notFound();
@@ -166,22 +186,26 @@ public class ReportReviewService {
         if (result != AdminResult.NONE && r.blogId() == null) {
             throw ApiException.badRequest("NO_BLOG", "블로그와 관계없는 신고는 '문제 없음'으로만 처리합니다. 글·댓글은 따로 숨기거나 지울 수 있습니다.");
         }
+        if (result != AdminResult.NONE) {
+            SanctionReason.require(code);
+        }
         switch (result) {
-            case OWNER_WARNING -> lifecycle.warnOwner(r.blogId(), adminId, reason, reportId);
+            case OWNER_WARNING -> lifecycle.warnOwner(r.blogId(), adminId, code, reason, reportId);
             case OWNER_KICK -> lifecycle.kickOwner(r.blogId());
             case BLOG_CLOSE -> lifecycle.closeByAdmin(r.blogId());
             case NONE -> {
             }
         }
-        finish(r, result.name(), null, adminId);
+        finish(r, result.name(), result == AdminResult.NONE ? null : code, null, adminId);
         return result.name();
     }
 
-    private void finish(Report r, String result, Long memberId, Long adminId) {
+    private void finish(Report r, String result, SanctionReason code, Long memberId, Long adminId) {
         jdbc.update("""
-                UPDATE reports SET status = 'DONE', result = :result, processed_by_member_id = :member,
+                UPDATE reports SET status = 'DONE', result = :result, sanction_reason = :code, processed_by_member_id = :member,
                        processed_by_admin_id = :admin, processed_at = :now WHERE id = :id
-                """, new MapSqlParameterSource("result", result).addValue("member", memberId).addValue("admin", adminId)
+                """, new MapSqlParameterSource("result", result).addValue("code", code == null ? null : code.name())
+                .addValue("member", memberId).addValue("admin", adminId)
                 .addValue("now", LocalDateTime.now(clock)).addValue("id", r.id()));
         notifications.reportResult(r.reporterId(), r.blogId(), r.id(), RESULT_LABEL.get(result));
     }
@@ -221,10 +245,11 @@ public class ReportReviewService {
     /** targetGone: 신고된 글·댓글이 이미 지워졌거나 숨겨짐. byOwner: 신고된 사람이 그 블로그의 블로그장. */
     public record Item(long id, String targetType, long targetId, String summary, boolean targetGone, String link,
             Long authorId, String authorNickname, boolean byOwner, String reason, String reasonLabel, String detail,
-            String createdAt, String status, String result, String resultLabel, String processedAt, String blogSlug,
+            String createdAt, String status, String result, String resultLabel, String sanctionReason,
+            String sanctionReasonLabel, String processedAt, String blogSlug,
             String blogName, int sameTargetPending) {
     }
 
-    public record Page(List<Item> items, int page, int totalPages, long total) {
+    public record Page(List<Item> items, int page, int totalPages, long total, Map<String, Integer> reasonCounts) {
     }
 }

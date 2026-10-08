@@ -137,7 +137,7 @@ class AdminTest extends IntegrationTest {
                     .andReturn().getResponse().getContentAsString();
             long reportId = ((Number) JsonPath.read(list, "$.items[0].id")).longValue();
             postAs("/api/admin/reports/" + reportId, """
-                    {"result":"OWNER_WARNING","reason":"욕설"}""", admin).andExpect(status().isOk());
+                    {"result":"OWNER_WARNING","sanctionReason":"ABUSE","reason":"욕설"}""", admin).andExpect(status().isOk());
             clock.advance(Duration.ofDays(15));
         }
         assertThat(jdbc.queryForObject("SELECT owner_id FROM blogs WHERE slug = 'food'", Long.class)).isEqualTo(subId);

@@ -119,7 +119,7 @@ export function renderNotFound(message) {
 }
 
 /** 비밀번호 칸마다 눌러서 입력한 값을 보거나 다시 가리는 버튼을 붙인다. */
-function addPasswordToggles() {
+export function addPasswordToggles() {
   document.querySelectorAll('input[type=password]').forEach((input) => {
     const wrapper = el('div', { class: 'password-field' });
     input.replaceWith(wrapper);

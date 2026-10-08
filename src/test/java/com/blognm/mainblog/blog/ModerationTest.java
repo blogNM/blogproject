@@ -64,13 +64,13 @@ class ModerationTest extends IntegrationTest {
     void subOwnerSanctions() throws Exception {
         makeSub(false);
         postAs("/api/blogs/club/members/" + memberId + "/sanctions", """
-                {"action":"WARNING","reason":"도배"}""", sub).andExpect(status().isForbidden());
+                {"action":"WARNING","reasonCode":"FLOOD","reason":"도배"}""", sub).andExpect(status().isForbidden());
         makeSub(true);
         postAs("/api/blogs/club/members/" + memberId + "/sanctions", """
-                {"action":"WARNING","reason":"도배"}""", sub).andExpect(status().isOk());
+                {"action":"WARNING","reasonCode":"FLOOD","reason":"도배"}""", sub).andExpect(status().isOk());
         // 부블로그장은 블로그장을 제재할 수 없다
         postAs("/api/blogs/club/members/" + ownerId + "/sanctions", """
-                {"action":"WARNING","reason":"x"}""", sub).andExpect(status().is4xxClientError());
+                {"action":"WARNING","reasonCode":"ETC","reason":"x"}""", sub).andExpect(status().is4xxClientError());
         getAs("/api/blogs/club/sanctions", owner).andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].type").value("WARNING")).andExpect(jsonPath("$[0].reason").value("도배"));
         assertThat(notifications(memberId, "MEMBER_WARNED")).isEqualTo(1);
@@ -83,7 +83,7 @@ class ModerationTest extends IntegrationTest {
     void suspendThreeTimes() throws Exception {
         for (int i = 1; i <= 3; i++) {
             postAs("/api/blogs/club/members/" + memberId + "/sanctions", """
-                    {"action":"SUSPEND","duration":"D3","reason":"욕설"}""", owner)
+                    {"action":"SUSPEND","duration":"D3","reasonCode":"ABUSE","reason":"욕설"}""", owner)
                     .andExpect(status().isOk()).andExpect(jsonPath("$.suspensions").value(i))
                     .andExpect(jsonPath("$.kickSuggested").value(i == 3));
             postAs("/api/blogs/club/posts", """
@@ -101,7 +101,7 @@ class ModerationTest extends IntegrationTest {
     @DisplayName("강퇴하면 블랙리스트에 올라 다시 못 들어오고, 이의 신청을 받아 풀어 주면 다시 들어온다 (BLG-13)")
     void kickBlacklistAppeal() throws Exception {
         postAs("/api/blogs/club/members/" + memberId + "/sanctions", """
-                {"action":"KICK","reason":"광고"}""", owner).andExpect(status().isOk());
+                {"action":"KICK","reasonCode":"SPAM","reason":"광고"}""", owner).andExpect(status().isOk());
         postAs("/api/blogs/club/join", null, member)
                 .andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("JOIN_BLACKLISTED"));
         getAs("/api/blogs/club/blacklist", owner).andExpect(jsonPath("$.length()").value(1));
@@ -129,7 +129,16 @@ class ModerationTest extends IntegrationTest {
                 .andExpect(jsonPath("$.total").value(1)).andReturn().getResponse().getContentAsString();
         long reportId = ((Number) JsonPath.read(list, "$.items[0].id")).longValue();
         postAs("/api/blogs/club/reports/" + reportId, """
-                {"result":"WARNING","reason":"광고"}""", owner).andExpect(status().isOk());
+                {"result":"WARNING","reason":"광고"}""", owner)
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("INVALID_SANCTION_REASON"));
+        postAs("/api/blogs/club/reports/" + reportId, """
+                {"result":"WARNING","sanctionReason":"SPAM","reason":"광고"}""", owner).andExpect(status().isOk());
+        // 처리한 신고는 제재 사유 항목으로 나눠 본다 (D-95)
+        getAs("/api/blogs/club/reports?status=DONE", owner).andExpect(jsonPath("$.reasonCounts.SPAM").value(1))
+                .andExpect(jsonPath("$.items[0].sanctionReasonLabel").value("스팸·광고"));
+        getAs("/api/blogs/club/reports?status=DONE&reason=ABUSE", owner).andExpect(jsonPath("$.total").value(0));
+        getAs("/api/blogs/club/sanctions?reason=SPAM", owner).andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].reasonLabel").value("스팸·광고"));
         getAs("/api/blogs/club/reports?status=PENDING", owner).andExpect(jsonPath("$.total").value(0));
         assertThat(notifications(subId, "REPORT_RESULT")).isEqualTo(1);
         assertThat(notifications(memberId, "MEMBER_WARNED")).isEqualTo(1);

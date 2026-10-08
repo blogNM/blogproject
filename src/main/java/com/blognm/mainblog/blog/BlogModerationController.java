@@ -58,13 +58,15 @@ public class BlogModerationController {
     @PreAuthorize("@blogAuth.canManageMembers(#slug)")
     public SanctionService.Result sanction(@PathVariable String slug, @PathVariable long memberId,
             @RequestBody SanctionBody body, @AuthenticationPrincipal MemberPrincipal me) {
-        return sanctions.sanction(slug, me.memberId(), memberId, body.action(), body.duration(), body.reason(), null);
+        return sanctions.sanction(slug, me.memberId(), memberId, body.action(), body.duration(), body.reasonCode(),
+                body.reason(), null);
     }
 
     @GetMapping("/api/blogs/{slug}/sanctions")
     @PreAuthorize("@blogAuth.canManageMembers(#slug)")
-    public List<SanctionService.SanctionRow> sanctionHistory(@PathVariable String slug) {
-        return sanctions.history(slug);
+    public List<SanctionService.SanctionRow> sanctionHistory(@PathVariable String slug,
+            @RequestParam(required = false) SanctionReason reason) {
+        return sanctions.history(slug, reason);
     }
 
     // ----- 블랙리스트 (BLG-11, BLG-12) -----
@@ -102,15 +104,17 @@ public class BlogModerationController {
     @GetMapping("/api/blogs/{slug}/reports")
     @PreAuthorize("@blogAuth.canManageMembers(#slug)")
     public ReportReviewService.Page reports(@PathVariable String slug,
-            @RequestParam(defaultValue = "PENDING") String status, @RequestParam(defaultValue = "1") int page) {
-        return reports.forBlog(slug, !"DONE".equals(status), page);
+            @RequestParam(defaultValue = "PENDING") String status, @RequestParam(required = false) SanctionReason reason,
+            @RequestParam(defaultValue = "1") int page) {
+        return reports.forBlog(slug, !"DONE".equals(status), reason, page);
     }
 
     @PostMapping("/api/blogs/{slug}/reports/{reportId}")
     @PreAuthorize("@blogAuth.canManageMembers(#slug)")
     public Map<String, Boolean> processReport(@PathVariable String slug, @PathVariable long reportId,
             @RequestBody ReportBody body, @AuthenticationPrincipal MemberPrincipal me) {
-        reports.processByOwner(slug, reportId, me.memberId(), body.result(), body.duration(), body.reason());
+        reports.processByOwner(slug, reportId, me.memberId(), body.result(), body.duration(), body.sanctionReason(),
+                body.reason());
         return Map.of("done", true);
     }
 
@@ -157,13 +161,15 @@ public class BlogModerationController {
     public record RoleBody(BlogMembership.Role role, SanctionService.Permissions permissions) {
     }
 
-    public record SanctionBody(SanctionService.Action action, SanctionService.Duration duration, String reason) {
+    public record SanctionBody(SanctionService.Action action, SanctionService.Duration duration,
+            SanctionReason reasonCode, String reason) {
     }
 
     public record AppealBody(String key, String message) {
     }
 
-    public record ReportBody(ReportReviewService.OwnerResult result, SanctionService.Duration duration, String reason) {
+    public record ReportBody(ReportReviewService.OwnerResult result, SanctionService.Duration duration,
+            SanctionReason sanctionReason, String reason) {
     }
 
     public record TransferBody(long memberId) {

@@ -668,3 +668,6 @@ em, i, .toastui-editor-md-emph, .toastui-editor-contents em {
 .banner-actions { display: flex; gap: 6px; }
 .appeal-form { display: grid; gap: 8px; margin-top: 12px; text-align: left; }
 .appeal-form textarea { margin: 0; }
+.reason-chips .tab { font-size: 0.84rem; padding: 6px 12px; }
+.reason-chips .tab:disabled { opacity: 0.7; }
+select.reason-filter { width: auto; margin: 4px 0 8px; }

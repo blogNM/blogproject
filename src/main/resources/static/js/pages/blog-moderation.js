@@ -4,6 +4,7 @@ import { api } from '../api.js';
 import { roleName } from '../blog-card.js';
 import { el } from '../layout.js';
 import { renderPager } from '../pager.js';
+import { SANCTION_REASONS, sanctionReasonSelect } from '../sanction-reasons.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -29,6 +30,26 @@ function button(label, cls, onClick) {
     }
   });
   return b;
+}
+
+/** 처리한 신고를 제재 사유 항목별로 나눠 보는 단추 (D-95). counts가 없으면 숨긴다. */
+function renderReasonChips(box, counts, current, onPick) {
+  box.replaceChildren();
+  box.hidden = !counts;
+  if (!counts) return;
+  const all = Object.values(counts).reduce((a, b) => a + b, 0);
+  const options = [['', '전체', all], ...SANCTION_REASONS.filter(([v]) => counts[v]).map(([v, text]) => [v, text, counts[v]])];
+  // 문제 없음과 사유 항목이 생기기 전 처리는 건수만 보여 준다
+  if (counts.NONE) options.push(['NONE', '문제 없음', counts.NONE]);
+  if (counts.UNSET) options.push(['UNSET', '사유 없음(예전 처리)', counts.UNSET]);
+  options.forEach(([v, text, n]) => {
+    const b = el('button', { type: 'button', class: 'tab' + (v === current ? ' active' : '') }, text);
+    b.append(el('span', { class: 'count' }, String(n)));
+    const countOnly = v === 'NONE' || v === 'UNSET';
+    b.disabled = countOnly;
+    if (!countOnly) b.addEventListener('click', () => onPick(v));
+    box.append(b);
+  });
 }
 
 export function setupModeration({ blog, base, me, reloadBlog }) {
@@ -79,9 +100,14 @@ export function setupModeration({ blog, base, me, reloadBlog }) {
     return box;
   }
 
-  async function sanction(m, action, duration) {
+  async function sanction(m, action, duration, code) {
     const names = { WARNING: '경고를', SUSPEND: '활동 정지를', LIFT: '정지 풀기를', KICK: '강제 퇴장을' };
     let reason = '';
+    if (action !== 'LIFT' && !code) {
+      $('members-message').className = 'error';
+      $('members-message').textContent = `${m.nickname}님의 제재 사유를 먼저 골라 주세요.`;
+      return;
+    }
     if (action !== 'LIFT') {
       reason = prompt(`${m.nickname}님에게 ${duration ? DURATIONS[duration] + ' ' : ''}${names[action]} 할까요?\n사유를 적어 주세요 (200자까지, 본인에게 알림으로 가요).`, '');
       if (reason === null) return;
@@ -89,7 +115,7 @@ export function setupModeration({ blog, base, me, reloadBlog }) {
     if (action === 'KICK' && !confirm(`${m.nickname}님을 강제 퇴장할까요? 블랙리스트에 올라 다시 들어올 수 없어요.`)) return;
     const msg = $('members-message');
     try {
-      const res = await api.post(`${base}/members/${m.id}/sanctions`, { action, duration, reason });
+      const res = await api.post(`${base}/members/${m.id}/sanctions`, { action, duration, reasonCode: code || null, reason });
       msg.className = 'info';
       msg.textContent = res.kickSuggested
         ? `${m.nickname}님은 최근 1년에 ${res.suspensions}번 정지됐어요. 강제 퇴장을 생각해 보세요.`
@@ -119,14 +145,16 @@ export function setupModeration({ blog, base, me, reloadBlog }) {
     const canSanction = isOwner || m.role !== 'SUB_OWNER';
     const actions = el('div', { class: 'member-actions' });
     if (canSanction) {
+      const why = sanctionReasonSelect();
       const dur = durationSelect();
       actions.append(
-        button('경고', '', () => sanction(m, 'WARNING')),
+        why,
+        button('경고', '', () => sanction(m, 'WARNING', null, why.value)),
         dur,
-        button('정지', '', () => sanction(m, 'SUSPEND', dur.value)),
+        button('정지', '', () => sanction(m, 'SUSPEND', dur.value, why.value)),
       );
       if (m.suspendedUntil) actions.append(button('정지 풀기', '', () => sanction(m, 'LIFT')));
-      actions.append(button('강제 퇴장', 'danger-outline', () => sanction(m, 'KICK')));
+      actions.append(button('강제 퇴장', 'danger-outline', () => sanction(m, 'KICK', null, why.value)));
     }
     li.append(actions);
     if (isOwner) li.append(permissionBox(m));
@@ -150,6 +178,7 @@ export function setupModeration({ blog, base, me, reloadBlog }) {
 
   let reportStatus = 'PENDING';
   let reportPage = 1;
+  let reportReason = '';
 
   function reportItem(r) {
     const li = el('li', { class: 'report-item' });
@@ -169,7 +198,8 @@ export function setupModeration({ blog, base, me, reloadBlog }) {
     li.append(target);
     if (r.detail) li.append(el('p', { class: 'report-detail' }, r.detail));
     if (r.status === 'DONE') {
-      li.append(el('p', { class: 'muted' }, `처리 결과: ${r.resultLabel || r.result} · ${r.processedAt}`));
+      li.append(el('p', { class: 'muted' }, `처리 결과: ${r.resultLabel || r.result}`
+        + (r.sanctionReasonLabel ? ` · 제재 사유: ${r.sanctionReasonLabel}` : '') + ` · ${r.processedAt}`));
       return li;
     }
     const form = el('div', { class: 'member-actions' });
@@ -178,15 +208,26 @@ export function setupModeration({ blog, base, me, reloadBlog }) {
       el('option', { value: 'SUSPEND' }, '활동 정지'), el('option', { value: 'KICK' }, '강제 퇴장'));
     const dur = durationSelect();
     dur.hidden = true;
-    result.addEventListener('change', () => { dur.hidden = result.value !== 'SUSPEND'; });
+    // 조치를 고르면 제재 사유 항목도 고른다 (D-95). 신고 사유와 같은 항목을 먼저 골라 둔다.
+    const why = sanctionReasonSelect(r.reason);
+    why.hidden = true;
+    result.addEventListener('change', () => {
+      dur.hidden = result.value !== 'SUSPEND';
+      why.hidden = result.value === 'NONE';
+    });
     const reason = el('input', { maxlength: '200', placeholder: '사유 (선택)', 'aria-label': '사유' });
     const msg = el('p', { class: 'error', role: 'alert' });
-    form.append(result, dur, reason, button('처리', 'primary inline', async () => {
+    form.append(result, why, dur, reason, button('처리', 'primary inline', async () => {
+      if (result.value !== 'NONE' && !why.value) {
+        msg.textContent = '제재 사유를 골라 주세요.';
+        return;
+      }
       if (result.value === 'KICK' && !confirm('신고된 사람을 강제 퇴장할까요? 블랙리스트에 올라 다시 들어올 수 없어요.')) return;
       try {
         await api.post(`${base}/reports/${r.id}`, {
           result: result.value,
           duration: result.value === 'SUSPEND' ? dur.value : null,
+          sanctionReason: result.value === 'NONE' ? null : why.value,
           reason: reason.value,
         });
         await Promise.all([loadReports(), refreshAll()]);
@@ -201,7 +242,8 @@ export function setupModeration({ blog, base, me, reloadBlog }) {
   async function loadReports() {
     let res;
     try {
-      res = await api.get(`${base}/reports?status=${reportStatus}&page=${reportPage}`);
+      const reasonQuery = reportStatus === 'DONE' && reportReason ? `&reason=${reportReason}` : '';
+      res = await api.get(`${base}/reports?status=${reportStatus}&page=${reportPage}${reasonQuery}`);
     } catch {
       $('reports-section').hidden = true;
       return;
@@ -211,6 +253,11 @@ export function setupModeration({ blog, base, me, reloadBlog }) {
       ? [el('li', { class: 'muted' }, reportStatus === 'PENDING' ? '처리할 신고가 없어요.' : '처리한 신고가 없어요.')]
       : res.items.map(reportItem)));
     renderPager($('reports-pager'), res.page, res.totalPages, (p) => { reportPage = p; loadReports(); });
+    renderReasonChips($('report-reasons'), reportStatus === 'DONE' ? res.reasonCounts : null, reportReason, (v) => {
+      reportReason = v;
+      reportPage = 1;
+      loadReports();
+    });
     $('reports-section').hidden = false;
   }
 
@@ -219,16 +266,19 @@ export function setupModeration({ blog, base, me, reloadBlog }) {
       document.querySelectorAll('#reports-section .tab').forEach((t) => t.classList.toggle('active', t === tab));
       reportStatus = tab.dataset.status;
       reportPage = 1;
+      reportReason = '';
       loadReports();
     });
   });
 
   // ----- 제재 기록 -----
 
+  let sanctionReason = '';
+
   async function loadSanctions() {
     let rows;
     try {
-      rows = await api.get(base + '/sanctions');
+      rows = await api.get(base + '/sanctions' + (sanctionReason ? `?reason=${sanctionReason}` : ''));
     } catch {
       $('sanctions-section').hidden = true;
       return;
@@ -239,11 +289,20 @@ export function setupModeration({ blog, base, me, reloadBlog }) {
         li.append(el('span', { class: 'badge' + (s.type === 'LIFT' ? ' muted-badge' : ' warn') },
           SANCTION_LABEL[s.type] + (s.duration ? ' ' + s.duration : '')),
         el('span', { class: 'strong' }, s.target), el('span', { class: 'muted' }, `${s.actor} · ${s.createdAt}${s.fromReport ? ' · 신고 처리' : ''}`));
+        if (s.reasonLabel) li.append(el('span', { class: 'badge' }, s.reasonLabel));
         if (s.reason) li.append(el('span', { class: 'sanction-reason' }, s.reason));
         return li;
       })));
     $('sanctions-section').hidden = false;
   }
+
+  const sanctionFilter = $('sanction-reason-filter');
+  sanctionFilter.replaceChildren(el('option', { value: '' }, '모든 사유'),
+    ...SANCTION_REASONS.map(([v, text]) => el('option', { value: v }, text)));
+  sanctionFilter.addEventListener('change', () => {
+    sanctionReason = sanctionFilter.value;
+    loadSanctions();
+  });
 
   // ----- 블랙리스트 -----
 
