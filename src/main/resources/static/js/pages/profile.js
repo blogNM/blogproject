@@ -14,6 +14,7 @@ const memberId = Number(location.pathname.split('/')[2]);
 /** key: 주소의 ?tab= 값. setting: 공개 설정 이름 (팔로워는 늘 공개라 없음). */
 const TABS = [
   { key: 'posts', name: '쓴 글', setting: 'posts', api: 'posts' },
+  { key: 'comments', name: '쓴 댓글', setting: 'comments', api: 'comments' },
   { key: 'likes', name: '좋아요 한 글', setting: 'likes', api: 'likes' },
   { key: 'following', name: '팔로잉', setting: 'following', api: 'following' },
   { key: 'followers', name: '팔로워', setting: null, api: 'followers' },
@@ -190,6 +191,9 @@ async function loadList() {
   if (tab.api === 'posts' || tab.api === 'likes') {
     list = el('ul', { class: 'feed' });
     list.append(...res.items.map(feedCard));
+  } else if (tab.api === 'comments') {
+    list = el('ul', { class: 'my-comments' });
+    list.append(...res.items.map(commentItem));
   } else if (tab.api === 'subscriptions') {
     list = el('ul', { class: 'blog-chips grid' });
     list.append(...res.items.map((b) => blogChip(b, b.description || '/blog/' + b.slug)));
@@ -215,10 +219,24 @@ async function loadList() {
   });
 }
 
+/** 쓴 댓글 한 줄: 댓글 내용, 어느 블로그의 어느 글에 달았는지, 날짜. 누르면 그 댓글 자리로 (D-94). */
+function commentItem(c) {
+  const li = el('li', { class: 'my-comment' });
+  const a = el('a', { href: `/blog/${encodeURIComponent(c.blogSlug)}/posts/${c.postId}#comment-${c.id}` });
+  const where = el('span', { class: 'mc-where' });
+  where.append(el('span', { class: 'mc-kind' }, c.reply ? '답글' : '댓글'), el('strong', {}, c.postTitle),
+    el('span', { class: 'muted' }, ' · ' + c.blogName));
+  a.append(el('p', { class: 'mc-content' }, c.content), where,
+    el('span', { class: 'muted mc-date' }, c.createdAt + (c.edited ? ' · 수정됨' : '')));
+  li.append(a);
+  return li;
+}
+
 function emptyText() {
   const who = profile.me ? '아직' : `${profile.nickname}님은 아직`;
   return {
     posts: `${who} 쓴 글이 없어요.`,
+    comments: `${who} 쓴 댓글이 없어요.`,
     likes: `${who} 좋아요 한 글이 없어요.`,
     following: `${who} 팔로우하는 사람이 없어요.`,
     followers: `${who} 팔로워가 없어요.`,

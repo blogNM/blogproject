@@ -580,6 +580,14 @@ button.subscribe.on { background: var(--highlight); color: var(--primary-dark); 
 .chip-text strong { color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .chip-text .muted { margin: 0; font-size: 0.8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .people { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+/* 쓴 댓글 목록 (D-94) */
+.my-comments { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.my-comment a { display: flex; flex-direction: column; gap: 6px; padding: 14px 16px; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-sm); color: var(--text); text-decoration: none; transition: border-color 0.15s, transform 0.15s; }
+.my-comment a:hover, .my-comment a:focus-visible { border-color: var(--rose); transform: translateY(-1px); }
+.mc-content { margin: 0; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.mc-where { font-size: 0.88rem; display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; }
+.mc-kind { font-size: 0.75rem; padding: 1px 8px; border-radius: 999px; background: var(--soft); color: var(--purple); }
+.mc-date { font-size: 0.8rem; }
 .share-toggle { display: inline-flex; padding: 8px 14px; margin: 0 0 14px; background: var(--soft); border-radius: 999px; font-size: 0.88rem; }
 #activity .tabs { margin-top: 4px; }
 

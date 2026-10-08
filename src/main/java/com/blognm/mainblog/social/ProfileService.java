@@ -18,16 +18,17 @@ import com.blognm.mainblog.common.ApiException;
 /**
  * 프로필(SOC-03)과 [내 활동](SOC-07, D-91). 다른 사람에게는 닉네임·사진·소개·운영·참여 블로그·팔로워 수만 보이고
  * 이메일·이름·전화번호는 응답에도 넣지 않는다 (4.4, SC-003).
- * 쓴 글·좋아요 한 글·팔로잉·구독 목록은 본인이 "다른 사람에게 보여주기"를 켜 둔 것만 남이 본다 (기본 켜짐).
+ * 쓴 글·쓴 댓글(D-94)·좋아요 한 글·팔로잉·구독 목록은 본인이 "다른 사람에게 보여주기"를 켜 둔 것만 남이 본다 (기본 켜짐).
  * 남에게는 그 사람이 볼 수 있는 글·블로그만 나온다.
  */
 @Service
 public class ProfileService {
 
     private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("yyyy.MM.dd");
+    private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern("yyyy.MM.dd HH:mm");
     private static final int LIST_SIZE = 20;
 
-    public enum ActivityList { POSTS, LIKES, FOLLOWING, SUBSCRIPTIONS }
+    public enum ActivityList { POSTS, COMMENTS, LIKES, FOLLOWING, SUBSCRIPTIONS }
 
     private final NamedParameterJdbcTemplate jdbc;
     private final PostCards cards;
@@ -50,7 +51,8 @@ public class ProfileService {
     public Profile profile(long memberId, Long viewerId) {
         Row m = member(memberId);
         boolean self = viewerId != null && viewerId == memberId;
-        Visibility visibility = new Visibility(m.showPosts(), m.showLikes(), m.showFollowing(), m.showSubscriptions());
+        Visibility visibility = new Visibility(m.showPosts(), m.showComments(), m.showLikes(), m.showFollowing(),
+                m.showSubscriptions());
         return new Profile(m.id(), m.nickname(), m.bio(), m.imageUrl(), m.joinedAt(), self,
                 follows.following(viewerId, memberId),
                 viewerId != null && !self && blocks.blockedBy(viewerId, memberId),
@@ -59,7 +61,7 @@ public class ProfileService {
                 count("SELECT COUNT(*) FROM follows f JOIN members x ON x.id = f.followee_id "
                         + "WHERE f.follower_id = :id AND x.status = 'ACTIVE'", memberId),
                 blogs(memberId, viewerId, true), blogs(memberId, viewerId, false),
-                self ? new Visibility(true, true, true, true) : visibility, self ? visibility : null);
+                self ? new Visibility(true, true, true, true, true) : visibility, self ? visibility : null);
     }
 
     /** 내가 쓴 글·좋아요 한 글. 보는 사람이 볼 수 있는 글만. */
@@ -76,6 +78,35 @@ public class ProfileService {
         return cards.page(where + " AND p.id IN (SELECT l.post_id FROM post_likes l WHERE l.member_id = :id)",
                 "(SELECT l.created_at FROM post_likes l WHERE l.member_id = :id AND l.post_id = p.id) DESC, p.id DESC",
                 params, page, LIST_SIZE);
+    }
+
+    /**
+     * 쓴 댓글 (D-94). 보는 사람이 읽을 수 있는 글에 달린, 지워지거나 숨겨지지 않은 댓글만 최근 순으로.
+     * 누르면 그 글의 댓글 자리로 간다.
+     */
+    @Transactional(readOnly = true)
+    public CommentPage comments(long memberId, Long viewerId, int page) {
+        Row m = member(memberId);
+        requireVisible(m, viewerId, ActivityList.COMMENTS);
+        MapSqlParameterSource params = new MapSqlParameterSource("id", memberId);
+        String from = " FROM comments c JOIN posts p ON p.id = c.post_id JOIN blogs b ON b.id = p.blog_id"
+                + " WHERE c.author_id = :id AND c.status = 'NORMAL' AND " + readableWhere(viewerId, params);
+        if (viewerId != null) {
+            from += " AND NOT EXISTS (SELECT 1 FROM blocks bk2 WHERE (bk2.blocker_id = :viewerId AND bk2.blocked_id = :id)"
+                    + " OR (bk2.blocker_id = :id AND bk2.blocked_id = :viewerId))";
+        }
+        long total = count("SELECT COUNT(*)" + from, params);
+        int current = Math.max(page, 1);
+        params.addValue("size", LIST_SIZE).addValue("offset", (current - 1) * LIST_SIZE);
+        List<CommentCard> items = jdbc.query("""
+                SELECT c.id, c.content, c.is_edited, c.created_at, c.parent_id, p.id AS post_id, p.title,
+                       b.slug, b.name AS blog_name
+                """ + from + " ORDER BY c.created_at DESC, c.id DESC LIMIT :size OFFSET :offset", params,
+                (rs, i) -> new CommentCard(rs.getLong("id"), rs.getString("content"), rs.getBoolean("is_edited"),
+                        rs.getObject("parent_id") != null,
+                        rs.getObject("created_at", LocalDateTime.class).format(DATE_TIME), rs.getLong("post_id"),
+                        rs.getString("title"), rs.getString("slug"), rs.getString("blog_name")));
+        return new CommentPage(items, current, pages(total), total);
     }
 
     /** 팔로워(누구나 볼 수 있음, SOC-02)와 팔로잉(공개 설정을 따름). 탈퇴한 회원은 빠진다. */
@@ -137,9 +168,11 @@ public class ProfileService {
     @Transactional
     public void updateVisibility(long memberId, Visibility v) {
         jdbc.update("""
-                UPDATE members SET show_posts = :posts, show_likes = :likes, show_following = :following,
-                                   show_subscriptions = :subs WHERE id = :id
-                """, new MapSqlParameterSource("posts", v.posts()).addValue("likes", v.likes())
+                UPDATE members SET show_posts = :posts, show_comments = COALESCE(:comments, show_comments),
+                                   show_likes = :likes, show_following = :following, show_subscriptions = :subs
+                WHERE id = :id
+                """, new MapSqlParameterSource("posts", v.posts()).addValue("comments", v.comments())
+                .addValue("likes", v.likes())
                 .addValue("following", v.following()).addValue("subs", v.subscriptions()).addValue("id", memberId));
     }
 
@@ -209,6 +242,7 @@ public class ProfileService {
         }
         boolean open = switch (list) {
             case POSTS -> m.showPosts();
+            case COMMENTS -> m.showComments();
             case LIKES -> m.showLikes();
             case FOLLOWING -> m.showFollowing();
             case SUBSCRIPTIONS -> m.showSubscriptions();
@@ -220,13 +254,13 @@ public class ProfileService {
 
     private Row member(long memberId) {
         return jdbc.query("""
-                SELECT m.id, m.nickname, m.bio, m.created_at, m.show_posts, m.show_likes, m.show_following,
+                SELECT m.id, m.nickname, m.bio, m.created_at, m.show_posts, m.show_comments, m.show_likes, m.show_following,
                        m.show_subscriptions, (SELECT i.stored_name FROM images i WHERE i.id = m.profile_image_id) AS image
                 FROM members m WHERE m.id = :id AND m.status = 'ACTIVE'
                 """, Map.of("id", memberId), (rs, i) -> new Row(rs.getLong("id"), rs.getString("nickname"),
                 rs.getString("bio"), image(rs.getString("image")),
                 rs.getObject("created_at", LocalDateTime.class).format(DATE), rs.getBoolean("show_posts"),
-                rs.getBoolean("show_likes"), rs.getBoolean("show_following"), rs.getBoolean("show_subscriptions")))
+                rs.getBoolean("show_comments"), rs.getBoolean("show_likes"), rs.getBoolean("show_following"), rs.getBoolean("show_subscriptions")))
                 .stream().findFirst()
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "MEMBER_NOT_FOUND", "회원을 찾을 수 없습니다."));
     }
@@ -249,7 +283,7 @@ public class ProfileService {
     }
 
     private record Row(long id, String nickname, String bio, String imageUrl, String joinedAt, boolean showPosts,
-            boolean showLikes, boolean showFollowing, boolean showSubscriptions) {
+            boolean showComments, boolean showLikes, boolean showFollowing, boolean showSubscriptions) {
     }
 
     /** visible: 보는 사람이 열 수 있는 목록. mySettings: 본인에게만, 다른 사람에게 보여주기 체크 값. */
@@ -258,7 +292,15 @@ public class ProfileService {
             List<BlogCard> joinedBlogs, Visibility visible, Visibility mySettings) {
     }
 
-    public record Visibility(boolean posts, boolean likes, boolean following, boolean subscriptions) {
+    /** comments를 빼고 보내면 그 설정은 그대로 둔다 (D-94 전에 만든 화면·스크립트). */
+    public record Visibility(boolean posts, Boolean comments, boolean likes, boolean following, boolean subscriptions) {
+    }
+
+    public record CommentCard(long id, String content, boolean edited, boolean reply, String createdAt, long postId,
+            String postTitle, String blogSlug, String blogName) {
+    }
+
+    public record CommentPage(List<CommentCard> items, int page, int totalPages, long total) {
     }
 
     public record MemberCard(long id, String nickname, String bio, String imageUrl) {

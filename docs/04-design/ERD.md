@@ -57,6 +57,7 @@ erDiagram
         bigint profile_image_id FK "images"
         varchar bio "소개, 선택, 150자"
         boolean show_posts "쓴 글 공개 (D-91)"
+        boolean show_comments "쓴 댓글 공개 (D-94, V6)"
         boolean show_likes "좋아요 한 글 공개 (D-91)"
         boolean show_following "팔로잉 공개 (D-91)"
         boolean show_subscriptions "구독 공개 (D-91)"

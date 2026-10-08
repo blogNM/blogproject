@@ -122,6 +122,37 @@ class SocialTest extends IntegrationTest {
     }
 
     @Test
+    @DisplayName("쓴 댓글: 최근 순으로 글 제목·블로그와 함께, 지운 댓글은 빠지고 공개를 끄면 남에게 막힌다 (D-94)")
+    void commentList() throws Exception {
+        long first = id(postAs("/api/posts/" + postId + "/comments", """
+                {"content":"첫 댓글"}""", reader));
+        long second = id(postAs("/api/posts/" + postId + "/comments", """
+                {"content":"지울 댓글"}""", reader));
+        id(postAs("/api/posts/" + postId + "/comments", """
+                {"content":"답글","parentId":%d}""".formatted(first), reader));
+        sendAs(HttpMethod.DELETE, "/api/comments/" + second, null, reader).andExpect(status().isOk());
+
+        getAs("/api/members/" + readerId + "/comments")
+                .andExpect(jsonPath("$.total").value(2))
+                .andExpect(jsonPath("$.items[0].content").value("답글"))
+                .andExpect(jsonPath("$.items[0].reply").value(true))
+                .andExpect(jsonPath("$.items[1].id").value(first))
+                .andExpect(jsonPath("$.items[1].postTitle").value("첫 글"))
+                .andExpect(jsonPath("$.items[1].blogSlug").value("food"));
+
+        // 예전 화면처럼 comments 없이 보내면 댓글 공개 설정은 그대로
+        sendAs(HttpMethod.PUT, "/api/me/activity-visibility", """
+                {"posts":true,"likes":true,"following":true,"subscriptions":true}""", reader)
+                .andExpect(jsonPath("$.comments").value(true));
+        sendAs(HttpMethod.PUT, "/api/me/activity-visibility", """
+                {"posts":true,"comments":false,"likes":true,"following":true,"subscriptions":true}""", reader)
+                .andExpect(status().isOk());
+        getAs("/api/members/" + readerId + "/comments", other).andExpect(status().isForbidden());
+        getAs("/api/members/" + readerId + "/comments", reader).andExpect(jsonPath("$.total").value(2));
+        getAs("/api/members/" + readerId).andExpect(jsonPath("$.visible.comments").value(false));
+    }
+
+    @Test
     @DisplayName("남에게는 그 사람이 볼 수 있는 글만 나온다 (D-91)")
     void privateBlogPostsHidden() throws Exception {
         postAs("/api/blogs", """

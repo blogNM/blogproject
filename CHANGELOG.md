@@ -7,6 +7,12 @@
 
 ## 2026-10-08
 
+### 내 활동: 쓴 댓글 ([PR #3](https://github.com/blogNM/blogproject/pull/3))
+
+- **기능** [내 활동]에 "쓴 댓글" 탭: 댓글 내용·댓글/답글·글 제목·블로그 이름·날짜, 누르면 그 댓글 자리로. "다른 사람에게 보여주기" 체크(기본 켜짐) ([D-94](docs/03-decisions/D-94-내-활동-쓴-댓글.md), 사용자 요청)
+- **설정** DB V6: `members.show_comments`, 작성자별 댓글 인덱스
+- **문서** D-94, 003 spec SOC-07·Clarifications, ERD·schema.sql
+
 ### 링크 미리보기 카드 ([PR #3](https://github.com/blogNM/blogproject/pull/3))
 
 - **기능** 글에서 한 줄에 링크만 있으면 썸네일·제목·설명·사이트 이름 카드로 보임. 유튜브는 oEmbed, 나머지는 og 태그. 글을 저장할 때 서버가 받아 두고, 못 받으면 글자 링크 그대로 ([D-92](docs/03-decisions/D-92-링크-미리보기-카드.md), 사용자 요청)

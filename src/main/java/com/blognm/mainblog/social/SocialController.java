@@ -49,6 +49,12 @@ public class SocialController {
         return profiles.posts(id, viewer(me), ProfileService.ActivityList.POSTS, page);
     }
 
+    @GetMapping("/api/members/{id}/comments")
+    public ProfileService.CommentPage comments(@PathVariable long id, @RequestParam(defaultValue = "1") int page,
+            @AuthenticationPrincipal MemberPrincipal me) {
+        return profiles.comments(id, viewer(me), page);
+    }
+
     @GetMapping("/api/members/{id}/likes")
     public PostCards.Page likes(@PathVariable long id, @RequestParam(defaultValue = "1") int page,
             @AuthenticationPrincipal MemberPrincipal me) {
@@ -121,7 +127,7 @@ public class SocialController {
     public ProfileService.Visibility visibility(@RequestBody ProfileService.Visibility body,
             @AuthenticationPrincipal MemberPrincipal me) {
         profiles.updateVisibility(me.memberId(), body);
-        return body;
+        return profiles.profile(me.memberId(), me.memberId()).mySettings();
     }
 
     @GetMapping("/api/me/blocks")
