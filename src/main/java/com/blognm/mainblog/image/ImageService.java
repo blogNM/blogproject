@@ -65,6 +65,31 @@ public class ImageService {
                 bySignature.mime(), clean.length, LocalDateTime.now(clock)));
     }
 
+    /**
+     * 서버가 바깥에서 받아 온 사진(링크 미리보기 썸네일, D-92)을 저장한다. 형식은 파일 시그니처로만 보고,
+     * 허용 형식이 아니거나 너무 크거나 깨졌으면 저장하지 않는다.
+     */
+    @Transactional
+    public Optional<Image> storeFetched(long uploaderId, byte[] data) {
+        if (data.length == 0 || data.length > props.maxFileSize().toBytes()) {
+            return Optional.empty();
+        }
+        Optional<ImageType> type = ImageType.fromSignature(data);
+        if (type.isEmpty()) {
+            return Optional.empty();
+        }
+        byte[] clean;
+        try {
+            clean = MetadataStripper.strip(type.get(), data);
+        } catch (IllegalArgumentException | IndexOutOfBoundsException e) {
+            return Optional.empty();
+        }
+        String storedName = UUID.randomUUID().toString();
+        storage.save(storedName, clean);
+        return Optional.of(images.save(Image.uploaded(uploaderId, storedName, "link-preview",
+                type.get().mime(), clean.length, LocalDateTime.now(clock))));
+    }
+
     @Transactional(readOnly = true)
     public Optional<Served> read(String storedName) {
         return images.findByStoredName(storedName)

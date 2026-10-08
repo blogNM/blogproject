@@ -54,12 +54,13 @@ public class PostCleanupJob {
                 jdbc.update("DELETE FROM comments WHERE post_id IN (:ids)", ids);
                 jdbc.update("DELETE FROM posts WHERE id IN (:ids)", ids);
             }
-            // 글에 붙지 않은 사진. 프로필·블로그 대표 사진은 남긴다.
+            // 글에 붙지 않은 사진. 프로필·블로그 대표 사진과 링크 미리보기 썸네일(D-92)은 남긴다.
             Map<String, Object> orphan = Map.of("before", now.minusDays(1));
             String where = """
                     post_id IS NULL AND created_at < :before
                       AND id NOT IN (SELECT profile_image_id FROM members WHERE profile_image_id IS NOT NULL)
                       AND id NOT IN (SELECT cover_image_id FROM blogs WHERE cover_image_id IS NOT NULL)
+                      AND id NOT IN (SELECT image_id FROM link_previews WHERE image_id IS NOT NULL)
                     """;
             names.addAll(jdbc.queryForList("SELECT stored_name FROM images WHERE " + where, orphan, String.class));
             jdbc.update("DELETE FROM images WHERE " + where, orphan);

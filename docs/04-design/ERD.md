@@ -323,6 +323,17 @@ erDiagram
         varchar keyword
         datetime searched_at "회원당 최근 10개"
     }
+    link_previews {
+        bigint id PK
+        char url_hash UK "주소의 SHA-256"
+        varchar url
+        varchar status "OK, FAILED"
+        varchar title
+        varchar description
+        varchar site_name
+        bigint image_id FK "서버가 받아 둔 썸네일"
+        datetime fetched_at "OK 7일, FAILED 하루 뒤 다시"
+    }
 
     blogs ||--o{ categories : ""
     blogs ||--o{ posts : ""
@@ -339,6 +350,7 @@ erDiagram
     posts ||--o{ post_likes : ""
     posts ||--o{ post_views : "조회 기록"
     members ||--o{ recent_searches : ""
+    images |o--o{ link_previews : "썸네일"
 ```
 
 | 테이블 | 하는 일 | 근거 |
@@ -350,6 +362,7 @@ erDiagram
 | `comments` | 댓글·대댓글. 답글이 있는 댓글을 지우면 `DELETED`로 두고 "삭제된 댓글입니다" 표시 | BRD-06, D-78 |
 | `post_likes` | 좋아요. 다시 누르면 행을 지움 | BRD-06 |
 | `post_views` | 같은 사람·같은 날·같은 글은 한 번만 | BRD-11, D-77 |
+| `link_previews` | 글 속 링크 미리보기(제목·설명·썸네일). 주소별로 한 번 받아 여러 글이 같이 씀 (V5) | D-92 |
 | `recent_searches` | 본인의 최근 검색어 | BRD-08, 6.1 |
 
 검색용 인덱스: `blogs(name, description)`과 `posts(title)`에 `FULLTEXT ... WITH PARSER ngram`, `tags.name`과 `members.nickname`은 일반 인덱스로 일치 검색 (BRD-08).

@@ -346,6 +346,20 @@ select { padding: 10px 14px; border: 1px solid var(--line); border-radius: 999px
 .post-content table { border-collapse: collapse; }
 .post-content th, .post-content td { border: 1px solid var(--line); padding: 6px 10px; }
 .post-content a { color: var(--purple); }
+/* 링크 미리보기 카드 (D-92). 서버가 만든 카드라 글자는 모두 텍스트로 들어 있다 */
+.post-content a.link-card { display: flex; gap: 0; margin: 14px 0; border: 1px solid var(--line); border-radius: var(--radius-sm); overflow: hidden; background: var(--card); color: var(--text); text-decoration: none; transition: border-color .15s, box-shadow .15s; }
+.post-content a.link-card:hover, .post-content a.link-card:focus-visible { border-color: var(--rose); box-shadow: var(--shadow); }
+.link-card .lc-thumb { flex: 0 0 168px; background: var(--soft); }
+.post-content .link-card .lc-thumb img { display: block; width: 100%; height: 100%; max-height: 120px; object-fit: cover; border-radius: 0; }
+.link-card .lc-body { flex: 1; min-width: 0; padding: 12px 16px; display: flex; flex-direction: column; gap: 4px; line-height: 1.45; }
+.link-card .lc-title { font-size: 0.98rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.link-card .lc-desc { font-size: 0.86rem; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.link-card .lc-site { font-size: 0.8rem; color: var(--mauve); margin-top: auto; }
+@media (max-width: 560px) {
+  .post-content a.link-card { flex-direction: column; }
+  .link-card .lc-thumb { flex-basis: auto; }
+  .post-content .link-card .lc-thumb img { max-height: 180px; }
+}
 .post-tags { margin-top: 24px; }
 .post-tags a { text-decoration: none; }
 .counts { margin-top: 16px; }

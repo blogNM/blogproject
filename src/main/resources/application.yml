@@ -104,6 +104,17 @@ upload:
   # 글 하나에 넣을 수 있는 사진 수
   max-images-per-post: ${UPLOAD_MAX_IMAGES_PER_POST:10}
 
+# 글 속 링크 미리보기 카드 (D-92). 글을 저장할 때 서버가 한 번 받아 둔다
+link-preview:
+  enabled: ${LINK_PREVIEW_ENABLED:true}
+  # 바깥 사이트가 늦으면 이만큼만 기다리고 카드 없이 둔다
+  timeout: ${LINK_PREVIEW_TIMEOUT:3s}
+  max-links-per-post: ${LINK_PREVIEW_MAX_LINKS:5}
+  # 받아 둔 미리보기는 이만큼 지나면 글을 다시 저장할 때 새로 받는다 (실패한 것은 하루 뒤)
+  refresh-after: ${LINK_PREVIEW_REFRESH_AFTER:7d}
+  # 내부망 주소는 받지 않는다 (SSRF). 테스트에서만 켠다
+  allow-private-hosts: false
+
 # 댓글·좋아요·검색·피드 (004 4단계)
 board:
   # 좋아요 연타로 알림을 쏟아내지 않도록 회원당 1분에 30번 (추천안 #11)

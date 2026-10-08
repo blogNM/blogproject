@@ -7,6 +7,13 @@
 
 ## 2026-10-08
 
+### 링크 미리보기 카드 ([PR #3](https://github.com/blogNM/blogproject/pull/3))
+
+- **기능** 글에서 한 줄에 링크만 있으면 썸네일·제목·설명·사이트 이름 카드로 보임. 유튜브는 oEmbed, 나머지는 og 태그. 글을 저장할 때 서버가 받아 두고, 못 받으면 글자 링크 그대로 ([D-92](docs/03-decisions/D-92-링크-미리보기-카드.md), 사용자 요청)
+- **기능** 내부망 주소 요청 막기, 썸네일은 사진 형식 검사 후 이 사이트에 저장 (SEC-08, CSP img-src 'self')
+- **설정** DB V5 `link_previews` 표, `link-preview.*` 설정(켜기·기다림 3초·글당 5개·7일 뒤 새로 받기)
+- **문서** D-92에 만든 방식, 004 spec Clarifications
+
 ### 5단계: 팔로우·구독·프로필·차단·신고·알림 ([PR #3](https://github.com/blogNM/blogproject/pull/3))
 
 - **기능** 글쓰기 글자 색: 툴바 "A" 버튼으로 7가지 색과 "색 빼기". 서버는 정해 둔 색 class만 남기고, 색 표시는 1000자에 넣지 않음 ([D-93](docs/03-decisions/D-93-글자-색.md), 사용자 요청)

@@ -69,6 +69,7 @@ public abstract class IntegrationTest {
         jdbc.update("DELETE FROM blocks");
         jdbc.update("UPDATE blogs SET cover_image_id = NULL");
         jdbc.update("DELETE FROM post_tags");
+        jdbc.update("DELETE FROM link_previews");
         jdbc.update("UPDATE members SET profile_image_id = NULL");
         jdbc.update("DELETE FROM images");
         jdbc.update("DELETE FROM posts");

@@ -29,6 +29,7 @@ import com.blognm.mainblog.common.ApiException;
 import com.blognm.mainblog.image.Image;
 import com.blognm.mainblog.image.ImageRepository;
 import com.blognm.mainblog.image.UploadProperties;
+import com.blognm.mainblog.linkpreview.LinkPreviewService;
 import com.blognm.mainblog.member.Member;
 import com.blognm.mainblog.member.MemberRepository;
 import com.blognm.mainblog.notification.NotificationWriter;
@@ -53,6 +54,7 @@ public class PostService {
     private final ImageRepository images;
     private final MemberRepository members;
     private final MarkdownRenderer markdown;
+    private final LinkPreviewService linkPreviews;
     private final NotificationWriter notifications;
     private final UploadProperties uploadProps;
     private final Clock clock;
@@ -60,7 +62,8 @@ public class PostService {
     public PostService(PostRepository posts, CategoryRepository categories, BlogRepository blogs,
             BlogService blogService, BlogMembershipRepository memberships, TagRepository tags, ImageRepository images,
             MemberRepository members, MarkdownRenderer markdown, NotificationWriter notifications,
-            UploadProperties uploadProps, Clock clock) {
+            UploadProperties uploadProps, LinkPreviewService linkPreviews, Clock clock) {
+        this.linkPreviews = linkPreviews;
         this.posts = posts;
         this.categories = categories;
         this.blogs = blogs;
@@ -149,7 +152,7 @@ public class PostService {
         String category = post.getCategoryId() == null ? null
                 : categories.findById(post.getCategoryId()).map(Category::getName).orElse(null);
         return new PostView(post.getId(), blog.getSlug(), blog.getName(), post.getTitle(),
-                markdown.toSafeHtml(post.getContentMd()), author ? post.getContentMd() : null, authorName(post),
+                linkPreviews.decorate(markdown.toSafeHtml(post.getContentMd())), author ? post.getContentMd() : null, authorName(post),
                 post.getCategoryId(), category, tagNames(post), post.isNotice(),
                 post.getCreatedAt().format(DATE_TIME),
                 post.getUpdatedAt().isAfter(post.getCreatedAt()) ? post.getUpdatedAt().format(DATE_TIME) : null,

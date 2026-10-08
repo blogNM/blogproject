@@ -17,3 +17,7 @@ app:
 
 upload:
   dir: ${java.io.tmpdir}/mainblog-test-uploads
+
+# 테스트는 이 컴퓨터에 띄운 가짜 사이트에서 미리보기를 받는다
+link-preview:
+  allow-private-hosts: true

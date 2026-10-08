@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.blognm.mainblog.auth.MemberPrincipal;
 import com.blognm.mainblog.common.ClientIp;
+import com.blognm.mainblog.linkpreview.LinkPreviewService;
 
 /**
  * 글 API (004 US1~3). 목록·상세는 비회원도 읽는다(공개 범위 안에서, SecurityConfig).
@@ -30,9 +31,13 @@ public class PostController {
     private final PostQueryService query;
     private final CategoryService categories;
     private final ReactionService reactions;
+    private final MarkdownRenderer markdown;
+    private final LinkPreviewService linkPreviews;
 
     public PostController(PostService posts, PostQueryService query, CategoryService categories,
-            ReactionService reactions) {
+            ReactionService reactions, MarkdownRenderer markdown, LinkPreviewService linkPreviews) {
+        this.markdown = markdown;
+        this.linkPreviews = linkPreviews;
         this.posts = posts;
         this.query = query;
         this.categories = categories;
@@ -50,7 +55,9 @@ public class PostController {
     @PostMapping("/api/blogs/{slug}/posts")
     public Map<String, Long> write(@PathVariable String slug, @RequestBody PostService.WriteRequest body,
             @AuthenticationPrincipal MemberPrincipal me) {
-        return Map.of("id", posts.write(slug, me.memberId(), body));
+        long id = posts.write(slug, me.memberId(), body);
+        collectPreviews(body, me);
+        return Map.of("id", id);
     }
 
     /** 글을 열면 조회수를 센다 (BRD-11). 볼 수 없는 글이면 세기 전에 404. */
@@ -72,7 +79,15 @@ public class PostController {
     public Map<String, Boolean> update(@PathVariable long id, @RequestBody PostService.WriteRequest body,
             @AuthenticationPrincipal MemberPrincipal me) {
         posts.update(id, me.memberId(), body);
+        collectPreviews(body, me);
         return Map.of("updated", true);
+    }
+
+    /** 글이 저장된 뒤(트랜잭션 밖에서) 링크 미리보기를 받아 둔다 (D-92). */
+    private void collectPreviews(PostService.WriteRequest body, MemberPrincipal me) {
+        if (body.content() != null) {
+            linkPreviews.collect(markdown.toSafeHtml(body.content()), me.memberId());
+        }
     }
 
     @DeleteMapping("/api/posts/{id}")
