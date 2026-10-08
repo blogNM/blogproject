@@ -7,6 +7,10 @@
 
 ## 2026-10-08
 
+### 번호 매기기 정리 ([PR #3](https://github.com/blogNM/blogproject/pull/3))
+
+- **문서** 번호 매기기에서 Tab으로 들여 쓴 안쪽 목록은 1번부터 다시 시작하기로 함, 동작은 그대로 (004 spec Clarifications, 사용자 결정)
+
 ### 내 활동: 쓴 댓글 ([PR #3](https://github.com/blogNM/blogproject/pull/3))
 
 - **기능** [내 활동]에 "쓴 댓글" 탭: 댓글 내용·댓글/답글·글 제목·블로그 이름·날짜, 누르면 그 댓글 자리로. "다른 사람에게 보여주기" 체크(기본 켜짐) ([D-94](docs/03-decisions/D-94-내-활동-쓴-댓글.md), 사용자 요청)
