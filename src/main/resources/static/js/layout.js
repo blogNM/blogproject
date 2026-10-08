@@ -52,9 +52,33 @@ function renderFooter() {
   );
 }
 
+/** 비밀번호 칸마다 눌러서 입력한 값을 보거나 다시 가리는 버튼을 붙인다. */
+function addPasswordToggles() {
+  document.querySelectorAll('input[type=password]').forEach((input) => {
+    const wrapper = el('div', { class: 'password-field' });
+    input.replaceWith(wrapper);
+    const toggle = el('button', {
+      type: 'button',
+      class: 'password-toggle',
+      'aria-label': '비밀번호 보기',
+      'aria-pressed': 'false',
+    }, '보기');
+    toggle.addEventListener('click', () => {
+      const show = input.type === 'password';
+      input.type = show ? 'text' : 'password';
+      toggle.textContent = show ? '숨기기' : '보기';
+      toggle.setAttribute('aria-label', show ? '비밀번호 숨기기' : '비밀번호 보기');
+      toggle.setAttribute('aria-pressed', String(show));
+      input.focus();
+    });
+    wrapper.append(input, toggle);
+  });
+}
+
 /** 화면 위·아래를 그리고 로그인한 회원(없으면 null)을 돌려준다. */
 export async function initLayout() {
   renderFooter();
+  addPasswordToggles();
   const me = await loadMe();
   renderHeader(me);
   if (me) startActivityHeartbeat();

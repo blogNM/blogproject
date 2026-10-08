@@ -62,12 +62,25 @@ a { color: inherit; }
 label { display: block; margin: 16px 0 6px; font-weight: 600; font-size: 0.9rem; }
 label.checkbox { font-weight: 400; display: flex; gap: 8px; align-items: center; margin: 10px 0; }
 
-input[type=email], input[type=password], input:not([type]), input[inputmode] {
+input[type=email], input[type=password], input[type=text], input:not([type]), input[inputmode] {
   width: 100%;
   padding: 10px 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
   font-size: 1rem;
+}
+
+.password-field { position: relative; }
+.password-field input { padding-right: 72px; }
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+  padding: 4px 10px;
+  font-size: 0.85rem;
+  border: none;
+  background: var(--bg);
 }
 
 .row { display: flex; gap: 8px; }
