@@ -23,7 +23,7 @@
 - **수정** 블로그 태그도 6.4대로 가운데 공백을 `_`로 바꿈 ("서울 맛집" → `서울_맛집`)
 - **설정** commonmark·jsoup 추가, Toast UI Editor 3.2.2를 서버에 둠(바깥 CDN 안 씀). 글쓰기 화면만 CSP에서 인라인 style 허용
 - **설정** `UPLOAD_DIR`(기본 `./data/uploads`), `UPLOAD_MAX_FILE_SIZE`, `UPLOAD_MAX_REQUEST_SIZE`, `UPLOAD_MAX_IMAGES_PER_POST`
-- **설정** 테스트 데이터: 글 본문에 사진 5장을 넣고 `load.sh`가 사진 파일도 복사함
+- **설정** 테스트 데이터: 글 본문에 사진 5장을 넣고 `load.sh`가 사진 파일도 복사함. 이미 넣은 DB에는 `add-photos.sql`로 사진만 더함(회원은 그대로)
 - **문서** 004 [plan.md](specs/004-board/plan.md)·[tasks.md](specs/004-board/tasks.md), 단계별 [진행 기록](specs/진행-기록.md) 새로 만듦(1~3단계, 사용자 요청), [로컬 실행 안내](docs/05-guides/로컬-실행.md) 6장(3단계 확인 목록), [테스트 데이터](docs/05-guides/테스트-데이터.md) 글 안내
 
 ### 테스트 데이터
