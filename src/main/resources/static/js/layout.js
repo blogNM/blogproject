@@ -1,5 +1,6 @@
 // 모든 화면 위쪽 메뉴와 아래쪽 링크. 사용자 입력은 모두 textContent로 넣는다 (SEC-06).
 import { api, startActivityHeartbeat } from './api.js';
+import { mountBell } from './notifications.js';
 
 export async function loadMe() {
   try {
@@ -44,6 +45,7 @@ function renderHeader(me) {
 
   if (me) {
     nav.append(el('a', { href: '/my-blogs.html' }, '내 블로그'));
+    nav.append(el('a', { href: '/members/' + me.id }, '내 활동'));
     nav.append(el('a', { href: '/me.html', class: 'nickname' }, me.nickname + '님'));
     const logout = el('button', { type: 'button', class: 'link-button' }, '로그아웃');
     logout.addEventListener('click', async () => {
@@ -54,6 +56,7 @@ function renderHeader(me) {
       }
     });
     nav.append(logout);
+    mountBell(nav);
   } else {
     nav.append(el('a', { href: '/login.html' }, '로그인'));
     nav.append(el('a', { href: '/signup.html', class: 'cta' }, '무료로 시작하기'));
@@ -74,7 +77,7 @@ function footerColumn(title, links) {
   return col;
 }
 
-function renderFooter() {
+function renderFooter(me) {
   const footer = document.querySelector('footer.site-footer');
   if (!footer) return;
   const brand = el('div');
@@ -82,7 +85,8 @@ function renderFooter() {
   const inner = el('div', { class: 'footer-inner' });
   inner.append(brand,
     footerColumn('둘러보기', [['/', '메인 피드'], ['/search.html', '통합 검색'], ['/blog-new.html', '블로그 만들기']]),
-    footerColumn('내 활동', [['/my-blogs.html', '내 블로그'], ['/me.html', '내 정보']]),
+    footerColumn('내 활동', [['/my-blogs.html', '내 블로그'], ...(me ? [['/members/' + me.id, '내 활동']] : []),
+      ['/me.html', '내 정보']]),
     footerColumn('도움말', [['/find-email.html', '이메일 찾기'], ['/forgot-password.html', '비밀번호 찾기']]));
   const bottom = el('div', { class: 'footer-bottom' });
   bottom.append(el('span', {}, '© Creat_'), el('a', { href: '/terms.html' }, '이용약관'),
@@ -143,7 +147,10 @@ export async function initLayout() {
   addPasswordToggles();
   const me = await loadMe();
   renderHeader(me);
-  if (me) startActivityHeartbeat();
+  if (me) {
+    renderFooter(me);
+    startActivityHeartbeat();
+  }
   return me;
 }
 

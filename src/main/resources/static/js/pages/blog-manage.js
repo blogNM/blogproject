@@ -316,3 +316,19 @@ if (blog) {
     $('share-url').value = shareUrl(res.shareToken);
   });
 }
+
+// 블로그 알림 보관 기간 (블로그장만, 3.6 알림 표)
+if (blog && blog.myRole === 'OWNER') {
+  api.get(base + '/notification-retention').then((res) => {
+    $('blog-retention').value = String(res.days);
+    $('retention-section').hidden = false;
+  }).catch(() => {});
+  $('blog-retention').addEventListener('change', async () => {
+    try {
+      const res = await api.put(base + '/notification-retention', { days: Number($('blog-retention').value) });
+      $('retention-message').textContent = `블로그 알림을 ${res.days}일 동안 보관합니다.`;
+    } catch (err) {
+      $('retention-message').textContent = err.message;
+    }
+  });
+}

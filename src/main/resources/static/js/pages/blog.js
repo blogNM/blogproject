@@ -3,6 +3,7 @@ import { JOIN_POLICY, VISIBILITY, roleName } from '../blog-card.js';
 import { renderShowcase, renderSideRecent } from '../blog-theme.js';
 import { el, initLayout, renderNotFound, toast } from '../layout.js';
 import { initPostList, postUrl } from '../post-list.js';
+import { openReport } from '../report.js';
 import { FONTS, THEMES, applyBlogLook, isAccent } from '../theme.js';
 
 const me = await initLayout();
@@ -54,8 +55,11 @@ async function load() {
   $('blog-address').textContent = '/blog/' + blog.slug;
   $('blog-description').textContent = blog.description || '';
   $('blog-tags').replaceChildren(...blog.tags.map((t) => el('li', {}, '#' + t)));
-  $('blog-meta').textContent = `블로그장 ${blog.ownerNickname} · 멤버 ${blog.memberCount}명 · `
-    + `${VISIBILITY[blog.visibility]} · ${JOIN_POLICY[blog.joinPolicy]} · ${blog.createdAt} 개설`;
+  // 블로그장 닉네임을 누르면 프로필로 간다 (SOC-03).
+  $('blog-meta').replaceChildren(document.createTextNode('블로그장 '),
+    el('a', { href: '/members/' + blog.ownerId, class: 'author-link' }, blog.ownerNickname),
+    document.createTextNode(` · 멤버 ${blog.memberCount}명 · 구독 ${blog.subscribers}명 · `
+      + `${VISIBILITY[blog.visibility]} · ${JOIN_POLICY[blog.joinPolicy]} · ${blog.createdAt} 개설`));
   if (blog.status === 'CLOSING') {
     $('status-badge').textContent = '폐쇄 예정인 블로그입니다.';
     $('status-badge').hidden = false;
@@ -168,6 +172,38 @@ function renderActions(blog) {
   const actions = $('actions');
   actions.replaceChildren();
   const base = `/api/blogs/${encodeURIComponent(blog.slug)}`;
+  const keyQ = key ? '?key=' + encodeURIComponent(key) : '';
+
+  // 구독 (SOC-01): 누르면 구독, 한 번 더 누르면 취소. 폐쇄 예정이어도 이미 한 구독은 풀 수 있다.
+  if (blog.status !== 'CLOSING' || blog.subscribed) {
+    const sub = el('button', { type: 'button', class: blog.subscribed ? 'subscribe on' : 'subscribe' },
+      blog.subscribed ? '구독 중' : '+ 구독');
+    sub.setAttribute('aria-pressed', String(blog.subscribed));
+    sub.addEventListener('click', async () => {
+      if (!me) {
+        location.href = '/login.html?next=' + encodeURIComponent(location.pathname + location.search);
+        return;
+      }
+      sub.disabled = true;
+      try {
+        const res = await api.post(`${base}/subscribe${keyQ}`);
+        blog.subscribed = res.on;
+        blog.subscribers = res.count;
+        toast(res.on ? '구독했어요. 메인의 구독 피드에서 새 글을 볼 수 있어요.' : '구독을 취소했어요.');
+        await load();
+      } catch (err) {
+        toast(err.message);
+        sub.disabled = false;
+      }
+    });
+    actions.append(sub);
+  }
+  if (!blog.myRole || blog.myRole !== 'OWNER') {
+    const report = el('button', { type: 'button', class: 'link-button muted-link' }, '블로그 신고');
+    report.addEventListener('click', () => openReport({ targetType: 'BLOG', slug: blog.slug, key }, !!me));
+    // 참여·관리 버튼을 다 그린 뒤 맨 끝에 둔다.
+    queueMicrotask(() => actions.append(report));
+  }
 
   if (!me) {
     actions.append(el('a', { class: 'button', href: '/login.html?next=' + encodeURIComponent(location.pathname + location.search) },

@@ -11,6 +11,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -23,6 +24,7 @@ import com.blognm.mainblog.common.ApiException;
 import com.blognm.mainblog.notification.NotificationWriter;
 import com.blognm.mainblog.post.PostService;
 import com.blognm.mainblog.ratelimit.RateLimiter;
+import com.blognm.mainblog.social.BlockService;
 
 /**
  * 댓글·대댓글 (BRD-06, 004 US5). 대댓글은 1단계까지이고, 답글에 다시 답하면 같은 줄기에 붙고 앞에 @닉네임이 붙는다 (D-78).
@@ -39,15 +41,17 @@ public class CommentService {
     private final NotificationWriter notifications;
     private final RateLimiter rateLimiter;
     private final BoardProperties props;
+    private final BlockService blocks;
     private final Clock clock;
 
     public CommentService(JdbcTemplate jdbc, PostService posts, NotificationWriter notifications,
-            RateLimiter rateLimiter, BoardProperties props, Clock clock) {
+            RateLimiter rateLimiter, BoardProperties props, BlockService blocks, Clock clock) {
         this.jdbc = jdbc;
         this.posts = posts;
         this.notifications = notifications;
         this.rateLimiter = rateLimiter;
         this.props = props;
+        this.blocks = blocks;
         this.clock = clock;
     }
 
@@ -63,14 +67,17 @@ public class CommentService {
                 WHERE c.post_id = ?
                 ORDER BY c.created_at, c.id
                 """, CommentService::row, postId);
+        // 서로 차단한 사이의 댓글은 숨긴다. 같은 블로그의 멤버끼리는 보인다 (D-36).
+        Set<Long> hidden = viewerId == null ? Set.of() : blocks.hiddenIn(post.blog().getId(), viewerId);
         Map<Long, CommentView> roots = new LinkedHashMap<>();
         for (Row r : rows) {
             if (r.parentId() == null) {
-                roots.put(r.id(), view(r, viewerId, post, new ArrayList<>()));
+                Row shown = hidden.contains(r.authorId()) ? r.asDeleted() : r;
+                roots.put(r.id(), view(shown, viewerId, post, new ArrayList<>()));
             }
         }
         for (Row r : rows) {
-            if (r.parentId() != null && r.normal() && roots.containsKey(r.parentId())) {
+            if (r.parentId() != null && r.normal() && roots.containsKey(r.parentId()) && !hidden.contains(r.authorId())) {
                 roots.get(r.parentId()).replies().add(view(r, viewerId, post, List.of()));
             }
         }
@@ -82,6 +89,8 @@ public class CommentService {
     public long write(long postId, String key, long actorId, WriteRequest req) {
         PostService.Readable post = posts.readable(postId, key, actorId);
         String content = normalize(req.content());
+        long blogOfPost = post.blog().getId();
+        blocks.requireNotBlocked(blogOfPost, actorId, post.post().getAuthorId(), "댓글을 달");
         if (!rateLimiter.tryAcquire("comment:" + actorId, props.commentsPerMinute(), Duration.ofMinutes(1))) {
             throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "TOO_MANY_REQUESTS", "댓글을 너무 빨리 달고 있습니다. 잠시 뒤에 다시 해 주세요.");
         }
@@ -93,6 +102,7 @@ public class CommentService {
                     .orElseThrow(() -> ApiException.badRequest("PARENT_NOT_FOUND", "답글을 달 댓글이 지워졌습니다."));
             parentId = target.parentId() == null ? target.id() : target.parentId();
             replyTo = target.authorId();
+            blocks.requireNotBlocked(blogOfPost, actorId, replyTo, "답글을 달");
         }
         LocalDateTime now = LocalDateTime.now(clock);
         GeneratedKeyHolder keys = new GeneratedKeyHolder();
@@ -173,17 +183,17 @@ public class CommentService {
                 rs.getBoolean("is_edited"), "NORMAL".equals(rs.getString("status")),
                 rs.getObject("created_at", LocalDateTime.class),
                 "ACTIVE".equals(rs.getString("member_status")) ? rs.getString("nickname") : "탈퇴한 회원",
-                rs.getString("reply_to"));
+                rs.getString("reply_to"), "ACTIVE".equals(rs.getString("member_status")));
     }
 
     private static CommentView view(Row r, Long viewerId, PostService.Readable post, List<CommentView> replies) {
         boolean mine = viewerId != null && r.authorId() == viewerId;
         if (!r.normal()) {
-            return new CommentView(r.id(), null, null, "삭제된 댓글입니다.", r.createdAt().format(DATE_TIME), false,
+            return new CommentView(r.id(), null, null, null, "삭제된 댓글입니다.", r.createdAt().format(DATE_TIME), false,
                     true, false, false, replies);
         }
-        return new CommentView(r.id(), r.authorName(), r.replyTo(), r.content(), r.createdAt().format(DATE_TIME),
-                r.edited(), false, mine, mine || post.canManagePosts(), replies);
+        return new CommentView(r.id(), r.authorActive() ? r.authorId() : null, r.authorName(), r.replyTo(), r.content(),
+                r.createdAt().format(DATE_TIME), r.edited(), false, mine, mine || post.canManagePosts(), replies);
     }
 
     private static ApiException notFound() {
@@ -191,14 +201,19 @@ public class CommentService {
     }
 
     private record Row(long id, long postId, Long parentId, long authorId, String content, boolean edited,
-            boolean normal, LocalDateTime createdAt, String authorName, String replyTo) {
+            boolean normal, LocalDateTime createdAt, String authorName, String replyTo, boolean authorActive) {
+
+        /** 차단해서 숨긴 댓글은 지운 댓글처럼 보인다. 답글이 없으면 목록에서 빠진다. */
+        Row asDeleted() {
+            return new Row(id, postId, parentId, authorId, null, false, false, createdAt, null, null, false);
+        }
     }
 
     public record WriteRequest(String content, Long parentId) {
     }
 
-    /** 화면은 모든 값을 textContent로 넣는다 (헌법 III). */
-    public record CommentView(long id, String authorName, String replyTo, String content, String createdAt,
+    /** 화면은 모든 값을 textContent로 넣는다 (헌법 III). authorId는 프로필 링크용, 탈퇴한 회원이면 null. */
+    public record CommentView(long id, Long authorId, String authorName, String replyTo, String content, String createdAt,
             boolean edited, boolean deleted, boolean mine, boolean canDelete, List<CommentView> replies) {
     }
 }

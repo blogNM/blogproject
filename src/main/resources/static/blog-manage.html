@@ -120,6 +120,16 @@
           <button id="regenerate" type="button">새 링크 만들기</button>
         </div>
       </section>
+
+      <section class="card" id="retention-section" hidden>
+        <h2 class="section-title">블로그 알림 보관</h2>
+        <p class="hint">참여 신청처럼 이 블로그에서 생긴 블로그 알림을 얼마나 남겨 둘지 정해요. 블로그장만 바꿀 수 있어요.</p>
+        <select id="blog-retention" aria-label="블로그 알림 보관 기간">
+          <option value="30">30일</option>
+          <option value="7">7일</option>
+        </select>
+        <p id="retention-message" class="info" role="status"></p>
+      </section>
     </div>
   </main>
   <footer class="site-footer"></footer>

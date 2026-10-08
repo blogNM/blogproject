@@ -20,6 +20,26 @@
       </dl>
       <p class="hint">이메일과 이름은 바꿀 수 없습니다.</p>
 
+      <section id="profile-card">
+        <h2 class="section-title">프로필 (다른 사람에게 보이는 정보)</h2>
+        <div class="photo-row">
+          <div id="photo" class="avatar large"></div>
+          <div>
+            <label class="button file-button">사진 고르기<input id="photo-input" type="file" accept="image/jpeg,image/png,image/gif,image/webp" class="visually-hidden"></label>
+            <button id="photo-delete" type="button">사진 지우기</button>
+            <p class="hint">jpg·png·gif·webp</p>
+          </div>
+        </div>
+        <label for="bio">소개</label>
+        <textarea id="bio" maxlength="150" rows="3" placeholder="나를 한두 줄로 소개해 주세요."></textarea>
+        <p class="hint"><span id="bio-length">0</span> / 150자</p>
+        <p id="bio-message" class="error" role="alert"></p>
+        <div class="actions">
+          <button id="bio-save" type="button" class="dark">소개 저장</button>
+          <a id="my-activity" class="button" href="/members/">내 활동 보기</a>
+        </div>
+      </section>
+
       <form id="profile-form" novalidate>
         <h2 class="section-title">닉네임·전화번호</h2>
         <label for="nickname">닉네임</label>
@@ -43,6 +63,25 @@
         <p id="password-message" class="error" role="alert"></p>
         <button type="submit" class="primary">비밀번호 바꾸기</button>
       </form>
+
+      <section id="notifications">
+        <h2 class="section-title">알림</h2>
+        <p class="hint">끈 동안 생긴 일은 다시 켜도 알림으로 오지 않아요.</p>
+        <div id="notice-settings" class="setting-list"></div>
+        <p class="hint">꼭 필요한 알림은 끌 수 없어요: <span id="always-on"></span></p>
+        <label for="retention">알림 보관 기간</label>
+        <select id="retention">
+          <option value="30">30일</option>
+          <option value="7">7일</option>
+        </select>
+        <p id="notice-message" class="info" role="status"></p>
+      </section>
+
+      <section id="blocked-section">
+        <h2 class="section-title">차단한 회원</h2>
+        <p class="hint">차단하면 서로의 글·댓글이 숨겨지고, 팔로우·댓글·좋아요를 할 수 없어요. 같은 블로그 멤버끼리는 그 블로그 안에서 보여요.</p>
+        <ul id="blocked" class="plain-list"></ul>
+      </section>
 
       <form id="withdraw-form" novalidate>
         <h2 class="section-title">회원탈퇴</h2>

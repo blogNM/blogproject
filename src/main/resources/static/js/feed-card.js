@@ -17,7 +17,10 @@ export function feedCard(p) {
   body.append(blog, h3);
   if (p.excerpt) body.append(el('p', { class: 'excerpt' }, p.excerpt));
   const meta = el('div', { class: 'meta' });
-  meta.append(el('span', {}, p.authorName), el('span', {}, p.createdAt),
+  // 작성자를 누르면 프로필로 간다. 탈퇴한 회원·블로그를 나간 작성자는 글자만.
+  const author = p.authorId ? el('a', { href: '/members/' + p.authorId, class: 'author-link' }, p.authorName)
+    : el('span', {}, p.authorName);
+  meta.append(author, el('span', {}, p.createdAt),
     el('span', {}, '♥ ' + p.likes), el('span', {}, '댓글 ' + p.comments), el('span', {}, '조회 ' + p.views));
   body.append(meta);
   li.append(body);

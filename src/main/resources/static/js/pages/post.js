@@ -1,5 +1,6 @@
 import { api, ApiError } from '../api.js';
 import { el, initLayout, renderNotFound, toast } from '../layout.js';
+import { openReport } from '../report.js';
 import { applyBlogLook } from '../theme.js';
 
 const me = await initLayout();
@@ -46,7 +47,10 @@ if (post && post.blogSlug !== slug) {
     $('category').hidden = false;
   }
   $('title').textContent = post.title;
-  $('meta').textContent = `${post.authorName} · ${post.createdAt}` + (post.updatedAt ? ` (수정 ${post.updatedAt})` : '');
+  const author = post.authorId ? el('a', { href: '/members/' + post.authorId, class: 'author-link' }, post.authorName)
+    : document.createTextNode(post.authorName);
+  $('meta').replaceChildren(author,
+    document.createTextNode(` · ${post.createdAt}` + (post.updatedAt ? ` (수정 ${post.updatedAt})` : '')));
   $('content').innerHTML = post.contentHtml;
   $('tags').replaceChildren(...post.tags.map((t) => {
     const li = el('li');
@@ -77,6 +81,12 @@ if (post && post.blogSlug !== slug) {
       }
     });
     actions.append(del);
+  }
+  // 내 글이 아니면 신고 (SOC-06). 블로그장이 쓴 글은 메인 관리자에게 간다.
+  if (!post.canEdit) {
+    const report = el('button', { type: 'button', class: 'link-button muted-link' }, '신고');
+    report.addEventListener('click', () => openReport({ targetType: 'POST', targetId: post.id, key }, !!me));
+    $('post-actions-extra').append(report);
   }
   $('post').hidden = false;
 }
@@ -135,13 +145,20 @@ async function loadComments() {
   $('comment-count').textContent = String(total);
   $('counts').textContent = `조회 ${post.counts.views} · 댓글 ${total}`;
   $('comment-list').replaceChildren(...comments.map((c) => commentItem(c, c.id)));
+  // 알림에서 눌러 들어오면 그 댓글로 내려간다.
+  const target = /^#comment-\d+$/.test(location.hash) ? document.querySelector(location.hash) : null;
+  if (target) {
+    target.classList.add('focused');
+    target.scrollIntoView({ block: 'center' });
+  }
 }
 
 function commentItem(c, rootId) {
-  const li = el('li', { class: c.deleted ? 'comment deleted' : 'comment' });
+  const li = el('li', { class: c.deleted ? 'comment deleted' : 'comment', id: 'comment-' + c.id });
   if (!c.deleted) {
     const head = el('div', { class: 'comment-head' });
-    head.append(el('span', { class: 'comment-author' }, c.authorName), el('span', { class: 'muted' }, c.createdAt));
+    head.append(c.authorId ? el('a', { class: 'comment-author', href: '/members/' + c.authorId }, c.authorName)
+      : el('span', { class: 'comment-author' }, c.authorName), el('span', { class: 'muted' }, c.createdAt));
     if (c.edited) head.append(el('span', { class: 'muted' }, '수정됨'));
     li.append(head);
   }
@@ -174,6 +191,11 @@ function commentItem(c, rootId) {
         }
       });
       tools.append(del);
+    }
+    if (!c.mine) {
+      const report = el('button', { type: 'button' }, '신고');
+      report.addEventListener('click', () => openReport({ targetType: 'COMMENT', targetId: c.id, key }, !!me));
+      tools.append(report);
     }
     li.append(tools);
   }

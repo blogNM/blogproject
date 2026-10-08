@@ -16,6 +16,7 @@ import com.blognm.mainblog.common.Hashing;
 import com.blognm.mainblog.config.AppProperties;
 import com.blognm.mainblog.notification.NotificationWriter;
 import com.blognm.mainblog.ratelimit.RateLimiter;
+import com.blognm.mainblog.social.BlockService;
 
 /** 좋아요(BRD-06)와 조회수(BRD-11). */
 @Service
@@ -27,16 +28,18 @@ public class ReactionService {
     private final RateLimiter rateLimiter;
     private final BoardProperties props;
     private final AppProperties app;
+    private final BlockService blocks;
     private final Clock clock;
 
     public ReactionService(JdbcTemplate jdbc, PostService posts, NotificationWriter notifications,
-            RateLimiter rateLimiter, BoardProperties props, AppProperties app, Clock clock) {
+            RateLimiter rateLimiter, BoardProperties props, AppProperties app, BlockService blocks, Clock clock) {
         this.jdbc = jdbc;
         this.posts = posts;
         this.notifications = notifications;
         this.rateLimiter = rateLimiter;
         this.props = props;
         this.app = app;
+        this.blocks = blocks;
         this.clock = clock;
     }
 
@@ -52,6 +55,7 @@ public class ReactionService {
             jdbc.update("UPDATE posts SET like_count = GREATEST(like_count - 1, 0) WHERE id = ?", postId);
             liked = false;
         } else {
+            blocks.requireNotBlocked(post.blog().getId(), actorId, post.post().getAuthorId(), "좋아요를 누를");
             jdbc.update("INSERT IGNORE INTO post_likes (member_id, post_id, created_at) VALUES (?, ?, ?)", actorId,
                     postId, LocalDateTime.now(clock));
             jdbc.update("UPDATE posts SET like_count = like_count + 1 WHERE id = ?", postId);

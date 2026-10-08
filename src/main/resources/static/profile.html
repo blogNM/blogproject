@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>프로필 - Creat_</title>
+  <link rel="icon" href="/img/creat-mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/common.css">
+  <script type="module" src="/js/pages/profile.js"></script>
+</head>
+<body>
+  <header class="site-header"></header>
+  <main class="container wide">
+    <section id="profile" class="profile-card" hidden>
+      <div id="avatar" class="avatar large"></div>
+      <div class="profile-main">
+        <h1 id="nickname"></h1>
+        <p id="bio" class="profile-bio"></p>
+        <p class="profile-counts">
+          <button type="button" class="count-link" data-tab="followers"><strong id="follower-count">0</strong> 팔로워</button>
+          <button type="button" class="count-link" data-tab="following"><strong id="following-count">0</strong> 팔로잉</button>
+          <span id="joined" class="muted"></span>
+        </p>
+        <div id="profile-actions" class="actions"></div>
+      </div>
+    </section>
+
+    <section id="blogs" class="profile-blogs" hidden>
+      <div id="owned-wrap">
+        <h2 class="section-title">운영하는 블로그</h2>
+        <ul id="owned" class="blog-chips"></ul>
+      </div>
+      <div id="joined-wrap">
+        <h2 class="section-title">참여한 블로그</h2>
+        <ul id="joined-blogs" class="blog-chips"></ul>
+      </div>
+    </section>
+
+    <section id="activity" hidden>
+      <div class="activity-head">
+        <h2 id="activity-title" class="section-title">활동</h2>
+      </div>
+      <div id="activity-tabs" class="tabs" role="tablist"></div>
+      <label id="share-toggle" class="checkbox share-toggle" hidden>
+        <input id="share-check" type="checkbox"> <span id="share-label">다른 사람에게 보여주기</span>
+      </label>
+      <div id="activity-list"></div>
+      <nav id="activity-pager" class="pager"></nav>
+    </section>
+    <p id="error" class="error" role="alert" hidden></p>
+  </main>
+  <footer class="site-footer"></footer>
+</body>
+</html>

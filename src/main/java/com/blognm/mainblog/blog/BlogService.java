@@ -11,6 +11,7 @@ import java.util.Set;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +22,7 @@ import com.blognm.mainblog.member.Member;
 import com.blognm.mainblog.member.MemberRepository;
 import com.blognm.mainblog.notification.NotificationWriter;
 import com.blognm.mainblog.notification.NotificationWriter.Type;
+import com.blognm.mainblog.social.BlockService;
 
 /** 블로그 만들기·정보 수정·참여 신청·승인·탈퇴 (BLG-01, 04~07, 10). */
 @Service
@@ -36,11 +38,13 @@ public class BlogService {
     private final MemberRepository members;
     private final NotificationWriter notifications;
     private final BlogProperties props;
+    private final BlockService blocks;
+    private final JdbcTemplate jdbc;
     private final Clock clock;
 
     public BlogService(BlogRepository blogs, BlogMembershipRepository memberships, JoinRequestRepository joinRequests,
             TagRepository tags, MemberRepository members, NotificationWriter notifications, BlogProperties props,
-            Clock clock) {
+            BlockService blocks, JdbcTemplate jdbc, Clock clock) {
         this.blogs = blogs;
         this.memberships = memberships;
         this.joinRequests = joinRequests;
@@ -48,6 +52,8 @@ public class BlogService {
         this.members = members;
         this.notifications = notifications;
         this.props = props;
+        this.blocks = blocks;
+        this.jdbc = jdbc;
         this.clock = clock;
     }
 
@@ -147,7 +153,15 @@ public class BlogService {
                 ownerMember.getNickname(), memberships.countActive(blog.getId()), tagNames(blog),
                 blog.getCreatedAt().format(DATE), role, requestStatus,
                 canRequestAt == null ? null : canRequestAt.format(DATE),
-                owner ? blog.getShareToken() : null, managePosts, editInfo, themeView(blog));
+                owner ? blog.getShareToken() : null, managePosts, editInfo, themeView(blog), blog.getOwnerId(),
+                count("SELECT COUNT(*) FROM subscriptions WHERE blog_id = ?", blog.getId()),
+                viewerId != null && count("SELECT COUNT(*) FROM subscriptions WHERE blog_id = ? AND member_id = ?",
+                        blog.getId(), viewerId) > 0);
+    }
+
+    private long count(String sql, Object... args) {
+        Long n = jdbc.queryForObject(sql, Long.class, args);
+        return n == null ? 0 : n;
     }
 
     private ThemeView themeView(Blog blog) {
@@ -294,6 +308,10 @@ public class BlogService {
         if (existing.isPresent() && existing.get().getStatus() == BlogMembership.Status.KICKED) {
             throw new ApiException(HttpStatus.FORBIDDEN, "JOIN_BLOCKED", "이 블로그에는 참여할 수 없습니다.");
         }
+        // 블로그장과 서로 차단한 사이면 참여할 수 없다 (D-36, 추천안 #10).
+        if (blocks.between(blog.getOwnerId(), memberId)) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "JOIN_BLOCKED", "이 블로그에는 참여할 수 없습니다.");
+        }
         Optional<JoinRequest> last = joinRequests.findFirstByBlogIdAndMemberIdOrderByIdDesc(blog.getId(), memberId);
         if (last.isPresent() && last.get().isPending()) {
             throw new ApiException(HttpStatus.CONFLICT, "ALREADY_REQUESTED", "이미 참여 신청을 했습니다. 승인을 기다려 주세요.");
@@ -425,7 +443,8 @@ public class BlogService {
     public record BlogView(String slug, String name, String description, String visibility, String joinPolicy,
             String status, LocalDateTime closeScheduledAt, String ownerNickname, long memberCount, List<String> tags,
             String createdAt, String myRole, String myRequest, String canRequestAt, String shareToken,
-            boolean canManagePosts, boolean canEditInfo, ThemeView theme) {
+            boolean canManagePosts, boolean canEditInfo, ThemeView theme, long ownerId, long subscribers,
+            boolean subscribed) {
     }
 
     public record ThemeView(String theme, String accent, String font, String heroTitle, String heroSubtitle,

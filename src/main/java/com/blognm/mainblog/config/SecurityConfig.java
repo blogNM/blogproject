@@ -99,6 +99,8 @@ public class SecurityConfig {
                                 "/api/posts/*", "/api/posts/*/comments").permitAll()
                         // 메인 피드·공지·통합 검색 (004 4단계). 팔로우·구독 탭은 서비스가 로그인을 확인한다.
                         .requestMatchers(HttpMethod.GET, "/api/feed", "/api/notices", "/api/search").permitAll()
+                        // 프로필·팔로워·내 활동 목록 (5단계). 비공개로 둔 목록은 서비스가 막는다 (D-91).
+                        .requestMatchers(HttpMethod.GET, "/api/members/*", "/api/members/*/*").permitAll()
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll())
                 .exceptionHandling(e -> e

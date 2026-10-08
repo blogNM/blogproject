@@ -113,3 +113,13 @@ board:
   popular-window: ${BOARD_POPULAR_WINDOW:7d}
   recent-search-max: ${BOARD_RECENT_SEARCH_MAX:10}
   feed-notice-count: ${BOARD_FEED_NOTICE_COUNT:5}
+
+# 팔로우·구독·차단·신고·알림 (003 5단계)
+social:
+  # 팔로우·구독·차단을 연타해 알림을 쏟아내지 않도록 종류별로 회원당 1분에 30번 (추천안 #11)
+  actions-per-minute: ${SOCIAL_ACTIONS_PER_MINUTE:30}
+  # 같은 사람이 같은 대상을 다시 신고할 수 있기까지 (SOC-06)
+  report-cooldown: ${SOCIAL_REPORT_COOLDOWN:14d}
+  # 알림 기본 보관 일수 (4.5). 회원·블로그장이 7일로 줄일 수 있다
+  notification-retention-days: ${SOCIAL_NOTIFICATION_RETENTION_DAYS:30}
+  bio-max: ${SOCIAL_BIO_MAX:150}
