@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>내 블로그 - 메인블로그</title>
+  <link rel="stylesheet" href="/css/common.css">
+  <script type="module" src="/js/pages/my-blogs.js"></script>
+</head>
+<body>
+  <header class="site-header"></header>
+  <main class="container">
+    <h1>내 블로그</h1>
+    <section>
+      <h2 class="section-title">내가 만든 블로그</h2>
+      <ul id="owned" class="blog-grid"></ul>
+    </section>
+    <section>
+      <h2 class="section-title">참여한 블로그</h2>
+      <ul id="joined" class="blog-grid"></ul>
+    </section>
+    <section id="pending-section" hidden>
+      <h2 class="section-title">승인 기다리는 신청</h2>
+      <ul id="pending" class="plain-list"></ul>
+    </section>
+  </main>
+  <footer class="site-footer"></footer>
+</body>
+</html>

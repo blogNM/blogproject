@@ -12,6 +12,8 @@ public record AppProperties(
         Mail mail,
         Auth auth,
         Signup signup,
+        PasswordReset passwordReset,
+        EmailFind emailFind,
         Login login,
         RateLimit rateLimit,
         Turnstile turnstile) {
@@ -30,6 +32,12 @@ public record AppProperties(
     }
 
     public record Signup(Duration codeTtl, Duration verifiedTtl, Duration resendInterval, int maxCodeFailures) {
+    }
+
+    public record PasswordReset(Duration codeTtl, int maxCodeFailures) {
+    }
+
+    public record EmailFind(Duration tokenTtl, int perWindow, Duration window) {
     }
 
     public record Login(int captchaAfterFailures, int lockAfterFailures, Duration lockDuration) {

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>이메일 찾기 - 메인블로그</title>
+  <link rel="stylesheet" href="/css/common.css">
+  <script type="module" src="/js/pages/find-email.js"></script>
+</head>
+<body>
+  <header class="site-header"></header>
+  <main class="container">
+    <section class="card narrow">
+      <h1>이메일 찾기</h1>
+      <p class="muted">가입할 때 입력한 이름과 전화번호로 찾습니다.</p>
+      <form id="find-form" novalidate>
+        <label for="name">이름</label>
+        <input id="name" autocomplete="name" maxlength="20">
+        <label for="phone">전화번호</label>
+        <input id="phone" inputmode="numeric" autocomplete="tel" placeholder="01012345678">
+        <p id="error" class="error" role="alert"></p>
+        <button type="submit" class="primary">찾기</button>
+      </form>
+
+      <div id="result" hidden>
+        <h2 class="section-title">찾은 계정</h2>
+        <ul id="result-list" class="plain-list"></ul>
+        <p class="hint">[비밀번호 재설정]을 누르면 그 이메일로 인증번호를 보냅니다. 10분 안에 눌러 주세요.</p>
+      </div>
+      <p class="links"><a href="/login.html">로그인</a> · <a href="/forgot-password.html">비밀번호 찾기</a></p>
+    </section>
+  </main>
+  <footer class="site-footer"></footer>
+</body>
+</html>

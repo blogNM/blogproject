@@ -1,13 +1,15 @@
 package com.blognm.mainblog.support;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import jakarta.servlet.http.Cookie;
 
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,11 +21,15 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 import com.blognm.mainblog.mail.LogMailGateway;
 import com.blognm.mainblog.ratelimit.InMemoryRateLimiter;
@@ -51,6 +57,14 @@ public abstract class IntegrationTest {
 
     @BeforeEach
     void resetState() {
+        jdbc.update("DELETE FROM notifications");
+        jdbc.update("DELETE FROM join_requests");
+        jdbc.update("DELETE FROM blog_tags");
+        jdbc.update("DELETE FROM blog_memberships");
+        jdbc.update("DELETE FROM subscriptions");
+        jdbc.update("DELETE FROM blogs");
+        jdbc.update("DELETE FROM tags");
+        jdbc.update("DELETE FROM email_find_tokens");
         jdbc.update("DELETE FROM refresh_tokens");
         jdbc.update("DELETE FROM login_failures");
         jdbc.update("DELETE FROM email_verifications");
@@ -61,7 +75,7 @@ public abstract class IntegrationTest {
     }
 
     protected ResultActions postJson(String url, String json) throws Exception {
-        return mvc.perform(post(url).with(csrf().asHeader()).contentType(MediaType.APPLICATION_JSON).content(json));
+        return mvc.perform(MockMvcRequestBuilders.post(url).with(csrf().asHeader()).contentType(MediaType.APPLICATION_JSON).content(json));
     }
 
     /** @Async로 보내는 메일을 기다렸다가 6자리 인증번호를 꺼낸다. */
@@ -95,12 +109,50 @@ public abstract class IntegrationTest {
 
     /** 가입 세 단계를 끝까지 진행한다. */
     protected void signup(String email, String password, String nickname) throws Exception {
+        signup(email, password, nickname, "김테스트", "010-1234-5678");
+    }
+
+    protected void signup(String email, String password, String nickname, String name, String phone)
+            throws Exception {
         postJson("/api/auth/signup/code", "{\"email\":\"%s\"}".formatted(email));
         String code = waitForCode(email.toLowerCase());
         postJson("/api/auth/signup/verify", "{\"email\":\"%s\",\"code\":\"%s\"}".formatted(email, code));
         postJson("/api/auth/signup", """
-                {"email":"%s","password":"%s","name":"김테스트","nickname":"%s","phone":"010-1234-5678",
-                 "agreeTerms":true,"agreePrivacy":true,"age14":true}""".formatted(email, password, nickname));
+                {"email":"%s","password":"%s","name":"%s","nickname":"%s","phone":"%s",
+                 "agreeTerms":true,"agreePrivacy":true,"age14":true}""".formatted(email, password, name, nickname,
+                phone)).andExpect(status().isOk());
+    }
+
+    /** 로그인하고 ACCESS_TOKEN·REFRESH_TOKEN 쿠키를 돌려준다. */
+    protected Cookie[] login(String email, String password) throws Exception {
+        MvcResult r = postJson("/api/auth/login", """
+                {"email":"%s","password":"%s","rememberMe":false}""".formatted(email, password))
+                .andExpect(status().isOk()).andReturn();
+        return new Cookie[] {r.getResponse().getCookie("ACCESS_TOKEN"), r.getResponse().getCookie("REFRESH_TOKEN")};
+    }
+
+    /** 가입하고 로그인까지 한다. */
+    protected Cookie[] member(String email, String nickname) throws Exception {
+        signup(email, "Abcd1234!", nickname);
+        return login(email, "Abcd1234!");
+    }
+
+    protected ResultActions getAs(String url, Cookie... cookies) throws Exception {
+        return cookies.length == 0 ? mvc.perform(MockMvcRequestBuilders.get(url))
+                : mvc.perform(MockMvcRequestBuilders.get(url).cookie(cookies));
+    }
+
+    protected ResultActions sendAs(HttpMethod method, String url, String json, Cookie... cookies) throws Exception {
+        MockHttpServletRequestBuilder req = MockMvcRequestBuilders.request(method, url).with(csrf().asHeader())
+                .contentType(MediaType.APPLICATION_JSON).content(json == null ? "{}" : json);
+        if (cookies.length > 0) {
+            req.cookie(cookies);
+        }
+        return mvc.perform(req);
+    }
+
+    protected ResultActions postAs(String url, String json, Cookie... cookies) throws Exception {
+        return sendAs(HttpMethod.POST, url, json, cookies);
     }
 
     @TestConfiguration

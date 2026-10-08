@@ -9,7 +9,8 @@ export async function loadMe() {
   }
 }
 
-function el(tag, attrs = {}, text) {
+/** 요소를 만든다. 글자는 항상 textContent로 넣는다. */
+export function el(tag, attrs = {}, text) {
   const node = document.createElement(tag);
   Object.entries(attrs).forEach(([k, v]) => node.setAttribute(k, v));
   if (text !== undefined) node.textContent = text;
@@ -25,7 +26,8 @@ function renderHeader(me) {
   const nav = el('nav', { class: 'site-nav' });
 
   if (me) {
-    nav.append(el('span', { class: 'nickname' }, me.nickname + '님'));
+    nav.append(el('a', { href: '/my-blogs.html' }, '내 블로그'));
+    nav.append(el('a', { href: '/me.html', class: 'nickname' }, me.nickname + '님'));
     const logout = el('button', { type: 'button', class: 'link-button' }, '로그아웃');
     logout.addEventListener('click', async () => {
       try {
@@ -82,5 +84,15 @@ export async function initLayout() {
   const me = await loadMe();
   renderHeader(me);
   if (me) startActivityHeartbeat();
+  return me;
+}
+
+/** 로그인해야 쓰는 화면. 로그인하지 않았으면 로그인 화면으로 보내고, 로그인 뒤 이 화면으로 돌아온다. */
+export async function requireLogin() {
+  const me = await initLayout();
+  if (!me) {
+    location.replace('/login.html?next=' + encodeURIComponent(location.pathname + location.search));
+    return new Promise(() => {});
+  }
   return me;
 }

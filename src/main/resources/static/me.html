@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>내 정보 - 메인블로그</title>
+  <link rel="stylesheet" href="/css/common.css">
+  <script type="module" src="/js/pages/me.js"></script>
+</head>
+<body>
+  <header class="site-header"></header>
+  <main class="container">
+    <section class="card narrow">
+      <h1>내 정보</h1>
+      <dl class="info-list">
+        <dt>이메일</dt><dd id="email"></dd>
+        <dt>이름</dt><dd id="name"></dd>
+        <dt>가입일</dt><dd id="joined"></dd>
+      </dl>
+      <p class="hint">이메일과 이름은 바꿀 수 없습니다.</p>
+
+      <form id="profile-form" novalidate>
+        <h2 class="section-title">닉네임·전화번호</h2>
+        <label for="nickname">닉네임</label>
+        <input id="nickname" maxlength="12">
+        <p class="hint">2~12자, 한글·영문·숫자</p>
+        <label for="phone">전화번호</label>
+        <input id="phone" inputmode="numeric">
+        <p id="profile-message" class="error" role="alert"></p>
+        <button type="submit" class="primary">저장</button>
+      </form>
+
+      <form id="password-form" novalidate>
+        <h2 class="section-title">비밀번호 바꾸기</h2>
+        <label for="current-password">현재 비밀번호</label>
+        <input id="current-password" type="password" autocomplete="current-password" maxlength="15">
+        <label for="new-password">새 비밀번호</label>
+        <input id="new-password" type="password" autocomplete="new-password" maxlength="15">
+        <p class="hint">8~15자, 영문·숫자·특수문자를 모두 넣어 주세요. 바꾸면 다른 기기의 로그인이 풀립니다.</p>
+        <label for="new-password2">새 비밀번호 확인</label>
+        <input id="new-password2" type="password" autocomplete="new-password" maxlength="15">
+        <p id="password-message" class="error" role="alert"></p>
+        <button type="submit" class="primary">비밀번호 바꾸기</button>
+      </form>
+
+      <form id="withdraw-form" novalidate>
+        <h2 class="section-title">회원탈퇴</h2>
+        <p class="hint">탈퇴하면 쓴 글은 "탈퇴한 회원"으로 남고, 이름·전화번호는 30일 뒤 지워집니다.
+          블로그장인 블로그가 있으면 블로그장을 넘기거나 블로그를 닫은 뒤에 탈퇴할 수 있습니다.</p>
+        <label for="withdraw-password">비밀번호 확인</label>
+        <input id="withdraw-password" type="password" autocomplete="current-password" maxlength="15">
+        <label class="checkbox"><input id="withdraw-confirm" type="checkbox"> 위 내용을 확인했고 탈퇴합니다.</label>
+        <p id="withdraw-message" class="error" role="alert"></p>
+        <ul id="owned-blogs" class="plain-list" hidden></ul>
+        <button type="submit" class="danger">탈퇴하기</button>
+      </form>
+    </section>
+  </main>
+  <footer class="site-footer"></footer>
+</body>
+</html>

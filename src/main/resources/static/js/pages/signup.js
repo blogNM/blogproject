@@ -1,5 +1,6 @@
 import { api } from '../api.js';
 import { initLayout } from '../layout.js';
+import { PASSWORD_MESSAGE, PASSWORD_RULE } from '../rules.js';
 
 const me = await initLayout();
 if (me) {
@@ -62,13 +63,12 @@ $('step1').addEventListener('submit', async (e) => {
 });
 
 // ② 비밀번호 (SEC-02). 서버도 같은 규칙으로 다시 확인한다.
-const PASSWORD_RULE = /^(?=.*[A-Za-z])(?=.*[0-9])(?=.*[^A-Za-z0-9])[\x21-\x7E]{8,15}$/;
 
 $('step2').addEventListener('submit', (e) => {
   e.preventDefault();
   const pw = $('password').value;
   if (!PASSWORD_RULE.test(pw)) {
-    $('step2-error').textContent = '비밀번호는 8~15자로 영문·숫자·특수문자를 모두 넣어 주세요.';
+    $('step2-error').textContent = PASSWORD_MESSAGE;
     return;
   }
   if (pw !== $('password2').value) {

@@ -13,7 +13,21 @@
     <section class="hero">
       <h1>메인블로그</h1>
       <p id="welcome">블로그를 만들고 다른 회원과 함께 운영해 보세요.</p>
-      <p class="muted">블로그 만들기·참여는 2단계에서 열립니다.</p>
+      <a class="button primary inline" href="/blog-new.html">블로그 만들기</a>
+    </section>
+
+    <section>
+      <form id="search-form" class="search-bar" role="search">
+        <input id="q" type="search" placeholder="블로그 이름·소개·태그로 검색" aria-label="블로그 검색">
+        <button type="submit">검색</button>
+      </form>
+      <div class="tabs" role="tablist">
+        <button type="button" class="tab active" data-sort="latest" role="tab">최신순</button>
+        <button type="button" class="tab" data-sort="popular" role="tab">인기순</button>
+      </div>
+      <p id="summary" class="muted"></p>
+      <ul id="blog-list" class="blog-grid"></ul>
+      <nav id="pager" class="pager" aria-label="페이지"></nav>
     </section>
   </main>
   <footer class="site-footer"></footer>

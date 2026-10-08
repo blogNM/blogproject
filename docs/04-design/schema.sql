@@ -23,6 +23,7 @@ CREATE TABLE members (
   age14_confirmed_at DATETIME NOT NULL COMMENT '만 14세 이상 확인 시각',
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '가입일',
   withdrawn_at DATETIME NULL COMMENT '탈퇴 시각. 30일 뒤 개인정보 삭제',
+  credentials_changed_at DATETIME NULL COMMENT '비밀번호 변경·탈퇴 시각. 이전에 발급된 Access Token 무효 (T031, V2)',
   PRIMARY KEY (id),
   UNIQUE KEY uk_members_email (email),
   UNIQUE KEY uk_members_nickname (nickname),

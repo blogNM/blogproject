@@ -11,7 +11,9 @@ spring:
     hibernate:
       ddl-auto: validate
     properties:
-      hibernate.jdbc.time_zone: Asia/Seoul
+      # 시각은 모두 한국 시간(app.time-zone) 그대로 저장한다. 서버 JVM 시간대(UTC 등)에 따라 값이 밀리지 않도록
+      # LocalDateTime을 변환 없이 JDBC에 넘긴다. JdbcTemplate으로 읽고 쓰는 값과도 같아진다.
+      hibernate.type.java_time_use_direct_jdbc: true
   flyway:
     enabled: true
   mail:
@@ -54,6 +56,15 @@ app:
     verified-ttl: ${SIGNUP_VERIFIED_TTL:30m}
     resend-interval: ${SIGNUP_RESEND_INTERVAL:1m}
     max-code-failures: ${SIGNUP_MAX_CODE_FAILURES:5}
+  password-reset:
+    # 비밀번호 재설정 인증번호: 30분, 1회용, 5번 틀리면 무효 (USR-06, SEC-05)
+    code-ttl: ${PASSWORD_RESET_CODE_TTL:30m}
+    max-code-failures: ${PASSWORD_RESET_MAX_FAILURES:5}
+  email-find:
+    # 이메일 찾기: 결과에서 비밀번호 재설정으로 넘어갈 때 쓰는 임시 토큰 10분 (D-26), 같은 IP 10분에 5번 (USR-08)
+    token-ttl: ${EMAIL_FIND_TOKEN_TTL:10m}
+    per-window: ${EMAIL_FIND_PER_WINDOW:5}
+    window: ${EMAIL_FIND_WINDOW:10m}
   login:
     captcha-after-failures: ${LOGIN_CAPTCHA_AFTER:3}
     lock-after-failures: ${LOGIN_LOCK_AFTER:5}
@@ -67,3 +78,14 @@ app:
     site-key: ${TURNSTILE_SITE_KEY:1x00000000000000000000AA}
     secret-key: ${TURNSTILE_SECRET_KEY:1x0000000000000000000000000000000AA}
     verify-url: https://challenges.cloudflare.com/turnstile/v0/siteverify
+
+# 블로그 (002). 개수 제한은 설정 파일 + 환경변수 (BLG-10, D-52)
+blog:
+  limit:
+    # 공개(일부 공개 포함) 블로그 수. 5까지 올릴 수 있다 (D-51)
+    public: ${BLOG_LIMIT_PUBLIC:3}
+    private: ${BLOG_LIMIT_PRIVATE:5}
+  # 블로그 목록 한 페이지 개수
+  page-size: ${BLOG_PAGE_SIZE:12}
+  # 참여 신청이 거절된 뒤 다시 신청할 수 있을 때까지 (BLG-04)
+  rejoin-after-reject: ${BLOG_REJOIN_AFTER_REJECT:7d}

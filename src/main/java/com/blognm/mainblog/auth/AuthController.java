@@ -1,5 +1,6 @@
 package com.blognm.mainblog.auth;
 
+import java.util.List;
 import java.util.Map;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -22,13 +23,15 @@ public class AuthController {
 
     private final SignupService signupService;
     private final LoginService loginService;
+    private final PasswordResetService passwordResetService;
     private final AuthCookies cookies;
     private final TurnstileVerifier turnstile;
 
-    public AuthController(SignupService signupService, LoginService loginService, AuthCookies cookies,
-            TurnstileVerifier turnstile) {
+    public AuthController(SignupService signupService, LoginService loginService,
+            PasswordResetService passwordResetService, AuthCookies cookies, TurnstileVerifier turnstile) {
         this.signupService = signupService;
         this.loginService = loginService;
+        this.passwordResetService = passwordResetService;
         this.cookies = cookies;
         this.turnstile = turnstile;
     }
@@ -95,6 +98,35 @@ public class AuthController {
         AuthCookies.read(request, AuthCookies.REFRESH).ifPresent(loginService::logout);
         cookies.clear(response);
         return Map.of("loggedOut", true);
+    }
+
+    // ----- 비밀번호 찾기·재설정 (USR-06), 이메일 찾기 (USR-08) -----
+
+    @PostMapping("/password/code")
+    public Map<String, String> requestPasswordCode(@RequestBody PasswordCodeBody body, HttpServletRequest request) {
+        String masked = passwordResetService.requestCode(body.email(), body.findToken(), ClientIp.of(request));
+        return Map.of("message", "입력한 이메일로 안내를 보냈습니다. 메일함을 확인해 주세요.", "maskedEmail", masked);
+    }
+
+    @PostMapping("/password/reset")
+    public Map<String, Boolean> resetPassword(@RequestBody PasswordResetBody body) {
+        passwordResetService.reset(body.email(), body.findToken(), body.code(), body.newPassword());
+        return Map.of("changed", true);
+    }
+
+    @PostMapping("/find-email")
+    public Map<String, List<PasswordResetService.FoundEmail>> findEmail(@RequestBody FindEmailBody body,
+            HttpServletRequest request) {
+        return Map.of("results", passwordResetService.findEmail(body.name(), body.phone(), ClientIp.of(request)));
+    }
+
+    public record PasswordCodeBody(String email, String findToken) {
+    }
+
+    public record PasswordResetBody(String email, String findToken, String code, String newPassword) {
+    }
+
+    public record FindEmailBody(String name, String phone) {
     }
 
     public record EmailBody(String email) {

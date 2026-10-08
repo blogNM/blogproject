@@ -2,6 +2,7 @@ package com.blognm.mainblog.auth;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
+import java.time.Instant;
 import java.util.Date;
 import java.util.Optional;
 
@@ -53,6 +54,11 @@ public class JwtProvider {
 
     /** 서명·만료가 맞는 회원 토큰이면 회원 번호를 돌려준다. */
     public Optional<Long> parseMemberId(String token) {
+        return parseMemberToken(token).map(MemberToken::memberId);
+    }
+
+    /** 서명·만료가 맞는 회원 토큰이면 회원 번호와 발급 시각을 돌려준다. */
+    public Optional<MemberToken> parseMemberToken(String token) {
         try {
             Claims claims = Jwts.parser()
                     .verifyWith(key)
@@ -63,9 +69,13 @@ public class JwtProvider {
             if (!MEMBER_TYPE.equals(claims.get(TYPE_CLAIM, String.class))) {
                 return Optional.empty();
             }
-            return Optional.of(Long.parseLong(claims.getSubject()));
+            Instant issuedAt = claims.getIssuedAt() == null ? Instant.EPOCH : claims.getIssuedAt().toInstant();
+            return Optional.of(new MemberToken(Long.parseLong(claims.getSubject()), issuedAt));
         } catch (JwtException | IllegalArgumentException e) {
             return Optional.empty();
         }
+    }
+
+    public record MemberToken(long memberId, Instant issuedAt) {
     }
 }

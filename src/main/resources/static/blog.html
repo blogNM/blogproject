@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>블로그 - 메인블로그</title>
+  <link rel="stylesheet" href="/css/common.css">
+  <script type="module" src="/js/pages/blog.js"></script>
+</head>
+<body>
+  <header class="site-header"></header>
+  <main class="container">
+    <p id="error" class="notice" hidden></p>
+    <article id="blog" class="card" hidden>
+      <p id="status-badge" class="badge warn" hidden></p>
+      <h1 id="blog-name"></h1>
+      <p id="blog-address" class="muted"></p>
+      <p id="blog-description" class="description"></p>
+      <ul id="blog-tags" class="tags"></ul>
+      <p id="blog-meta" class="muted"></p>
+      <div id="actions" class="actions"></div>
+      <p id="action-message" class="info" role="status"></p>
+    </article>
+    <section class="card empty">
+      <p class="muted">글쓰기와 글 목록은 3단계에서 열립니다.</p>
+    </section>
+  </main>
+  <footer class="site-footer"></footer>
+</body>
+</html>

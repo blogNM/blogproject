@@ -35,6 +35,18 @@ public class AuthMailService {
                 """.formatted(code, ttlMinutes));
     }
 
+    @Async
+    public void sendPasswordResetCode(String email, String code, long ttlMinutes) {
+        send(email, "[메인블로그] 비밀번호 재설정 인증번호", """
+                메인블로그 비밀번호 재설정 인증번호입니다.
+
+                인증번호: %s
+
+                %d분 안에 비밀번호 찾기 화면에 입력해 주세요. 한 번만 쓸 수 있습니다.
+                본인이 요청하지 않았다면 이 메일을 무시하세요. 비밀번호는 바뀌지 않습니다.
+                """.formatted(code, ttlMinutes));
+    }
+
     /** 이미 가입된 이메일로 가입을 시도하면 인증번호 대신 이 안내를 보낸다 (D-28). */
     @Async
     public void sendAlreadyRegistered(String email) {

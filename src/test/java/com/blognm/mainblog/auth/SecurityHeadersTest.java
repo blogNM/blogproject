@@ -7,10 +7,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.annotation.DirtiesContext;
 
 import com.blognm.mainblog.support.IntegrationTest;
 
-/** SEC-12 보안 헤더, SEC-10 CSRF 쿠키 */
+/**
+ * SEC-12 보안 헤더, SEC-10 CSRF 쿠키.
+ * 다른 테스트의 csrf() 요청 도우미가 공유 컨텍스트의 CSRF 저장소를 세션 방식으로 바꿔 두므로,
+ * 실제 쿠키 저장소를 확인하려면 새 컨텍스트에서 돌린다.
+ */
+@DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_CLASS)
 class SecurityHeadersTest extends IntegrationTest {
 
     @Test

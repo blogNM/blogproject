@@ -4,8 +4,10 @@ import java.nio.charset.StandardCharsets;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -16,14 +18,16 @@ import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 
+import com.blognm.mainblog.auth.AccessTokenValidator;
 import com.blognm.mainblog.auth.JwtAuthenticationFilter;
 import com.blognm.mainblog.auth.JwtProvider;
 
 /**
  * 보안 헤더·CSRF·인증 (SEC-10, SEC-11, SEC-12, 헌법 III).
- * 주소 단위로 비회원·회원을 나누고, 블로그별 역할은 2단계부터 @PreAuthorize로 확인한다.
+ * 주소 단위로 비회원·회원을 나누고, 블로그별 역할은 @PreAuthorize("@blogAuth...")로 매 요청 DB에서 확인한다.
  */
 @Configuration
+@EnableMethodSecurity
 public class SecurityConfig {
 
     /** Turnstile 스크립트·iframe만 바깥 주소를 허용한다. 3단계에서 Toast UI Editor를 붙일 때 늘린다. */
@@ -40,7 +44,8 @@ public class SecurityConfig {
             "frame-ancestors 'none'");
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtProvider jwtProvider, AppProperties props)
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtProvider jwtProvider,
+            AccessTokenValidator tokenValidator, AppProperties props)
             throws Exception {
         CookieCsrfTokenRepository csrfRepository = CookieCsrfTokenRepository.withHttpOnlyFalse();
         csrfRepository.setCookieCustomizer(c -> c.secure(props.auth().cookieSecure()).sameSite("Lax"));
@@ -63,6 +68,8 @@ public class SecurityConfig {
                         .contentSecurityPolicy(c -> c.policyDirectives(CSP)))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**", "/api/csrf").permitAll()
+                        // 블로그 목록·검색·블로그 정보는 비회원도 본다. 비공개 여부는 서비스가 다시 확인한다.
+                        .requestMatchers(HttpMethod.GET, "/api/blogs", "/api/blogs/*").permitAll()
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll())
                 .exceptionHandling(e -> e
@@ -70,7 +77,7 @@ public class SecurityConfig {
                                 "LOGIN_REQUIRED", "로그인이 필요합니다."))
                         .accessDeniedHandler((req, res, ex) -> writeError(res, HttpStatus.FORBIDDEN,
                                 "FORBIDDEN", "요청을 처리할 수 없습니다. 페이지를 새로고침한 뒤 다시 시도해 주세요.")))
-                .addFilterBefore(new JwtAuthenticationFilter(jwtProvider), UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(new JwtAuthenticationFilter(jwtProvider, tokenValidator), UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 

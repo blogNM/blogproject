@@ -122,6 +122,12 @@ public class LoginService {
         refreshTokens.deleteByTokenHash(Hashing.sha256Hex(rawRefreshToken));
     }
 
+    /** 비밀번호를 바꾼 뒤 지금 쓰는 기기만 새 토큰으로 로그인을 이어간다 (USR-07). */
+    @Transactional
+    public Tokens reissue(Member member, boolean rememberMe) {
+        return issue(member, rememberMe, LocalDateTime.now(clock));
+    }
+
     private Tokens issue(Member member, boolean rememberMe, LocalDateTime now) {
         String raw = Hashing.randomToken();
         Duration ttl = rememberMe ? props.auth().rememberMeTtl() : props.auth().sessionMaxTtl();

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>블로그 관리 - 메인블로그</title>
+  <link rel="stylesheet" href="/css/common.css">
+  <script type="module" src="/js/pages/blog-manage.js"></script>
+</head>
+<body>
+  <header class="site-header"></header>
+  <main class="container">
+    <p id="error" class="notice" hidden></p>
+    <div id="manage" hidden>
+      <h1><span id="blog-name"></span> 관리</h1>
+      <p><a id="back-link" href="/">블로그로 돌아가기</a></p>
+
+      <section class="card" id="requests-section" hidden>
+        <h2 class="section-title">참여 신청</h2>
+        <ul id="requests" class="plain-list"></ul>
+      </section>
+
+      <section class="card" id="members-section" hidden>
+        <h2 class="section-title">멤버</h2>
+        <p class="hint">이메일과 전화번호는 가려서 보여줍니다.</p>
+        <table class="table">
+          <thead><tr><th>닉네임</th><th>이름</th><th>이메일</th><th>전화번호</th><th>역할</th><th>참여일</th></tr></thead>
+          <tbody id="members"></tbody>
+        </table>
+      </section>
+
+      <section class="card" id="settings-section" hidden>
+        <h2 class="section-title">블로그 정보</h2>
+        <form id="settings-form" novalidate>
+          <label for="name">블로그 이름</label>
+          <input id="name" maxlength="30">
+          <label for="description">소개</label>
+          <textarea id="description" maxlength="200" rows="3"></textarea>
+          <label for="tags">태그 (쉼표로 구분, 5개까지)</label>
+          <input id="tags">
+          <div id="owner-settings" hidden>
+            <fieldset class="choices">
+              <legend>공개 범위</legend>
+              <label class="checkbox"><input type="radio" name="visibility" value="PUBLIC"> 공개</label>
+              <label class="checkbox"><input type="radio" name="visibility" value="LINK_ONLY"> 일부 공개</label>
+              <label class="checkbox"><input type="radio" name="visibility" value="PRIVATE"> 비공개</label>
+            </fieldset>
+            <fieldset class="choices">
+              <legend>참여 방식</legend>
+              <label class="checkbox"><input type="radio" name="joinPolicy" value="FREE"> 자유 참여</label>
+              <label class="checkbox"><input type="radio" name="joinPolicy" value="APPROVAL"> 승인제</label>
+            </fieldset>
+          </div>
+          <p id="settings-message" class="error" role="alert"></p>
+          <button type="submit" class="primary">저장</button>
+        </form>
+        <div id="share-box" hidden>
+          <h3 class="section-title">공유 링크</h3>
+          <p class="hint">이 링크를 받은 사람은 로그인하지 않아도 블로그를 볼 수 있습니다. 새로 만들면 이전 링크는 막힙니다.</p>
+          <input id="share-url" readonly>
+          <button id="regenerate" type="button">새 링크 만들기</button>
+        </div>
+      </section>
+    </div>
+  </main>
+  <footer class="site-footer"></footer>
+</body>
+</html>

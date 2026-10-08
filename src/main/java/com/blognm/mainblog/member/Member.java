@@ -1,6 +1,7 @@
 package com.blognm.mainblog.member;
 
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -47,6 +48,12 @@ public class Member {
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
+    @Column(name = "withdrawn_at")
+    private LocalDateTime withdrawnAt;
+
+    @Column(name = "credentials_changed_at")
+    private LocalDateTime credentialsChangedAt;
+
     protected Member() {
     }
 
@@ -68,6 +75,28 @@ public class Member {
 
     public boolean isActive() {
         return status == Status.ACTIVE;
+    }
+
+    public void changeNickname(String nickname) {
+        this.nickname = nickname;
+    }
+
+    public void changePhone(String phone) {
+        this.phone = phone;
+    }
+
+    /** 이전에 발급된 Access Token은 다음 요청부터 받지 않는다 (T031). JWT 발급 시각이 초 단위라 초로 자른다. */
+    public void changePassword(String passwordHash, LocalDateTime now) {
+        this.passwordHash = passwordHash;
+        this.credentialsChangedAt = now.truncatedTo(ChronoUnit.SECONDS);
+    }
+
+    /** 로그인용 이메일을 바로 비워 같은 이메일로 다시 가입할 수 있게 한다 (USR-05). 나머지 개인정보는 30일 뒤 지운다. */
+    public void withdraw(LocalDateTime now) {
+        this.email = null;
+        this.status = Status.WITHDRAWN;
+        this.withdrawnAt = now;
+        this.credentialsChangedAt = now.truncatedTo(ChronoUnit.SECONDS);
     }
 
     public Long getId() {
@@ -96,5 +125,9 @@ public class Member {
 
     public LocalDateTime getCreatedAt() {
         return createdAt;
+    }
+
+    public LocalDateTime getCredentialsChangedAt() {
+        return credentialsChangedAt;
     }
 }

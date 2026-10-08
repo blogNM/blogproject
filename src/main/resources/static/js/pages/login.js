@@ -1,9 +1,14 @@
 import { api } from '../api.js';
 import { initLayout } from '../layout.js';
 
+// 로그인 뒤 돌아갈 화면. 다른 사이트로 보내지 않도록 이 사이트 안의 주소만 받는다.
+const nextParam = new URLSearchParams(location.search).get('next');
+const next = nextParam && nextParam.startsWith('/') && !nextParam.startsWith('//') && !nextParam.startsWith('/\\')
+  ? nextParam : '/';
+
 const me = await initLayout();
 if (me) {
-  location.replace('/');
+  location.replace(next);
 }
 
 const form = document.getElementById('login-form');
@@ -13,6 +18,9 @@ const notice = document.getElementById('notice');
 
 if (new URLSearchParams(location.search).has('joined')) {
   notice.textContent = '가입이 끝났습니다. 로그인해 주세요.';
+  notice.hidden = false;
+} else if (new URLSearchParams(location.search).has('withdrawn')) {
+  notice.textContent = '탈퇴했습니다. 그동안 이용해 주셔서 감사합니다.';
   notice.hidden = false;
 }
 
@@ -59,7 +67,7 @@ form.addEventListener('submit', async (e) => {
       rememberMe: document.getElementById('remember').checked,
       turnstileToken,
     });
-    location.href = '/';
+    location.href = next;
   } catch (err) {
     errorBox.textContent = err.message;
     if (err.details && err.details.captchaRequired) {

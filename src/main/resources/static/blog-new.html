@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>블로그 만들기 - 메인블로그</title>
+  <link rel="stylesheet" href="/css/common.css">
+  <script type="module" src="/js/pages/blog-new.js"></script>
+</head>
+<body>
+  <header class="site-header"></header>
+  <main class="container">
+    <section class="card narrow">
+      <h1>블로그 만들기</h1>
+      <form id="blog-form" novalidate>
+        <label for="name">블로그 이름</label>
+        <input id="name" maxlength="30" required>
+        <p class="hint">1~30자. 다른 블로그와 같은 이름도 됩니다.</p>
+
+        <label for="slug">블로그 주소</label>
+        <div class="row">
+          <span class="prefix">/blog/</span>
+          <input id="slug" maxlength="30" autocapitalize="off" spellcheck="false" required>
+          <button id="check-slug" type="button">확인</button>
+        </div>
+        <p id="slug-message" class="hint">영문 소문자·숫자·-로 3~30자. 만든 뒤에는 바꿀 수 없습니다.</p>
+
+        <label for="description">소개 (선택)</label>
+        <textarea id="description" maxlength="200" rows="3"></textarea>
+
+        <label for="tags">태그 (선택, 쉼표로 구분, 5개까지)</label>
+        <input id="tags" placeholder="여행, 사진">
+
+        <fieldset class="choices">
+          <legend>공개 범위</legend>
+          <label class="checkbox"><input type="radio" name="visibility" value="PUBLIC" checked> 공개: 목록·검색에 보입니다</label>
+          <label class="checkbox"><input type="radio" name="visibility" value="LINK_ONLY"> 일부 공개: 공유 링크를 받은 사람만 봅니다</label>
+          <label class="checkbox"><input type="radio" name="visibility" value="PRIVATE"> 비공개: 멤버만 봅니다</label>
+        </fieldset>
+        <fieldset class="choices">
+          <legend>참여 방식</legend>
+          <label class="checkbox"><input type="radio" name="joinPolicy" value="FREE" checked> 자유 참여: 신청하면 바로 멤버</label>
+          <label class="checkbox"><input type="radio" name="joinPolicy" value="APPROVAL"> 승인제: 블로그장이 승인해야 멤버</label>
+        </fieldset>
+        <p class="hint">공개·일부 공개 블로그는 3개, 비공개는 5개까지 만들 수 있습니다. 대표 이미지는 사진 올리기가 생기면 넣을 수 있습니다.</p>
+        <p id="error" class="error" role="alert"></p>
+        <button type="submit" class="primary">만들기</button>
+      </form>
+    </section>
+  </main>
+  <footer class="site-footer"></footer>
+</body>
+</html>

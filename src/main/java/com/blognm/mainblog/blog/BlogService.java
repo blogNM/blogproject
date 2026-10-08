@@ -1,0 +1,382 @@
+package com.blognm.mainblog.blog;
+
+import java.time.Clock;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.blognm.mainblog.common.ApiException;
+import com.blognm.mainblog.common.DetailedApiException;
+import com.blognm.mainblog.common.Hashing;
+import com.blognm.mainblog.member.Member;
+import com.blognm.mainblog.member.MemberRepository;
+import com.blognm.mainblog.notification.NotificationWriter;
+import com.blognm.mainblog.notification.NotificationWriter.Type;
+
+/** 블로그 만들기·정보 수정·참여 신청·승인·탈퇴 (BLG-01, 04~07, 10). */
+@Service
+public class BlogService {
+
+    private static final List<Blog.Status> OPERATING = List.of(Blog.Status.ACTIVE, Blog.Status.CLOSING);
+    private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("yyyy.MM.dd");
+
+    private final BlogRepository blogs;
+    private final BlogMembershipRepository memberships;
+    private final JoinRequestRepository joinRequests;
+    private final TagRepository tags;
+    private final MemberRepository members;
+    private final NotificationWriter notifications;
+    private final BlogProperties props;
+    private final Clock clock;
+
+    public BlogService(BlogRepository blogs, BlogMembershipRepository memberships, JoinRequestRepository joinRequests,
+            TagRepository tags, MemberRepository members, NotificationWriter notifications, BlogProperties props,
+            Clock clock) {
+        this.blogs = blogs;
+        this.memberships = memberships;
+        this.joinRequests = joinRequests;
+        this.tags = tags;
+        this.members = members;
+        this.notifications = notifications;
+        this.props = props;
+        this.clock = clock;
+    }
+
+    // ----- 만들기 (BLG-01, BLG-10) -----
+
+    @Transactional
+    public String create(long memberId, CreateRequest req) {
+        String slug = BlogRules.normalizeSlug(req.slug());
+        String name = BlogRules.normalizeName(req.name());
+        String description = BlogRules.normalizeDescription(req.description());
+        List<String> tagNames = BlogRules.normalizeTags(req.tags());
+        Blog.Visibility visibility = required(req.visibility(), "공개 범위를 골라 주세요.");
+        Blog.JoinPolicy joinPolicy = required(req.joinPolicy(), "참여 방식을 골라 주세요.");
+        LocalDateTime now = LocalDateTime.now(clock);
+
+        // 같은 회원의 만들기 요청을 줄 세운 뒤 개수를 센다. 동시에 눌러도 제한을 넘지 않는다 (D-68).
+        members.findForUpdate(memberId).filter(Member::isActive)
+                .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "LOGIN_REQUIRED", "다시 로그인해 주세요."));
+        checkLimit(memberId, visibility, null);
+
+        if (blogs.existsBySlug(slug)) {
+            throw slugTaken();
+        }
+        Blog blog = Blog.create(slug, name, description, memberId, visibility, joinPolicy, now);
+        blog.replaceTags(findOrCreateTags(tagNames));
+        try {
+            blogs.saveAndFlush(blog);
+        } catch (DataIntegrityViolationException e) {
+            throw slugTaken();
+        }
+        memberships.save(BlogMembership.owner(blog.getId(), memberId, now));
+        return slug;
+    }
+
+    public boolean isSlugAvailable(String rawSlug) {
+        return !blogs.existsBySlug(BlogRules.normalizeSlug(rawSlug));
+    }
+
+    /** 공개(일부 공개 포함)와 비공개를 따로 센다. 폐쇄 예정 블로그도 센다 (BLG-10). */
+    private void checkLimit(long ownerId, Blog.Visibility visibility, Long exceptBlogId) {
+        boolean wantPublic = visibility != Blog.Visibility.PRIVATE;
+        long count = blogs.findOwned(ownerId, OPERATING).stream()
+                .filter(b -> !b.getId().equals(exceptBlogId))
+                .filter(b -> b.countsAsPublic() == wantPublic)
+                .count();
+        int limit = wantPublic ? props.limit().publicCount() : props.limit().privateCount();
+        if (count >= limit) {
+            throw new ApiException(HttpStatus.CONFLICT, "BLOG_LIMIT",
+                    wantPublic
+                            ? "공개·일부 공개 블로그는 %d개까지 만들 수 있습니다.".formatted(limit)
+                            : "비공개 블로그는 %d개까지 만들 수 있습니다.".formatted(limit));
+        }
+    }
+
+    private Set<Tag> findOrCreateTags(List<String> names) {
+        Set<Tag> result = new LinkedHashSet<>();
+        for (String name : names) {
+            tags.insertIfAbsent(name);
+            result.add(tags.findByName(name).orElseThrow());
+        }
+        return result;
+    }
+
+    // ----- 블로그 정보 (BLG-01) -----
+
+    /**
+     * 블로그 화면에 필요한 정보. 볼 수 없는 블로그는 있는지조차 알리지 않고 404로 둔다.
+     * 일부 공개는 공유 링크 값(key)이 맞거나 멤버일 때만 보인다 (D-49, D-50).
+     */
+    @Transactional(readOnly = true)
+    public BlogView view(String slug, String key, Long viewerId) {
+        Blog blog = findVisible(slug, key, viewerId);
+        Optional<BlogMembership> mine = viewerId == null ? Optional.empty()
+                : memberships.findByBlogIdAndMemberId(blog.getId(), viewerId).filter(BlogMembership::isActive);
+        LocalDateTime now = LocalDateTime.now(clock);
+        if (mine.isPresent() && mine.get().getSuspendedUntil() != null && mine.get().getSuspendedUntil().isAfter(now)) {
+            throw new DetailedApiException(HttpStatus.FORBIDDEN, "SUSPENDED",
+                    "이 블로그에서 활동이 정지되었습니다.", Map.of("suspendedUntil", mine.get().getSuspendedUntil().toString()));
+        }
+        String requestStatus = null;
+        LocalDateTime canRequestAt = null;
+        if (viewerId != null && mine.isEmpty()) {
+            Optional<JoinRequest> last = joinRequests.findFirstByBlogIdAndMemberIdOrderByIdDesc(blog.getId(), viewerId);
+            if (last.isPresent() && last.get().isPending()) {
+                requestStatus = "PENDING";
+            } else if (last.isPresent() && last.get().getStatus() == JoinRequest.Status.REJECTED) {
+                LocalDateTime again = last.get().getProcessedAt().plus(props.rejoinAfterReject());
+                if (again.isAfter(now)) {
+                    requestStatus = "REJECTED";
+                    canRequestAt = again;
+                }
+            }
+        }
+        String role = mine.map(m -> m.getRole().name()).orElse(null);
+        boolean owner = mine.filter(m -> m.getRole() == BlogMembership.Role.OWNER).isPresent();
+        Member ownerMember = members.findById(blog.getOwnerId()).orElseThrow();
+        return new BlogView(blog.getSlug(), blog.getName(), blog.getDescription(), blog.getVisibility().name(),
+                blog.getJoinPolicy().name(), blog.getStatus().name(), blog.getCloseScheduledAt(),
+                ownerMember.getNickname(), memberships.countActive(blog.getId()), tagNames(blog),
+                blog.getCreatedAt().format(DATE), role, requestStatus,
+                canRequestAt == null ? null : canRequestAt.format(DATE),
+                owner ? blog.getShareToken() : null);
+    }
+
+    private Blog findVisible(String slug, String key, Long viewerId) {
+        Blog blog = blogs.findBySlug(slug == null ? "" : slug.toLowerCase()).orElseThrow(BlogService::notFound);
+        if (blog.isClosed()) {
+            throw notFound();
+        }
+        boolean member = viewerId != null && memberships.findByBlogIdAndMemberId(blog.getId(), viewerId)
+                .filter(BlogMembership::isActive).isPresent();
+        if (member) {
+            return blog;
+        }
+        if (blog.isHidden()) {
+            throw notFound();
+        }
+        return switch (blog.getVisibility()) {
+            case PUBLIC -> blog;
+            case LINK_ONLY -> {
+                if (key != null && blog.getShareToken() != null
+                        && Hashing.constantTimeEquals(blog.getShareToken(), key)) {
+                    yield blog;
+                }
+                throw notFound();
+            }
+            case PRIVATE -> throw notFound();
+        };
+    }
+
+    // ----- 정보 수정 (BLG-01) -----
+
+    /** 이름·소개·태그는 정보 수정 권한이 있으면, 공개 범위·참여 방식은 블로그장만 바꾼다. */
+    @Transactional
+    public void update(String slug, long actorId, UpdateRequest req) {
+        Blog blog = blogs.findBySlug(slug).filter(b -> !b.isClosed()).orElseThrow(BlogService::notFound);
+        blog.changeInfo(BlogRules.normalizeName(req.name()), BlogRules.normalizeDescription(req.description()));
+        blog.replaceTags(findOrCreateTags(BlogRules.normalizeTags(req.tags())));
+
+        boolean policyChange = (req.visibility() != null && req.visibility() != blog.getVisibility())
+                || (req.joinPolicy() != null && req.joinPolicy() != blog.getJoinPolicy());
+        if (!policyChange) {
+            return;
+        }
+        if (!blog.getOwnerId().equals(actorId)) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "OWNER_ONLY", "공개 범위와 참여 방식은 블로그장만 바꿀 수 있습니다.");
+        }
+        if (req.visibility() != null && req.visibility() != blog.getVisibility()) {
+            boolean toPublic = req.visibility() != Blog.Visibility.PRIVATE;
+            if (toPublic != blog.countsAsPublic()) {
+                members.findForUpdate(actorId);
+                checkLimit(actorId, req.visibility(), blog.getId());
+            }
+            blog.changeVisibility(req.visibility());
+        }
+        if (req.joinPolicy() != null) {
+            blog.changeJoinPolicy(req.joinPolicy());
+        }
+    }
+
+    @Transactional
+    public String regenerateShareLink(String slug) {
+        Blog blog = blogs.findBySlug(slug).filter(b -> !b.isClosed()).orElseThrow(BlogService::notFound);
+        if (blog.getVisibility() != Blog.Visibility.LINK_ONLY) {
+            throw ApiException.badRequest("NOT_LINK_ONLY", "일부 공개 블로그만 공유 링크가 있습니다.");
+        }
+        blog.regenerateShareToken();
+        return blog.getShareToken();
+    }
+
+    // ----- 참여 신청 (BLG-04) -----
+
+    /**
+     * 자유 참여는 바로 멤버, 승인제는 신청 대기. 대기 중이면 다시 신청할 수 없고, 거절되면 7일 뒤에 다시 신청한다.
+     * 스스로 나간 멤버는 바로 다시 신청할 수 있다 (추천안 #8).
+     *
+     * @return true면 바로 멤버가 됨, false면 승인 대기
+     */
+    @Transactional
+    public boolean join(String slug, String key, long memberId) {
+        Blog blog = findVisible(slug, key, memberId);
+        if (blog.getVisibility() == Blog.Visibility.PRIVATE) {
+            throw notFound();
+        }
+        if (blog.getStatus() == Blog.Status.CLOSING) {
+            throw new ApiException(HttpStatus.CONFLICT, "BLOG_CLOSING", "폐쇄 예정인 블로그에는 참여할 수 없습니다.");
+        }
+        LocalDateTime now = LocalDateTime.now(clock);
+        // 두 번 눌러도 신청이 두 개 생기지 않게 신청자 행을 잠근다.
+        members.findForUpdate(memberId);
+
+        Optional<BlogMembership> existing = memberships.findByBlogIdAndMemberId(blog.getId(), memberId);
+        if (existing.isPresent() && existing.get().isActive()) {
+            throw new ApiException(HttpStatus.CONFLICT, "ALREADY_MEMBER", "이미 이 블로그의 멤버입니다.");
+        }
+        if (existing.isPresent() && existing.get().getStatus() == BlogMembership.Status.KICKED) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "JOIN_BLOCKED", "이 블로그에는 참여할 수 없습니다.");
+        }
+        Optional<JoinRequest> last = joinRequests.findFirstByBlogIdAndMemberIdOrderByIdDesc(blog.getId(), memberId);
+        if (last.isPresent() && last.get().isPending()) {
+            throw new ApiException(HttpStatus.CONFLICT, "ALREADY_REQUESTED", "이미 참여 신청을 했습니다. 승인을 기다려 주세요.");
+        }
+        if (last.isPresent() && last.get().getStatus() == JoinRequest.Status.REJECTED) {
+            LocalDateTime again = last.get().getProcessedAt().plus(props.rejoinAfterReject());
+            if (again.isAfter(now)) {
+                throw new ApiException(HttpStatus.CONFLICT, "REJECTED_RECENTLY",
+                        "참여 신청이 거절되어 %s부터 다시 신청할 수 있습니다.".formatted(again.format(DATE)));
+            }
+        }
+
+        if (blog.getJoinPolicy() == Blog.JoinPolicy.FREE) {
+            addMember(blog.getId(), memberId, existing, now);
+            return true;
+        }
+        joinRequests.save(JoinRequest.pending(blog.getId(), memberId, now));
+        managerIds(blog).forEach(id -> notifications.blog(id, Type.JOIN_REQUESTED, blog.getId(), memberId));
+        return false;
+    }
+
+    @Transactional
+    public void cancelRequest(String slug, long memberId) {
+        Blog blog = blogs.findBySlug(slug).orElseThrow(BlogService::notFound);
+        joinRequests.findFirstByBlogIdAndMemberIdOrderByIdDesc(blog.getId(), memberId)
+                .filter(JoinRequest::isPending)
+                .ifPresentOrElse(joinRequests::delete, () -> {
+                    throw ApiException.badRequest("NO_PENDING_REQUEST", "대기 중인 참여 신청이 없습니다.");
+                });
+    }
+
+    // ----- 참여 승인·거절 (BLG-05). 권한은 컨트롤러의 @PreAuthorize가 먼저 확인한다. -----
+
+    @Transactional(readOnly = true)
+    public List<PendingRequest> pendingRequests(String slug) {
+        Blog blog = blogs.findBySlug(slug).orElseThrow(BlogService::notFound);
+        return joinRequests.findPending(blog.getId()).stream().map(r -> {
+            Member m = members.findById(r.getMemberId()).orElseThrow();
+            return new PendingRequest(r.getId(), m.getNickname(), r.getRequestedAt());
+        }).toList();
+    }
+
+    @Transactional
+    public void decide(String slug, long requestId, long actorId, boolean approve) {
+        Blog blog = blogs.findBySlug(slug).orElseThrow(BlogService::notFound);
+        JoinRequest request = joinRequests.findForUpdate(requestId)
+                // 다른 블로그의 신청 번호를 넣어도 처리되지 않는다 (SEC-07)
+                .filter(r -> r.getBlogId().equals(blog.getId()))
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "REQUEST_NOT_FOUND", "참여 신청을 찾을 수 없습니다."));
+        if (!request.isPending()) {
+            throw new ApiException(HttpStatus.CONFLICT, "ALREADY_PROCESSED", "이미 처리된 신청입니다.");
+        }
+        LocalDateTime now = LocalDateTime.now(clock);
+        if (approve) {
+            request.approve(actorId, now);
+            Optional<BlogMembership> existing = memberships.findByBlogIdAndMemberId(blog.getId(), request.getMemberId());
+            if (existing.isEmpty() || !existing.get().isActive()) {
+                addMember(blog.getId(), request.getMemberId(), existing, now);
+            }
+        } else {
+            request.reject(actorId, now);
+        }
+        notifications.blog(request.getMemberId(), approve ? Type.JOIN_APPROVED : Type.JOIN_REJECTED, blog.getId(),
+                actorId);
+    }
+
+    private void addMember(long blogId, long memberId, Optional<BlogMembership> existing, LocalDateTime now) {
+        if (existing.isPresent()) {
+            existing.get().rejoin(now);
+        } else {
+            memberships.save(BlogMembership.member(blogId, memberId, now));
+        }
+    }
+
+    /** 참여 신청 알림을 받을 사람: 블로그장과 멤버 관리 권한이 있는 부블로그장. */
+    private List<Long> managerIds(Blog blog) {
+        return memberships.findActiveByBlogId(blog.getId()).stream()
+                .filter(BlogMembership::canManageMembers)
+                .map(BlogMembership::getMemberId)
+                .toList();
+    }
+
+    // ----- 블로그 탈퇴 (BLG-07) -----
+
+    @Transactional
+    public void leave(String slug, long memberId) {
+        Blog blog = blogs.findBySlug(slug).filter(b -> !b.isClosed()).orElseThrow(BlogService::notFound);
+        BlogMembership membership = memberships.findByBlogIdAndMemberId(blog.getId(), memberId)
+                .filter(BlogMembership::isActive)
+                .orElseThrow(() -> ApiException.badRequest("NOT_MEMBER", "이 블로그의 멤버가 아닙니다."));
+        if (membership.getRole() == BlogMembership.Role.OWNER) {
+            throw new ApiException(HttpStatus.CONFLICT, "OWNER_CANNOT_LEAVE",
+                    "블로그장은 블로그장을 넘기거나 블로그를 닫은 뒤에만 나갈 수 있습니다.");
+        }
+        membership.leave(LocalDateTime.now(clock));
+    }
+
+    // ----- 공통 -----
+
+    static List<String> tagNames(Blog blog) {
+        return blog.getTags().stream().map(Tag::getName).toList();
+    }
+
+    private static <T> T required(T value, String message) {
+        if (value == null) {
+            throw ApiException.badRequest("INVALID_INPUT", message);
+        }
+        return value;
+    }
+
+    static ApiException notFound() {
+        return new ApiException(HttpStatus.NOT_FOUND, "BLOG_NOT_FOUND", "블로그를 찾을 수 없습니다.");
+    }
+
+    private static ApiException slugTaken() {
+        return new ApiException(HttpStatus.CONFLICT, "SLUG_TAKEN", "이미 쓰이는 주소입니다. 다른 주소를 정해 주세요.");
+    }
+
+    public record CreateRequest(String slug, String name, String description, Blog.Visibility visibility,
+            Blog.JoinPolicy joinPolicy, List<String> tags) {
+    }
+
+    public record UpdateRequest(String name, String description, Blog.Visibility visibility,
+            Blog.JoinPolicy joinPolicy, List<String> tags) {
+    }
+
+    public record BlogView(String slug, String name, String description, String visibility, String joinPolicy,
+            String status, LocalDateTime closeScheduledAt, String ownerNickname, long memberCount, List<String> tags,
+            String createdAt, String myRole, String myRequest, String canRequestAt, String shareToken) {
+    }
+
+    public record PendingRequest(long id, String nickname, LocalDateTime requestedAt) {
+    }
+}
