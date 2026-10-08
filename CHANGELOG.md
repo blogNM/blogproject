@@ -11,6 +11,7 @@
 
 - **설정** 소스코드(`src/`, `build.gradle`, `gradlew`, `gradle/`, `scripts/`)를 `app/` 폴더로 옮김. 문서(`docs/`, `specs/`, `.specify/`)와 `CHANGELOG.md`·`CLAUDE.md`는 위쪽에 그대로. 서버에는 `app/` 폴더나 거기서 만든 jar만 올림 (사용자 요청)
 - **설정** 실행·빌드·테스트는 `app/` 안에서. `.env`, 사진 폴더 `data/uploads`, `backups/`도 `app/` 안으로
+- **설정** `.gitignore`에 `*.log` 추가 (서버 로그가 커밋되지 않게)
 - **문서** `app/README.md` 새로 씀, docs/README "저장소 구조", CLAUDE.md, 로컬-실행·테스트-데이터·배포-계획, 001 plan·tasks 경로
 
 ### 빠졌던 기능 채우기, 글 목록·공유 버튼 ([PR #3](https://github.com/blogNM/blogproject/pull/3))
