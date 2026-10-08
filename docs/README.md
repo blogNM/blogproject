@@ -25,9 +25,10 @@
 
 | 위치 | 내용 |
 |---|---|
-| `app/` | 소스코드. Spring Boot Gradle 프로젝트(`src/`, `build.gradle`, `gradlew`), 테스트 데이터 스크립트(`scripts/`). 실행·빌드·테스트는 이 폴더 안에서. [app/README.md](../app/README.md) |
+| `app/` | 소스코드. Spring Boot Gradle 프로젝트(`src/`, `build.gradle`, `gradlew`), 테스트 데이터 스크립트(`scripts/`), 도커 이미지(`Dockerfile`, `deploy/deploy.sh`). 실행·빌드·테스트는 이 폴더 안에서. [app/README.md](../app/README.md) |
 | `docs/` | 이 폴더. 요구사항 원본, 결정 기록, 설계, 안내서 |
 | `specs/`, `.specify/` | Spec Kit 기능 명세와 헌법 |
+| `.github/workflows/` | 자동 배포 (GitHub Actions) |
 | `CHANGELOG.md`, `CLAUDE.md` | 변경 기록, 에이전트 작업 규칙 |
 
 ## 폴더
@@ -38,7 +39,7 @@
 | `02-policies/` | 구현에 필요한 숫자와 세부 규칙 | 요구사항분석서_2_세부정책_결정기록.pdf (6장 세부 정책, 8장 결정 기록) |
 | `03-decisions/` | 기술 결정 기록 (D-번호) | D-01~81은 위 PDF의 8장. [D-82 Spec Kit 도입](03-decisions/D-82-spec-kit-도입.md)부터 여기에 한 건씩 기록 (지금 D-82, D-84~D-95) |
 | `04-design/` | 화면 설계, ERD, API 명세 | [ERD.md](04-design/ERD.md) 전체 DB 설계 초안. 기능별 data-model·contracts는 `specs/00N-*/`에서 `/speckit-plan`으로 만듦 |
-| `05-guides/` | 개발 환경, 코드 컨벤션, 배포 방법 | [로컬-실행.md](05-guides/로컬-실행.md) 내 컴퓨터에서 실행·테스트, 단계별 직접 확인 목록. [테스트-데이터.md](05-guides/테스트-데이터.md) 테스트 계정 넣기. [사진-출처.md](05-guides/사진-출처.md) 테스트 사진 출처. [배포-계획.md](05-guides/배포-계획.md) 진짜 홈페이지로 열 때 |
+| `05-guides/` | 개발 환경, 코드 컨벤션, 배포 방법 | [로컬-실행.md](05-guides/로컬-실행.md) 내 컴퓨터에서 실행·테스트, 단계별 직접 확인 목록. [테스트-데이터.md](05-guides/테스트-데이터.md) 테스트 계정 넣기. [사진-출처.md](05-guides/사진-출처.md) 테스트 사진 출처. [배포-계획.md](05-guides/배포-계획.md) 진짜 홈페이지로 열 때. [도커-배포.md](05-guides/도커-배포.md) GitHub Actions로 도커 이미지를 만들어 서버에 올리기 |
 | `archive/` | 지난 버전, "복사본" 파일 | 아직 없음 |
 
 ## 요구사항 ID 규칙
