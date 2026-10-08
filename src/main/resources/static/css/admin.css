@@ -215,6 +215,9 @@ a.adm-stat.adm-alert .adm-stat-value { color: var(--adm-purple); }
 .adm-form .adm-form-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 .adm-form input { padding: 10px 14px; font-size: 0.93rem; }
 .adm-form button.adm-go { margin-top: 14px; padding: 10px 20px; }
+.adm-form .adm-textarea { width: 100%; padding: 10px 14px; font: inherit; font-size: 0.93rem; line-height: 1.6; resize: vertical; }
+.adm-form .adm-actions { align-items: center; }
+.adm-form .adm-actions button:not(.adm-go) { margin-top: 14px; }
 .adm-error { color: var(--adm-error); font-size: 0.88rem; min-height: 1.2em; margin: 8px 0 0; }
 .adm-ok-text { color: var(--adm-ok); font-size: 0.88rem; margin: 8px 0 0; }
 .adm-loading { color: var(--adm-muted); padding: 20px 0; }

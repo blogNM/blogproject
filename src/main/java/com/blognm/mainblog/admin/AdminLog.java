@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class AdminLog {
 
-    public enum Action { WARN, KICK, DELETE, HIDE, UNHIDE, CLOSE, RESTORE, VIEW_PII, REPORT, CREATE_ADMIN }
+    public enum Action { WARN, KICK, DELETE, HIDE, UNHIDE, CLOSE, RESTORE, VIEW_PII, REPORT, CREATE_ADMIN, NOTICE }
 
     private final JdbcTemplate jdbc;
     private final Clock clock;

@@ -42,13 +42,15 @@ if (post && post.blogSlug !== slug) {
   document.title = `${post.title} - ${post.blogName}`;
   $('blog-link').textContent = post.blogName;
   $('blog-link').href = blogHref;
+  $('list-link').href = listHref();
+  $('list-link-top').href = listHref();
   $('notice-badge').hidden = !post.notice;
   if (post.categoryName) {
     $('category').textContent = post.categoryName;
     $('category').hidden = false;
   }
   $('title').textContent = post.title;
-  const author = post.authorId ? el('a', { href: '/members/' + post.authorId, class: 'author-link' }, post.authorName)
+  const author = post.authorId ? el('a', { href: memberHref(post.authorId), class: 'author-link' }, post.authorName)
     : document.createTextNode(post.authorName);
   $('meta').replaceChildren(author,
     document.createTextNode(` · ${post.createdAt}` + (post.updatedAt ? ` (수정 ${post.updatedAt})` : '')));
@@ -90,6 +92,30 @@ if (post && post.blogSlug !== slug) {
     $('post-actions-extra').append(report);
   }
   $('post').hidden = false;
+}
+
+/**
+ * 글 목록으로 돌아가는 주소. 이 블로그의 목록(카테고리·태그 고른 상태 포함)에서 왔으면 거기로,
+ * 아니면 블로그의 전체 글 목록으로 간다.
+ */
+function listHref() {
+  try {
+    const from = new URL(document.referrer);
+    const blogPath = `/blog/${encodeURIComponent(slug)}`;
+    if (from.origin === location.origin && (from.pathname === blogPath || from.pathname === blogPath + '/')) {
+      return from.pathname + from.search + '#all-posts';
+    }
+  } catch {
+    // 바로 들어왔으면 referrer가 비어 있다
+  }
+  return blogHref + '#all-posts';
+}
+
+/** 블로그 안에서 연 프로필. 거기서 신고하면 이 블로그의 블로그장이 처리한다 (SOC-06, D-85). */
+function memberHref(id) {
+  const q = new URLSearchParams({ blog: post.blogSlug });
+  if (key) q.set('key', key);
+  return `/members/${id}?${q}`;
 }
 
 /** 인스타그램처럼 하트가 커졌다 돌아오고, 작은 하트들이 둘레로 퍼진다. */
@@ -140,6 +166,15 @@ function setupLike() {
 function setupShare() {
   $('share').addEventListener('click', async () => {
     const url = location.origin + `/blog/${encodeURIComponent(post.blogSlug)}/posts/${post.id}${keyQuery}`;
+    // 휴대폰은 기기 공유 창(카톡·메시지 등)을 띄우고, 안 되는 곳은 주소를 복사한다.
+    if (navigator.share && matchMedia('(pointer: coarse)').matches) {
+      try {
+        await navigator.share({ title: post.title, text: `${post.title} - ${post.blogName}`, url });
+        return;
+      } catch (err) {
+        if (err.name === 'AbortError') return;
+      }
+    }
     try {
       await navigator.clipboard.writeText(url);
       toast('글 주소를 복사했어요.');
@@ -177,7 +212,7 @@ function commentItem(c, rootId) {
   const li = el('li', { class: c.deleted ? 'comment deleted' : 'comment', id: 'comment-' + c.id });
   if (!c.deleted) {
     const head = el('div', { class: 'comment-head' });
-    head.append(c.authorId ? el('a', { class: 'comment-author', href: '/members/' + c.authorId }, c.authorName)
+    head.append(c.authorId ? el('a', { class: 'comment-author', href: memberHref(c.authorId) }, c.authorName)
       : el('span', { class: 'comment-author' }, c.authorName), el('span', { class: 'muted' }, c.createdAt));
     if (c.edited) head.append(el('span', { class: 'muted' }, '수정됨'));
     li.append(head);

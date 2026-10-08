@@ -114,8 +114,12 @@ function renderActions() {
       toast(err.message);
     }
   });
-  const report = el('button', { type: 'button', class: 'link-button muted-link' }, '신고');
-  report.addEventListener('click', () => openReport({ targetType: 'MEMBER', targetId: memberId }, !!me));
+  // 블로그 글·댓글에서 들어왔으면 그 블로그 안의 신고로 보낸다. 블로그 멤버가 아니면 서버가 메인 관리자에게 넘긴다.
+  const fromBlog = params.get('blog');
+  const report = el('button', { type: 'button', class: 'link-button muted-link' }, fromBlog ? '이 블로그에 신고' : '신고');
+  report.addEventListener('click', () => openReport(fromBlog
+    ? { targetType: 'MEMBER', targetId: memberId, slug: fromBlog, key: params.get('key') || undefined }
+    : { targetType: 'MEMBER', targetId: memberId }, !!me));
   actions.append(follow, block, report);
 }
 

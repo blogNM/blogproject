@@ -314,6 +314,15 @@ if (blog && blog.myRole === 'OWNER') {
     $('blog-retention').value = String(res.days);
     $('retention-section').hidden = false;
   }).catch(() => {});
+  $('blog-notifications-clear').addEventListener('click', async () => {
+    if (!confirm('이 블로그에서 생긴 블로그 알림을 받은 사람 모두에게서 지울까요? 되돌릴 수 없습니다.')) return;
+    try {
+      const res = await api.del(base + '/notifications');
+      $('retention-message').textContent = `블로그 알림 ${res.deleted}개를 지웠어요.`;
+    } catch (err) {
+      $('retention-message').textContent = err.message;
+    }
+  });
   $('blog-retention').addEventListener('change', async () => {
     try {
       const res = await api.put(base + '/notification-retention', { days: Number($('blog-retention').value) });

@@ -58,6 +58,7 @@ public abstract class IntegrationTest {
     @BeforeEach
     void resetState() {
         jdbc.update("DELETE FROM admin_action_logs");
+        jdbc.update("DELETE FROM notices");
         jdbc.update("DELETE FROM owner_warnings");
         jdbc.update("DELETE FROM member_sanctions");
         jdbc.update("DELETE FROM blacklist_appeals");

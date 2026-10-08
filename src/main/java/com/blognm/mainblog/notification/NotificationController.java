@@ -80,6 +80,12 @@ public class NotificationController {
         return Map.of("days", body.days());
     }
 
+    @DeleteMapping("/api/blogs/{slug}/notifications")
+    @PreAuthorize("@blogAuth.isOwner(#slug)")
+    public Map<String, Integer> deleteBlogNotifications(@PathVariable String slug) {
+        return Map.of("deleted", notifications.deleteBlogNotifications(slug));
+    }
+
     public record SettingsBody(Map<String, Boolean> enabled, Integer retentionDays) {
     }
 

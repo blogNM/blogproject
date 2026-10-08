@@ -504,8 +504,9 @@ CREATE TABLE admin_action_logs (
   PRIMARY KEY (id),
   KEY idx_admin_action_logs_created (created_at),
   CONSTRAINT ck_admin_action_logs_action CHECK (action IN ('WARN', 'KICK', 'DELETE', 'HIDE', 'UNHIDE', 'CLOSE',
-    'RESTORE', 'VIEW_PII', 'REPORT', 'CREATE_ADMIN')),
-  CONSTRAINT ck_admin_action_logs_target CHECK (target_type IN ('MEMBER', 'BLOG', 'POST', 'COMMENT', 'REPORT', 'ADMIN')),
+    'RESTORE', 'VIEW_PII', 'REPORT', 'CREATE_ADMIN', 'NOTICE')),
+  CONSTRAINT ck_admin_action_logs_target CHECK (target_type IN ('MEMBER', 'BLOG', 'POST', 'COMMENT', 'REPORT', 'ADMIN',
+    'NOTICE')),
   CONSTRAINT fk_admin_action_logs_admin FOREIGN KEY (admin_id) REFERENCES admins (id)
 ) COMMENT '관리자 활동 기록, 개인정보 전체 보기 포함 (ADM-06, SEC-09)';
 
@@ -536,6 +537,7 @@ CREATE TABLE notices (
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
+  KEY idx_notices_list (status, created_at),
   CONSTRAINT ck_notices_status CHECK (status IN ('NORMAL', 'DELETED')),
   CONSTRAINT fk_notices_admin FOREIGN KEY (admin_id) REFERENCES admins (id)
 ) COMMENT '메인 공지사항 (BRD-10)';

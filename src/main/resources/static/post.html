@@ -14,7 +14,7 @@
   <main class="container">
     <p id="error" class="notice" hidden></p>
     <article id="post" class="card post" hidden>
-      <p class="post-blog"><a id="blog-link" href="/"></a></p>
+      <p class="post-blog"><a id="blog-link" href="/"></a><a id="list-link-top" class="list-link" href="/">목록</a></p>
       <div class="post-item-head">
         <span id="notice-badge" class="badge" hidden>공지</span>
         <span id="category" class="post-category" hidden></span>
@@ -28,9 +28,10 @@
       <p id="counts" class="muted counts"></p>
       <div class="post-actions">
         <button id="like" type="button" class="like-button" aria-pressed="false"><span class="heart" aria-hidden="true">♥</span> 좋아요 <span id="like-count">0</span></button>
-        <button id="share" type="button">링크 복사</button>
+        <button id="share" type="button">공유</button>
         <span id="post-actions-extra" class="post-actions-extra"></span>
       </div>
+      <div class="post-list-row"><a id="list-link" class="button" href="/">목록</a></div>
     </article>
 
     <section id="comments" class="card comments" hidden>

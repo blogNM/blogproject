@@ -10,6 +10,7 @@ import * as blogs from './blogs.js';
 import * as content from './content.js';
 import * as logs from './logs.js';
 import * as admins from './admins.js';
+import * as notices from './notices.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -19,6 +20,7 @@ const TABS = [
   ['members', '회원', members],
   ['blogs', '블로그', blogs],
   ['content', '글·댓글', content],
+  ['notices', '공지', notices],
   ['logs', '활동 기록', logs],
   ['admins', '관리자', admins],
 ];

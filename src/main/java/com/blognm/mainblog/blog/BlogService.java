@@ -289,11 +289,25 @@ public class BlogService {
                 members.findForUpdate(actorId);
                 checkLimit(actorId, req.visibility(), blog.getId());
             }
+            boolean toPrivate = req.visibility() == Blog.Visibility.PRIVATE;
             blog.changeVisibility(req.visibility());
+            if (toPrivate) {
+                notifyPrivate(blog.getId(), actorId);
+            }
         }
         if (req.joinPolicy() != null) {
             blog.changeJoinPolicy(req.joinPolicy());
         }
+    }
+
+    /** 비공개로 바뀌면 멤버가 아닌 구독자에게 알린다. 구독은 그대로지만 글은 안 보인다 (D-37). */
+    private void notifyPrivate(long blogId, long actorId) {
+        jdbc.queryForList("""
+                SELECT s.member_id FROM subscriptions s JOIN members m ON m.id = s.member_id
+                WHERE s.blog_id = ? AND m.status = 'ACTIVE' AND NOT EXISTS (
+                  SELECT 1 FROM blog_memberships bm WHERE bm.blog_id = s.blog_id AND bm.member_id = s.member_id
+                    AND bm.status = 'ACTIVE')
+                """, Long.class, blogId).forEach(id -> notifications.blog(id, Type.BLOG_PRIVATE, blogId, actorId));
     }
 
     @Transactional

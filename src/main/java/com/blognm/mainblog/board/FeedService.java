@@ -64,7 +64,7 @@ public class FeedService {
         return cards.page(where, order, params, page, size);
     }
 
-    /** 메인 공지사항 (BRD-10). 관리자가 쓰는 화면은 6단계. */
+    /** 메인 공지사항 (BRD-10). 관리자는 관리자 화면의 공지 탭에서 쓴다. */
     public List<Notice> notices() {
         return jdbc.query("""
                 SELECT id, title, created_at FROM notices WHERE status = 'NORMAL'

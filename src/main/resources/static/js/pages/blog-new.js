@@ -1,7 +1,7 @@
 import { api } from '../api.js';
 import { blogUrl } from '../blog-card.js';
 import { requireLogin } from '../layout.js';
-import { SLUG_RULE, parseTags } from '../rules.js';
+import { IMAGE_EXTENSIONS, IMAGE_MAX_BYTES, SLUG_RULE, parseTags } from '../rules.js';
 
 await requireLogin();
 
@@ -35,6 +35,15 @@ $('check-slug').addEventListener('click', async () => {
 $('blog-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   $('error').textContent = '';
+  const cover = $('cover').files[0];
+  if (cover && !IMAGE_EXTENSIONS.includes(cover.name.split('.').pop().toLowerCase())) {
+    $('error').textContent = '대표 이미지는 jpg·jpeg·png·gif·webp 사진만 올릴 수 있습니다.';
+    return;
+  }
+  if (cover && cover.size > IMAGE_MAX_BYTES) {
+    $('error').textContent = '대표 이미지는 3MB까지 올릴 수 있습니다.';
+    return;
+  }
   const button = e.target.querySelector('button[type=submit]');
   button.disabled = true;
   try {
@@ -46,6 +55,16 @@ $('blog-form').addEventListener('submit', async (e) => {
       visibility: checked('visibility'),
       joinPolicy: checked('joinPolicy'),
     });
+    // 블로그는 이미 만들어졌으니, 사진이 실패해도 블로그로 넘어가고 관리에서 다시 올리게 한다 (BLG-01).
+    if (cover) {
+      const form = new FormData();
+      form.append('file', cover);
+      try {
+        await api.upload(`/api/blogs/${encodeURIComponent(res.slug)}/cover`, form);
+      } catch (err) {
+        alert(`블로그는 만들었지만 대표 이미지를 올리지 못했어요. 블로그 관리에서 다시 올려 주세요. (${err.message})`);
+      }
+    }
     location.href = blogUrl(res.slug);
   } catch (err) {
     $('error').textContent = err.message;

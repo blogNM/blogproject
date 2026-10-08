@@ -61,7 +61,7 @@ async function loadNotices() {
   }
   ul.replaceChildren(...notices.map((n) => {
     const li = el('li');
-    li.append(el('span', {}, n.title), el('span', { class: 'muted' }, ' · ' + n.createdAt));
+    li.append(el('a', { href: '/notices/' + n.id }, n.title), el('span', { class: 'muted' }, ' · ' + n.createdAt));
     return li;
   }));
 }

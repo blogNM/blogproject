@@ -32,6 +32,10 @@
         <label for="tags">태그 (선택, 쉼표로 구분, 5개까지)</label>
         <input id="tags" placeholder="여행, 사진">
 
+        <label for="cover">대표 이미지 (선택)</label>
+        <input id="cover" type="file" accept=".jpg,.jpeg,.png,.gif,.webp,image/jpeg,image/png,image/gif,image/webp">
+        <p class="hint">블로그 머리에 들어갑니다. jpg·jpeg·png·gif·webp, 3MB까지. 나중에 블로그 관리에서 바꿀 수 있습니다.</p>
+
         <fieldset class="choices">
           <legend>공개 범위</legend>
           <label class="checkbox"><input type="radio" name="visibility" value="PUBLIC" checked> 공개: 목록·검색에 보입니다</label>
@@ -43,7 +47,7 @@
           <label class="checkbox"><input type="radio" name="joinPolicy" value="FREE" checked> 자유 참여: 신청하면 바로 멤버</label>
           <label class="checkbox"><input type="radio" name="joinPolicy" value="APPROVAL"> 승인제: 블로그장이 승인해야 멤버</label>
         </fieldset>
-        <p class="hint">공개·일부 공개 블로그는 3개, 비공개는 5개까지 만들 수 있습니다. 대표 이미지는 사진 올리기가 생기면 넣을 수 있습니다.</p>
+        <p class="hint">공개·일부 공개 블로그는 3개, 비공개는 5개까지 만들 수 있습니다.</p>
         <p id="error" class="error" role="alert"></p>
         <button type="submit" class="primary">만들기</button>
       </form>

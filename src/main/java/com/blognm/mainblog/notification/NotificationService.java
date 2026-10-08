@@ -161,6 +161,15 @@ public class NotificationService {
                 Map.of("days", retention(days), "slug", slug));
     }
 
+    /** 블로그 알림 일괄 삭제 (6.7). 보관 기간이 지난 것을 지우는 배치와 같은 범위: 이 블로그의 블로그 탭 알림. */
+    @Transactional
+    public int deleteBlogNotifications(String slug) {
+        return jdbc.update("""
+                DELETE n FROM notifications n JOIN blogs b ON b.id = n.blog_id
+                WHERE b.slug = :slug AND n.tab = 'BLOG'
+                """, Map.of("slug", slug));
+    }
+
     @Transactional(readOnly = true)
     public int blogRetention(String slug) {
         Integer days = jdbc.queryForObject("SELECT notification_retention_days FROM blogs WHERE slug = :slug",
@@ -239,7 +248,8 @@ public class NotificationService {
                     blogLink == null ? null : blogLink + "/manage#blacklist");
             case "BLACKLIST_LIFTED" -> new Text(blog + " 블로그 블랙리스트에서 해제되었습니다. 다시 참여를 신청할 수 있습니다.", blogLink);
             case "BLACKLIST_REJECTED" -> new Text(blog + " 블로그 블랙리스트 해제 문의가 거절되었습니다.", null);
-            case "NOTICE" -> new Text("새 공지사항이 있습니다.", "/");
+            case "BLOG_PRIVATE" -> new Text(blog + " 블로그가 비공개로 바뀌었습니다. 구독은 그대로지만 멤버가 아니면 글이 보이지 않습니다.", blogLink);
+            case "NOTICE" -> new Text(d.isEmpty() ? "새 공지사항이 있습니다." : "새 공지사항: " + d, targetId == null ? "/notices" : "/notices/" + targetId);
             default -> new Text("새 알림이 있습니다.", null);
         };
     }

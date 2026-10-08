@@ -50,14 +50,14 @@ public class SearchService {
         String tag = BlogRules.normalizeTag(query);
         Map<Type, Long> counts = Map.of(
                 Type.POST, countPosts(postCondition(Type.POST, phrase, tag, query), viewerId),
-                Type.BLOG, countBlogs(phrase),
+                Type.BLOG, countBlogs(phrase, tag),
                 Type.TAG, tag == null ? 0 : countPosts(postCondition(Type.TAG, phrase, tag, query), viewerId),
                 Type.NICKNAME, countPosts(postCondition(Type.NICKNAME, phrase, tag, query), viewerId));
         if (viewerId != null) {
             remember(viewerId, query);
         }
         if (type == Type.BLOG) {
-            return new Result(query, type, sort, counts, null, blogs(phrase, sort, page));
+            return new Result(query, type, sort, counts, null, blogs(phrase, tag, sort, page));
         }
         if (type == Type.TAG && tag == null) {
             return new Result(query, type, sort, counts, new PostCards.Page(List.of(), 1, 10, 0, 0), null);
@@ -143,16 +143,18 @@ public class SearchService {
 
     private static final String BLOG_WHERE = """
             b.visibility = 'PUBLIC' AND b.is_hidden = FALSE AND b.status IN ('ACTIVE', 'CLOSING')
-            AND MATCH(b.name, b.description) AGAINST (:phrase IN BOOLEAN MODE)
+            AND (MATCH(b.name, b.description) AGAINST (:phrase IN BOOLEAN MODE)
+              OR b.id IN (SELECT bt.blog_id FROM blog_tags bt JOIN tags t ON t.id = bt.tag_id WHERE t.name = :tag))
             """;
 
-    private long countBlogs(String phrase) {
-        Long n = jdbc.queryForObject("SELECT COUNT(*) FROM blogs b WHERE " + BLOG_WHERE, Map.of("phrase", phrase),
-                Long.class);
+    /** 블로그 이름·소개에 맞거나, 검색어와 같은 블로그 태그가 달린 블로그 (BLG-03). */
+    private long countBlogs(String phrase, String tag) {
+        Long n = jdbc.queryForObject("SELECT COUNT(*) FROM blogs b WHERE " + BLOG_WHERE,
+                Map.of("phrase", phrase, "tag", tag == null ? "" : tag), Long.class);
         return n == null ? 0 : n;
     }
 
-    private BlogPage blogs(String phrase, Sort sort, int page) {
+    private BlogPage blogs(String phrase, String tag, Sort sort, int page) {
         int size = 12;
         int current = Math.max(page, 1);
         String order = switch (sort) {
@@ -160,7 +162,7 @@ public class SearchService {
             case POPULAR -> "subscriber_count DESC, b.id DESC";
             case RELEVANCE -> "MATCH(b.name, b.description) AGAINST (:phrase IN BOOLEAN MODE) DESC, b.id DESC";
         };
-        long total = countBlogs(phrase);
+        long total = countBlogs(phrase, tag);
         List<BlogCard> items = jdbc.query("""
                 SELECT b.slug, b.name, b.description, b.theme_accent, m.nickname,
                        (SELECT i.stored_name FROM images i WHERE i.id = b.cover_image_id) AS cover,
@@ -168,7 +170,7 @@ public class SearchService {
                        (SELECT COUNT(*) FROM blog_memberships x WHERE x.blog_id = b.id AND x.status = 'ACTIVE') AS member_count
                 FROM blogs b JOIN members m ON m.id = b.owner_id
                 WHERE\s""" + BLOG_WHERE + " ORDER BY " + order + " LIMIT :size OFFSET :offset",
-                Map.of("phrase", phrase, "size", size, "offset", (long) (current - 1) * size),
+                Map.of("phrase", phrase, "tag", tag == null ? "" : tag, "size", size, "offset", (long) (current - 1) * size),
                 (rs, i) -> new BlogCard(rs.getString("slug"), rs.getString("name"), rs.getString("description"),
                         rs.getString("theme_accent"), rs.getString("nickname"),
                         rs.getString("cover") == null ? null : "/uploads/" + rs.getString("cover"),

@@ -465,8 +465,8 @@ erDiagram
     admin_action_logs {
         bigint id PK
         bigint admin_id FK
-        enum action "WARN, KICK, DELETE, HIDE, UNHIDE, CLOSE, RESTORE, VIEW_PII, REPORT, CREATE_ADMIN"
-        enum target_type "MEMBER, BLOG, POST, COMMENT, REPORT, ADMIN"
+        enum action "WARN, KICK, DELETE, HIDE, UNHIDE, CLOSE, RESTORE, VIEW_PII, REPORT, CREATE_ADMIN, NOTICE"
+        enum target_type "MEMBER, BLOG, POST, COMMENT, REPORT, ADMIN, NOTICE"
         bigint target_id
         varchar reason
         datetime created_at "1년 보관 (D-60)"

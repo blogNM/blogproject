@@ -50,7 +50,8 @@ public class NotificationWriter {
         BLACKLIST_LIFTED("ADMIN", "APPEAL_RESULT", false, "블랙리스트 해제 문의 결과"),
         BLACKLIST_REJECTED("ADMIN", "APPEAL_RESULT", false, "블랙리스트 해제 문의 결과"),
         REPORT_RESULT("ADMIN", "REPORT_RESULT", true, "신고 처리 결과"),
-        NOTICE("ADMIN", "NOTICE", true, "공지사항");
+        NOTICE("ADMIN", "NOTICE", true, "공지사항"),
+        BLOG_PRIVATE("BLOG", "PRIVATE", false, "비공개 전환");
 
         public final String tab;
         public final String setting;
