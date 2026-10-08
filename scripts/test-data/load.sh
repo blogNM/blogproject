@@ -16,7 +16,7 @@ STAMP="$(date +%Y%m%d-%H%M%S)"
 export MYSQL_PWD="$DB_PASSWORD"
 mkdir -p "$BACKUP_DIR"
 BACKUP="$BACKUP_DIR/$DB_NAME-$STAMP.sql"
-mysqldump -h "$DB_HOST" -u "$DB_USER" --no-tablespaces --single-transaction "$DB_NAME" > "$BACKUP"
+mysqldump -h "$DB_HOST" -u "$DB_USER" --no-tablespaces --set-gtid-purged=OFF "$DB_NAME" > "$BACKUP"
 echo "백업: $BACKUP"
 
 mysql -h "$DB_HOST" -u "$DB_USER" --default-character-set=utf8mb4 "$DB_NAME" < "$DIR/seed.sql"
