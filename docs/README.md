@@ -10,6 +10,7 @@
 |---|---|
 | [헌법](../.specify/memory/constitution.md) | 모든 기능에 걸리는 원칙: 블로그별 역할 확인, XSS·CSRF, 개인정보, 이중화 대비, 기술 스택 |
 | [기능 명세 목록](../specs/README.md) | 기능별 spec 5개와 확인이 필요한 항목 |
+| [구현 단계 계획](../specs/구현-단계-계획.md) | 6단계로 나눈 구현 순서, 단계별 테스트 방법과 먼저 정할 항목 |
 | [001 회원관리](../specs/001-member-account/spec.md) | USR, SEC-01~05·13 |
 | [002 블로그 관리](../specs/002-blog-management/spec.md) | BLG |
 | [003 소셜·알림](../specs/003-social-notification/spec.md) | SOC, 알림 |
