@@ -6,7 +6,7 @@
 
 ## Phase 1: Setup — 1단계 ✅
 
-- [x] T001 Gradle 프로젝트, Spring Boot 4.1.1, Java 21 (`build.gradle`)
+- [x] T001 Gradle 프로젝트, Spring Boot 4.1.1, Java 21 (`app/build.gradle`)
 - [x] T002 [P] `application.yml`(숫자는 모두 환경변수), `application-local.yml`(개발용 메일·쿠키)
 - [x] T003 [P] Flyway `V1__init_schema.sql` = `docs/04-design/schema.sql`
 - [x] T004 [P] `.gitignore`에 빌드 결과물 추가

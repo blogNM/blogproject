@@ -19,6 +19,17 @@
 | [004 게시판](../specs/004-board/spec.md) | BRD |
 | [005 관리자·제재](../specs/005-admin-moderation/spec.md) | ADM |
 
+## 저장소 구조
+
+소스코드와 문서를 나눠 둡니다. 서버에 배포할 때는 `app/` 폴더만 씁니다.
+
+| 위치 | 내용 |
+|---|---|
+| `app/` | 소스코드. Spring Boot Gradle 프로젝트(`src/`, `build.gradle`, `gradlew`), 테스트 데이터 스크립트(`scripts/`). 실행·빌드·테스트는 이 폴더 안에서. [app/README.md](../app/README.md) |
+| `docs/` | 이 폴더. 요구사항 원본, 결정 기록, 설계, 안내서 |
+| `specs/`, `.specify/` | Spec Kit 기능 명세와 헌법 |
+| `CHANGELOG.md`, `CLAUDE.md` | 변경 기록, 에이전트 작업 규칙 |
+
 ## 폴더
 
 | 폴더 | 들어가는 문서 | 지금 있는 파일 |

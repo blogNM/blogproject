@@ -83,19 +83,19 @@
 ## Project Structure
 
 ```text
-build.gradle, settings.gradle, gradlew
-src/main/java/com/blognm/mainblog/
+app/build.gradle, settings.gradle, gradlew
+app/src/main/java/com/blognm/mainblog/
 ├── config/      # AppProperties, SecurityConfig, SchedulingConfig(ShedLock·@Async), TimeConfig, CsrfController
 ├── common/      # ApiException, 오류 응답, Hashing, ClientIp
 ├── ratelimit/   # RateLimiter 인터페이스, 메모리 구현
 ├── mail/        # MailGateway(SMTP·개발용 콘솔), AuthMailService
 ├── member/      # Member, MemberRepository, MemberRules(입력 규칙), MeController
 └── auth/        # 가입·로그인 서비스와 API, JWT, 쿠키, Turnstile, 인증 데이터 정리 배치
-src/main/resources/
+app/src/main/resources/
 ├── application.yml, application-local.yml
 ├── db/migration/V1__init_schema.sql
 └── static/      # HTML, css/common.css, js/api.js, js/layout.js, js/pages/*.js
-src/test/java/…  # 통합 테스트(SignupTest, LoginTest, SecurityHeadersTest), 단위 테스트(MemberRulesTest)
+app/src/test/java/…  # 통합 테스트(SignupTest, LoginTest, SecurityHeadersTest), 단위 테스트(MemberRulesTest)
 ```
 
 **Structure Decision**: 프로젝트 하나에 서버와 화면을 함께 둔다(D-66, 정적 HTML). 기능별 패키지로 나누고, 2단계부터 `blog/` 패키지를 더한다.

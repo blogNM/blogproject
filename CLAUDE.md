@@ -27,6 +27,7 @@
 
 ## 빌드·실행·테스트
 
+- 폴더: 소스코드는 `app/`(Gradle 프로젝트, 서버에는 이 폴더만 올림), 문서는 `docs/`·`specs/`·`.specify/`. 아래 명령은 `app/` 안에서 실행합니다.
 - 실행: `./gradlew bootRun --args='--spring.profiles.active=local'` (메일은 콘솔에 찍힘)
 - 테스트: `./gradlew test` (MySQL `blog_test` 필요)
 - 자세한 준비 방법: [docs/05-guides/로컬-실행.md](docs/05-guides/로컬-실행.md)

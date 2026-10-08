@@ -7,6 +7,12 @@
 
 ## 2026-10-08
 
+### 소스코드와 문서 폴더 나누기 ([PR #3](https://github.com/blogNM/blogproject/pull/3))
+
+- **설정** 소스코드(`src/`, `build.gradle`, `gradlew`, `gradle/`, `scripts/`)를 `app/` 폴더로 옮김. 문서(`docs/`, `specs/`, `.specify/`)와 `CHANGELOG.md`·`CLAUDE.md`는 위쪽에 그대로. 서버에는 `app/` 폴더나 거기서 만든 jar만 올림 (사용자 요청)
+- **설정** 실행·빌드·테스트는 `app/` 안에서. `.env`, 사진 폴더 `data/uploads`, `backups/`도 `app/` 안으로
+- **문서** `app/README.md` 새로 씀, docs/README "저장소 구조", CLAUDE.md, 로컬-실행·테스트-데이터·배포-계획, 001 plan·tasks 경로
+
 ### 빠졌던 기능 채우기, 글 목록·공유 버튼 ([PR #3](https://github.com/blogNM/blogproject/pull/3))
 
 - **기능** 메인 공지사항: 관리자 페이지 [공지] 탭에서 마크다운으로 쓰기·고치기·지우기, `/notices` 목록과 본문 화면, 메인 공지 제목을 누르면 본문으로. 새 공지는 공지 알림을 끄지 않은 모든 회원에게 알림 (BRD-10, SOC-04)
