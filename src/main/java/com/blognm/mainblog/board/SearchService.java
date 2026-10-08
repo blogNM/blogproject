@@ -125,18 +125,19 @@ public class SearchService {
         return switch (type) {
             case TAG -> new Condition("""
                     p.id IN (SELECT pt.post_id FROM post_tags pt JOIN tags t ON t.id = pt.tag_id WHERE t.name = :tag)
-                    """, Map.of("tag", tag == null ? "" : tag));
+                    """, Map.of("tag", tag == null ? "" : tag), false);
             case NICKNAME -> new Condition("m.nickname = :nickname AND m.status = 'ACTIVE' AND p.author_left = FALSE",
-                    Map.of("nickname", query));
-            default -> new Condition("MATCH(p.title) AGAINST (:phrase IN BOOLEAN MODE)", Map.of("phrase", phrase));
+                    Map.of("nickname", query), true);
+            default -> new Condition("MATCH(p.title) AGAINST (:phrase IN BOOLEAN MODE)", Map.of("phrase", phrase), false);
         };
     }
 
     private long countPosts(Condition condition, Long viewerId) {
         MapSqlParameterSource params = new MapSqlParameterSource(condition.params());
-        Long n = jdbc.queryForObject("""
-                SELECT COUNT(*) FROM posts p JOIN blogs b ON b.id = p.blog_id JOIN members m ON m.id = p.author_id
-                WHERE\s""" + PostCards.publicWhere(viewerId, params) + " AND " + condition.where(), params, Long.class);
+        // 회원 표는 닉네임 검색에만 붙인다. 건수를 셀 때 글마다 회원을 찾으면 글이 많을수록 느려진다
+        String members = condition.needsMember() ? " JOIN members m ON m.id = p.author_id" : "";
+        Long n = jdbc.queryForObject("SELECT COUNT(*) FROM posts p JOIN blogs b ON b.id = p.blog_id" + members
+                + " WHERE " + PostCards.publicWhere(viewerId, params) + " AND " + condition.where(), params, Long.class);
         return n == null ? 0 : n;
     }
 
@@ -175,7 +176,7 @@ public class SearchService {
         return new BlogPage(items, current, (int) ((total + size - 1) / size), total);
     }
 
-    private record Condition(String where, Map<String, Object> params) {
+    private record Condition(String where, Map<String, Object> params, boolean needsMember) {
     }
 
     public record Result(String query, Type type, Sort sort, Map<Type, Long> counts, PostCards.Page posts,

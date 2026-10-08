@@ -6,7 +6,7 @@
 |---|---|---|---|
 | [001-member-account](001-member-account/spec.md) | 회원관리 (가입·로그인·계정) | USR-01~08, SEC-01~05, SEC-13 | 1편 3.1, 4.1, 4.4, 4.6 / 2편 6.5, 6.7 |
 | [002-blog-management](002-blog-management/spec.md) | 블로그 생성·참여·운영·폐쇄 | BLG-01~13 | 1편 2장, 3.2, 3.7 / 2편 6.5 |
-| [003-social-notification](003-social-notification/spec.md) | 팔로우·구독·프로필·차단·신고·알림 | SOC-01~06 | 1편 3.3, 3.6 |
+| [003-social-notification](003-social-notification/spec.md) | 팔로우·구독·프로필·차단·신고·알림 | SOC-01~07 | 1편 3.3, 3.6 |
 | [004-board](004-board/spec.md) | 글·댓글·태그·이미지·검색·피드·조회수 | BRD-01~11 | 1편 3.4 / 2편 6.1~6.4, 6.6 |
 | [005-admin-moderation](005-admin-moderation/spec.md) | 메인 관리자와 제재 | ADM-01~07, SEC-09 | 1편 3.5, 3.7 |
 
@@ -62,6 +62,7 @@ spec 안의 `[NEEDS CLARIFICATION]`을 모은 목록입니다. 항목별 추천�
 | [D-88](../docs/03-decisions/D-88-태그-금칙어-제외.md) | 태그 금칙어는 만들지 않음 | 004 |
 | [D-89](../docs/03-decisions/D-89-블로그-테마-틀.md) | 블로그마다 테마 틀 7가지 중 하나를 고르고 색·글꼴·머리 사진·문구로 꾸밈 | 002, 004 |
 | [D-90](../docs/03-decisions/D-90-사이트-이름-Creat.md) | 사이트 이름 "Creat_"와 새 화면 디자인(색·로그인·오류 화면) | 전체 |
+| [D-91](../docs/03-decisions/D-91-내-활동-화면.md) | [내 활동] 화면(쓴 글·좋아요 한 글·팔로잉·구독), 목록마다 공개 체크, 기본 공개 | 003 |
 
 D-83은 IP별 요청 제한을 1차에 서버 메모리에서 세는 결정(헌법 V "확인 필요")에 쓰려고 비워 두었습니다.
 

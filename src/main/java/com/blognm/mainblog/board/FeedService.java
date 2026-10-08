@@ -42,6 +42,7 @@ public class FeedService {
         String order = "p.created_at DESC, p.id DESC";
         switch (tab) {
             case LATEST -> {
+                return cards.latestPage(where, params, page, size);
             }
             case POPULAR -> {
                 // 최근 7일 안에 쓴 글 중 좋아요 많은 순, 같으면 조회수 (추천안 #15)

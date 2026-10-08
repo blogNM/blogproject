@@ -47,6 +47,6 @@
 
 ## 문서를 고칠 때
 
-- 새 결정은 `docs/03-decisions/`에 기록하고 `D-번호`를 이어서 붙입니다 (현재 마지막 번호는 D-90, D-83은 IP별 요청 제한 결정용으로 비워 둠). 관련 spec의 Clarifications에도 한 줄 남깁니다.
+- 새 결정은 `docs/03-decisions/`에 기록하고 `D-번호`를 이어서 붙입니다 (현재 마지막 번호는 D-91, D-83은 IP별 요청 제한 결정용으로 비워 둠). 관련 spec의 Clarifications에도 한 줄 남깁니다.
 - "꼭 지킬 규칙"을 고치면 헌법(`.specify/memory/constitution.md`)도 같이 고칩니다.
 - 문서나 spec을 추가하면 `docs/README.md`와 `specs/README.md`의 목록도 함께 고칩니다.
