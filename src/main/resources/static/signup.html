@@ -3,15 +3,18 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>회원가입 - 메인블로그</title>
+  <title>회원가입 - Creat_</title>
+  <link rel="icon" href="/img/creat-mark.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/css/common.css">
   <script type="module" src="/js/pages/signup.js"></script>
 </head>
 <body>
-  <header class="site-header"></header>
-  <main class="container">
-    <section class="card narrow">
-      <h1>회원가입</h1>
+  <main class="auth-page">
+    <div class="auth-split">
+    <section class="auth-form">
+      <a class="wordmark" href="/" aria-label="Creat_ 메인으로"><span class="word">Creat</span><span class="cursor" aria-hidden="true">_</span></a>
+      <h1>시작해 볼까요?</h1>
+      <p class="sub">세 단계면 내 블로그를 만들 수 있어요.</p>
       <ol class="steps">
         <li data-step="1" class="active">이메일 인증</li>
         <li data-step="2">비밀번호</li>
@@ -68,8 +71,12 @@
         <p id="step3-error" class="error" role="alert"></p>
         <button type="submit" class="primary">가입하기</button>
       </form>
+      <div class="auth-links">
+        <span>이미 계정이 있나요? <a href="/login.html">로그인</a></span>
+      </div>
     </section>
+    <aside class="auth-art" aria-hidden="true"><img src="/img/login-art.svg" alt="" width="620" height="560"></aside>
+    </div>
   </main>
-  <footer class="site-footer"></footer>
 </body>
 </html>

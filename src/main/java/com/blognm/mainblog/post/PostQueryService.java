@@ -25,12 +25,16 @@ public class PostQueryService {
     public static final Set<Integer> PAGE_SIZES = Set.of(10, 20, 30);
     private static final int NOTICE_MAX = 5;
 
+    private static final int EXCERPT_MAX = 120;
+
     private final NamedParameterJdbcTemplate jdbc;
     private final BlogService blogService;
+    private final MarkdownRenderer markdown;
 
-    public PostQueryService(NamedParameterJdbcTemplate jdbc, BlogService blogService) {
+    public PostQueryService(NamedParameterJdbcTemplate jdbc, BlogService blogService, MarkdownRenderer markdown) {
         this.jdbc = jdbc;
         this.blogService = blogService;
+        this.markdown = markdown;
     }
 
     public PostPage list(String slug, String key, Long viewerId, int page, int size, Long categoryId, String rawTag) {
@@ -81,7 +85,7 @@ public class PostQueryService {
 
     private List<PostSummary> query(String where, MapSqlParameterSource params, String limit) {
         List<PostSummary> items = jdbc.query("""
-                SELECT p.id, p.title, p.is_notice, p.author_left, p.created_at, p.view_count, p.like_count,
+                SELECT p.id, p.title, p.content_md, p.is_notice, p.author_left, p.created_at, p.view_count, p.like_count,
                        p.comment_count, c.name AS category_name, m.nickname, m.status AS member_status,
                        (SELECT i.stored_name FROM images i WHERE i.post_id = p.id
                         ORDER BY i.sort_order, i.id LIMIT 1) AS first_image
@@ -92,7 +96,8 @@ public class PostQueryService {
                 ORDER BY p.created_at DESC, p.id DESC
                 %s
                 """.formatted(where, limit), params, (rs, i) -> new PostSummary(
-                rs.getLong("id"), rs.getString("title"), rs.getBoolean("is_notice"),
+                rs.getLong("id"), rs.getString("title"), markdown.toPlainText(rs.getString("content_md"), EXCERPT_MAX),
+                rs.getBoolean("is_notice"),
                 rs.getBoolean("author_left") ? "탈퇴한 계정"
                         : "ACTIVE".equals(rs.getString("member_status")) ? rs.getString("nickname") : "탈퇴한 회원",
                 rs.getString("category_name"),
@@ -118,7 +123,8 @@ public class PostQueryService {
                 });
     }
 
-    public record PostSummary(long id, String title, boolean notice, String authorName, String categoryName,
+    /** 요약(excerpt)은 HTML을 걷어 낸 글자라 화면은 textContent로 넣는다. 테마 틀이 카드에 쓴다 (D-89). */
+    public record PostSummary(long id, String title, String excerpt, boolean notice, String authorName, String categoryName,
             String createdAt, long views, long likes, long comments, String imageUrl, List<String> tags) {
     }
 

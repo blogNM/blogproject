@@ -47,4 +47,12 @@ class SecurityHeadersTest extends IntegrationTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(header().string("Content-Type", Matchers.containsString("application/json")));
     }
+
+    @Test
+    @DisplayName("없는 화면 주소는 404 안내 화면(HTML)을 보낸다")
+    void notFoundPage() throws Exception {
+        mvc.perform(get("/no-such-page"))
+                .andExpect(status().isNotFound())
+                .andExpect(header().string("Content-Type", Matchers.containsString("text/html")));
+    }
 }

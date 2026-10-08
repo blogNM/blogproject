@@ -3,8 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>글 - 메인블로그</title>
+  <title>글 - Creat_</title>
 <!--OG-->
+  <link rel="icon" href="/img/creat-mark.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/css/common.css">
   <script type="module" src="/js/pages/post.js"></script>
 </head>
@@ -25,8 +26,26 @@
       <div id="content" class="post-content"></div>
       <ul id="tags" class="tags post-tags"></ul>
       <p id="counts" class="muted counts"></p>
-      <p class="hint">공감과 댓글은 4단계에서 열립니다.</p>
+      <div class="post-actions">
+        <button id="like" type="button" class="like-button" aria-pressed="false">♥ 좋아요 <span id="like-count">0</span></button>
+        <button id="share" type="button">링크 복사</button>
+      </div>
     </article>
+
+    <section id="comments" class="card comments" hidden>
+      <h2 class="section-title">댓글 <span id="comment-count"></span></h2>
+      <form id="comment-form" class="comment-form" hidden>
+        <label for="comment-input" class="visually-hidden">댓글 쓰기</label>
+        <textarea id="comment-input" maxlength="500" placeholder="댓글을 남겨 주세요 (500자까지)"></textarea>
+        <div class="actions">
+          <span id="comment-length" class="muted">0 / 500</span>
+          <button type="submit" class="dark">댓글 달기</button>
+        </div>
+        <p id="comment-error" class="error" role="alert"></p>
+      </form>
+      <p id="comment-login" class="muted" hidden><a href="/login.html">로그인</a>하면 댓글을 달 수 있어요.</p>
+      <ul id="comment-list" class="comment-list"></ul>
+    </section>
   </main>
   <footer class="site-footer"></footer>
 </body>

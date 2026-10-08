@@ -1,7 +1,8 @@
 import { api } from '../api.js';
 import { roleName } from '../blog-card.js';
 import { el, requireLogin } from '../layout.js';
-import { parseTags } from '../rules.js';
+import { IMAGE_EXTENSIONS, IMAGE_MAX_BYTES, parseTags } from '../rules.js';
+import { FONTS, SWATCHES, THEMES, isAccent } from '../theme.js';
 
 await requireLogin();
 
@@ -52,20 +53,7 @@ async function loadRequests() {
           b.disabled = true;
           try {
             await api.post(`${base}/join-requests/${r.id}/${action}`);
-            await Promise.all([loadRequests(), loadMembers(), loadCategories()]);
-
-  $('category-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const msg = $('category-message');
-    try {
-      await api.post(base + '/categories', { name: $('category-name').value });
-      $('category-name').value = '';
-      msg.textContent = '';
-      await loadCategories();
-    } catch (err) {
-      msg.textContent = err.message;
-    }
-  });
+            await Promise.all([loadRequests(), loadMembers()]);
           } catch (err) {
             alert(err.message);
             b.disabled = false;
@@ -159,11 +147,133 @@ function fillSettings() {
   $('settings-section').hidden = false;
 }
 
+// ----- 테마 꾸미기 (D-89). 블로그장 또는 정보 수정 권한이 있는 부블로그장 -----
+function setAccent(value) {
+  $('accent').value = value.toUpperCase();
+  $('accent-picker').value = value.toLowerCase();
+  document.querySelectorAll('.swatch').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.color === value.toUpperCase())));
+}
+
+function chosenTheme() {
+  return document.querySelector('input[name=theme]:checked').value;
+}
+
+function themeBody() {
+  return {
+    theme: chosenTheme(),
+    accent: $('accent').value.trim(),
+    font: $('font').value,
+    heroTitle: $('hero-title').value,
+    heroSubtitle: $('hero-subtitle').value,
+  };
+}
+
+function renderCover(url) {
+  $('cover-preview').replaceChildren(...(url ? [el('img', { src: url, alt: '머리 사진' })] : []));
+  $('cover-remove').hidden = !url;
+}
+
+function fillTheme() {
+  const t = blog.theme;
+  $('theme-cards').replaceChildren(...Object.entries(THEMES).map(([value, info]) => {
+    const label = el('label', { class: 'theme-card' });
+    const input = el('input', { type: 'radio', name: 'theme', value });
+    input.checked = value === t.theme;
+    // 틀을 바꾸면 그 틀의 기본 색을 권한다. 저장 전에는 언제든 다른 색으로 바꿀 수 있다.
+    input.addEventListener('change', () => setAccent(info.accent));
+    label.append(input, el('img', { src: `/img/themes/${value.toLowerCase()}.svg`, alt: '', width: '240', height: '160' }),
+      el('strong', {}, info.name), el('span', { class: 'muted' }, info.summary),
+      el('span', { class: 'muted' }, info.tags.map((x) => '#' + x).join(' ')));
+    return label;
+  }));
+  $('swatches').replaceChildren(...SWATCHES.map((c) => {
+    const b = el('button', { type: 'button', class: 'swatch', 'data-color': c, 'aria-label': '색 ' + c, 'aria-pressed': 'false' });
+    b.style.setProperty('background', c);
+    b.addEventListener('click', () => setAccent(c));
+    return b;
+  }));
+  $('font').replaceChildren(...Object.entries(FONTS).map(([value, name]) => el('option', { value }, name)));
+  $('font').value = t.font;
+  setAccent(t.accent);
+  $('hero-title').value = t.heroTitle || '';
+  $('hero-subtitle').value = t.heroSubtitle || '';
+  renderCover(t.coverUrl);
+  $('theme-section').hidden = false;
+}
+
+function setupTheme() {
+  $('accent-picker').addEventListener('input', () => setAccent($('accent-picker').value));
+  $('accent').addEventListener('change', () => {
+    if (isAccent($('accent').value.trim())) setAccent($('accent').value.trim());
+  });
+  $('theme-preview').addEventListener('click', () => {
+    const body = themeBody();
+    if (!isAccent(body.accent)) {
+      $('theme-message').textContent = '색은 #과 16진수 6자리로 골라 주세요.';
+      return;
+    }
+    const q = new URLSearchParams({ preview: body.theme, accent: body.accent, font: body.font });
+    if (body.heroTitle) q.set('heroTitle', body.heroTitle);
+    if (body.heroSubtitle) q.set('heroSubtitle', body.heroSubtitle);
+    window.open(`/blog/${encodeURIComponent(slug)}?${q}`, '_blank', 'noopener');
+  });
+  $('theme-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const msg = $('theme-message');
+    try {
+      await api.put(base + '/theme', themeBody());
+      blog = await api.get(base);
+      msg.className = 'info';
+      msg.textContent = '테마를 저장했어요. 블로그로 돌아가면 바뀐 모습을 볼 수 있어요.';
+    } catch (err) {
+      msg.className = 'error';
+      msg.textContent = err.message;
+    }
+  });
+  // 머리 사진도 글 사진과 같은 규칙으로 먼저 확인하고, 서버가 한 번 더 확인한다 (SEC-08).
+  $('cover-file').addEventListener('change', async () => {
+    const file = $('cover-file').files[0];
+    const msg = $('theme-message');
+    if (!file) return;
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (!IMAGE_EXTENSIONS.includes(ext)) {
+      msg.textContent = 'jpg·jpeg·png·gif·webp 사진만 올릴 수 있습니다.';
+      return;
+    }
+    if (file.size > IMAGE_MAX_BYTES) {
+      msg.textContent = '사진은 한 장에 3MB까지 올릴 수 있습니다.';
+      return;
+    }
+    const form = new FormData();
+    form.append('file', file);
+    try {
+      const res = await api.upload(base + '/cover', form);
+      renderCover(res.coverUrl);
+      msg.className = 'info';
+      msg.textContent = '머리 사진을 바꿨어요.';
+    } catch (err) {
+      msg.className = 'error';
+      msg.textContent = err.message;
+    } finally {
+      $('cover-file').value = '';
+    }
+  });
+  $('cover-remove').addEventListener('click', async () => {
+    if (!confirm('머리 사진을 뺄까요? 테마 기본 색으로 칠해집니다.')) return;
+    await api.del(base + '/cover');
+    renderCover(null);
+  });
+}
+
 if (blog) {
   $('blog-name').textContent = blog.name;
   $('back-link').href = '/blog/' + encodeURIComponent(slug);
   $('manage').hidden = false;
   fillSettings();
+  if (blog.canEditInfo) {
+    fillTheme();
+    setupTheme();
+  }
   await Promise.all([loadRequests(), loadMembers(), loadCategories()]);
 
   $('category-form').addEventListener('submit', async (e) => {

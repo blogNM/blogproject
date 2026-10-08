@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>통합 검색 - Creat_</title>
+  <link rel="icon" href="/img/creat-mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/common.css">
+  <script type="module" src="/js/pages/search.js"></script>
+</head>
+<body class="no-header-search">
+  <header class="site-header"></header>
+  <main class="container">
+    <span class="eyebrow">Search</span>
+    <h1>무엇을 찾고 있나요?</h1>
+    <form id="search-form" class="search-bar" role="search" autocomplete="off">
+      <div class="search-box">
+        <input id="q" type="search" placeholder="블로그·글 제목·태그·닉네임 (2~20자)" aria-label="검색어" maxlength="20">
+        <div id="recent" class="recent" hidden>
+          <div class="recent-head"><span>최근 검색어</span><button type="button" id="recent-clear" class="link-button">전체 지우기</button></div>
+          <ul id="recent-list"></ul>
+        </div>
+      </div>
+      <button type="submit" class="dark">검색</button>
+    </form>
+    <p id="error" class="error" role="alert"></p>
+
+    <div id="result" hidden>
+      <div class="posts-head">
+        <div class="tabs" role="tablist" id="type-tabs">
+          <button type="button" class="tab" data-type="post" role="tab">글<span class="count"></span></button>
+          <button type="button" class="tab" data-type="blog" role="tab">블로그<span class="count"></span></button>
+          <button type="button" class="tab" data-type="tag" role="tab">태그<span class="count"></span></button>
+          <button type="button" class="tab" data-type="nickname" role="tab">닉네임<span class="count"></span></button>
+        </div>
+        <div class="row">
+          <select id="sort" aria-label="정렬">
+            <option value="relevance">관련도순</option>
+            <option value="latest">최신순</option>
+            <option value="popular">인기순</option>
+          </select>
+          <select id="size" aria-label="한 번에 볼 개수">
+            <option value="10">10개씩</option>
+            <option value="20">20개씩</option>
+            <option value="30">30개씩</option>
+          </select>
+        </div>
+      </div>
+      <p id="summary" class="muted"></p>
+      <ul id="post-results" class="feed"></ul>
+      <ul id="blog-results" class="blog-grid"></ul>
+      <nav id="pager" class="pager" aria-label="검색 결과 페이지"></nav>
+    </div>
+  </main>
+  <footer class="site-footer"></footer>
+</body>
+</html>

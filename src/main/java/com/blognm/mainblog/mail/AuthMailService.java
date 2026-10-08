@@ -26,8 +26,8 @@ public class AuthMailService {
 
     @Async
     public void sendSignupCode(String email, String code, long ttlMinutes) {
-        send(email, "[메인블로그] 회원가입 인증번호", """
-                메인블로그 회원가입 인증번호입니다.
+        send(email, "[Creat_] 회원가입 인증번호", """
+                Creat_ 회원가입 인증번호입니다.
 
                 인증번호: %s
 
@@ -37,8 +37,8 @@ public class AuthMailService {
 
     @Async
     public void sendPasswordResetCode(String email, String code, long ttlMinutes) {
-        send(email, "[메인블로그] 비밀번호 재설정 인증번호", """
-                메인블로그 비밀번호 재설정 인증번호입니다.
+        send(email, "[Creat_] 비밀번호 재설정 인증번호", """
+                Creat_ 비밀번호 재설정 인증번호입니다.
 
                 인증번호: %s
 
@@ -50,7 +50,7 @@ public class AuthMailService {
     /** 이미 가입된 이메일로 가입을 시도하면 인증번호 대신 이 안내를 보낸다 (D-28). */
     @Async
     public void sendAlreadyRegistered(String email) {
-        send(email, "[메인블로그] 이미 가입된 이메일입니다", """
+        send(email, "[Creat_] 이미 가입된 이메일입니다", """
                 이 이메일로 회원가입을 시도했지만, 이미 가입된 이메일입니다.
 
                 비밀번호가 기억나지 않으면 로그인 화면의 [비밀번호 찾기]를 이용해 주세요.

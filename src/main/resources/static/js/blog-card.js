@@ -15,20 +15,29 @@ export function blogUrl(slug) {
 
 export function blogCard(b) {
   const li = el('li', { class: 'blog-card' });
+  // 머리 사진이 없으면 블로그 강조 색으로 칠한다. 색은 서버가 #RRGGBB만 받는다 (D-89).
+  const cover = el('div', { class: 'blog-card-cover' });
+  if (b.coverUrl) {
+    cover.append(el('img', { src: b.coverUrl, alt: '', loading: 'lazy' }));
+  } else if (/^#[0-9A-Fa-f]{6}$/.test(b.accent || '')) {
+    cover.style.setProperty('background', `linear-gradient(135deg, ${b.accent}, #DFB79F)`);
+  }
+  const body = el('div', { class: 'blog-card-body' });
+  li.append(cover, body);
   const title = el('a', { href: blogUrl(b.slug), class: 'blog-card-title' }, b.name);
-  li.append(title);
+  body.append(title);
   const badges = el('div', { class: 'badges' });
   if (b.myRole) badges.append(el('span', { class: 'badge' }, roleName(b.myRole)));
   badges.append(el('span', { class: 'badge muted-badge' }, JOIN_POLICY[b.joinPolicy] || ''));
   if (b.status === 'CLOSING') badges.append(el('span', { class: 'badge warn' }, '폐쇄 예정'));
-  li.append(badges);
-  if (b.description) li.append(el('p', { class: 'blog-card-desc' }, b.description));
+  body.append(badges);
+  if (b.description) body.append(el('p', { class: 'blog-card-desc' }, b.description));
   if (b.tags && b.tags.length) {
     const tags = el('ul', { class: 'tags' });
     b.tags.forEach((t) => tags.append(el('li', {}, '#' + t)));
-    li.append(tags);
+    body.append(tags);
   }
-  li.append(el('p', { class: 'muted' },
+  body.append(el('p', { class: 'muted' },
     `블로그장 ${b.ownerNickname} · 멤버 ${b.memberCount}명 · 구독 ${b.subscriberCount}명 · ${b.createdAt} 개설`));
   return li;
 }

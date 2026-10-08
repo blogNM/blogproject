@@ -3,7 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>블로그 관리 - 메인블로그</title>
+  <title>블로그 관리 - Creat_</title>
+  <link rel="icon" href="/img/creat-mark.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/css/common.css">
   <script type="module" src="/js/pages/blog-manage.js"></script>
 </head>
@@ -14,6 +15,53 @@
     <div id="manage" hidden>
       <h1><span id="blog-name"></span> 관리</h1>
       <p><a id="back-link" href="/">블로그로 돌아가기</a></p>
+
+      <section class="card" id="theme-section" hidden>
+        <h2 class="section-title">테마 꾸미기</h2>
+        <p class="hint">테마 틀을 고르고 색·글꼴·머리 사진·문구를 바꿔 나만의 블로그를 만들어 보세요. [미리보기]로 저장하기 전에 볼 수 있어요.</p>
+        <form id="theme-form" novalidate>
+          <fieldset class="theme-picker">
+            <legend class="visually-hidden">테마 틀</legend>
+            <div id="theme-cards" class="theme-cards"></div>
+          </fieldset>
+
+          <div class="theme-options">
+            <div>
+              <label>강조 색</label>
+              <div id="swatches" class="swatches"></div>
+              <div class="row color-row">
+                <input id="accent" maxlength="7" aria-label="강조 색 #RRGGBB" placeholder="#7C0CB4">
+                <input id="accent-picker" type="color" aria-label="색 고르기">
+              </div>
+            </div>
+            <div>
+              <label for="font">글꼴</label>
+              <select id="font"></select>
+            </div>
+          </div>
+
+          <label for="hero-title">머리 사진 위 큰 문구 (40자까지, 비우면 블로그 이름)</label>
+          <input id="hero-title" maxlength="40">
+          <label for="hero-subtitle">작은 문구 (100자까지, 비우면 블로그 소개)</label>
+          <input id="hero-subtitle" maxlength="100">
+
+          <label>머리 사진</label>
+          <div class="cover-row">
+            <div id="cover-preview" class="cover-preview"></div>
+            <div>
+              <input id="cover-file" type="file" accept=".jpg,.jpeg,.png,.gif,.webp,image/jpeg,image/png,image/gif,image/webp">
+              <p class="hint">jpg·png·gif·webp, 3MB까지. 가로로 긴 사진이 잘 어울려요.</p>
+              <button id="cover-remove" type="button" class="danger-outline" hidden>머리 사진 빼기</button>
+            </div>
+          </div>
+
+          <p id="theme-message" class="error" role="alert"></p>
+          <div class="actions">
+            <button id="theme-preview" type="button">미리보기</button>
+            <button type="submit" class="primary inline">테마 저장</button>
+          </div>
+        </form>
+      </section>
 
       <section class="card" id="requests-section" hidden>
         <h2 class="section-title">참여 신청</h2>

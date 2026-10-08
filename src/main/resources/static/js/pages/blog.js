@@ -1,7 +1,9 @@
 import { api } from '../api.js';
 import { JOIN_POLICY, VISIBILITY, roleName } from '../blog-card.js';
-import { el, initLayout } from '../layout.js';
-import { initPostList } from '../post-list.js';
+import { renderShowcase, renderSideRecent } from '../blog-theme.js';
+import { el, initLayout, renderNotFound, toast } from '../layout.js';
+import { initPostList, postUrl } from '../post-list.js';
+import { FONTS, THEMES, applyBlogLook, isAccent } from '../theme.js';
 
 const me = await initLayout();
 
@@ -11,7 +13,7 @@ const slug = decodeURIComponent(location.pathname.split('/')[2] || '');
 const key = new URLSearchParams(location.search).get('key');
 
 function showError(text) {
-  $('blog').hidden = true;
+  $('blog-shell').hidden = true;
   $('error').textContent = text;
   $('error').hidden = false;
 }
@@ -39,11 +41,15 @@ async function load() {
     if (err.code === 'SUSPENDED') {
       showError(`이 블로그에서 활동이 정지되어 ${err.details.suspendedUntil.replace('T', ' ')}까지 들어갈 수 없습니다.`);
     } else {
-      showError(err.status === 404 ? '블로그를 찾을 수 없습니다. 주소를 확인하거나, 비공개 블로그라면 멤버만 볼 수 있습니다.' : err.message);
+      if (err.status === 404) {
+        renderNotFound('블로그를 찾을 수 없어요. 주소를 확인하거나, 비공개 블로그라면 멤버만 볼 수 있어요.');
+      } else {
+        showError(err.message);
+      }
     }
     return;
   }
-  document.title = blog.name + ' - 메인블로그';
+  document.title = blog.name + ' - Creat_';
   $('blog-name').textContent = blog.name;
   $('blog-address').textContent = '/blog/' + blog.slug;
   $('blog-description').textContent = blog.description || '';
@@ -56,7 +62,106 @@ async function load() {
   }
   renderActions(blog);
   $('blog').hidden = false;
+  renderLook(blog);
+  $('blog-shell').hidden = false;
   return blog;
+}
+
+// ----- 테마 틀과 꾸미기 (D-89) -----
+
+/** 정보 수정 권한이 있는 사람은 ?preview=틀&accent=색&font=글꼴 로 저장 전에 미리 본다. */
+function previewTheme(blog) {
+  const q = new URLSearchParams(location.search);
+  if (!blog.canEditInfo || !THEMES[q.get('preview')]) return null;
+  return {
+    ...blog.theme,
+    theme: q.get('preview'),
+    accent: isAccent(q.get('accent')) ? q.get('accent') : blog.theme.accent,
+    font: FONTS[q.get('font')] ? q.get('font') : blog.theme.font,
+    heroTitle: q.has('heroTitle') ? q.get('heroTitle') : blog.theme.heroTitle,
+    heroSubtitle: q.has('heroSubtitle') ? q.get('heroSubtitle') : blog.theme.heroSubtitle,
+  };
+}
+
+let look;
+
+function renderLook(blog) {
+  const preview = previewTheme(blog);
+  look = preview || blog.theme;
+  const shell = $('blog-shell');
+  Object.keys(THEMES).forEach((t) => shell.classList.remove('theme-' + t.toLowerCase().replace('_', '-')));
+  shell.classList.add('theme-' + look.theme.toLowerCase().replace('_', '-'));
+  applyBlogLook(look, shell);
+
+  const home = `/blog/${encodeURIComponent(blog.slug)}` + (key ? '?key=' + encodeURIComponent(key) : '');
+  $('blog-logo').textContent = blog.name;
+  $('blog-logo').href = home;
+  $('hero-eyebrow').textContent = THEMES[look.theme].name;
+  $('hero-title').textContent = look.heroTitle || blog.name;
+  $('hero-sub').textContent = look.heroSubtitle || blog.description || '';
+  const hero = $('blog-hero');
+  hero.classList.toggle('has-cover', !!look.coverUrl);
+  // 머리 사진 주소는 서버가 만든 /uploads/{UUID}라 CSS 변수로 넣어도 안전하다.
+  if (look.coverUrl && /^\/uploads\/[0-9a-f-]{36}$/.test(look.coverUrl)) {
+    hero.style.setProperty('--hero-image', `url("${look.coverUrl}")`);
+  } else {
+    hero.style.removeProperty('--hero-image');
+  }
+  const profile = $('profile');
+  profile.replaceChildren(look.coverUrl
+    ? el('img', { src: look.coverUrl, alt: '' })
+    : el('span', {}, [...blog.name][0] || 'C'));
+
+  if (preview) {
+    $('preview-text').textContent = `${THEMES[look.theme].name} 틀을 미리 보는 중이에요. 저장하기 전이라 다른 사람에게는 보이지 않아요.`;
+    $('preview-close').href = home;
+    $('preview-bar').hidden = false;
+    $('preview-apply').onclick = async () => {
+      try {
+        await api.put(`/api/blogs/${encodeURIComponent(blog.slug)}/theme`, {
+          theme: look.theme, accent: look.accent, font: look.font, heroTitle: look.heroTitle, heroSubtitle: look.heroSubtitle,
+        });
+        location.replace(home);
+      } catch (err) {
+        toast(err.message);
+      }
+    };
+  }
+}
+
+/** 메뉴: 홈과 카테고리 몇 개. 누르면 그 카테고리의 글 목록으로 간다. */
+async function renderMenu(blog) {
+  const menu = $('blog-menu');
+  const base = `/blog/${encodeURIComponent(blog.slug)}`;
+  const keyQ = key ? { key } : {};
+  const categories = await api.get(`/api/blogs/${encodeURIComponent(blog.slug)}/categories?` + new URLSearchParams(keyQ))
+    .catch(() => []);
+  const items = [el('a', { href: base + (key ? '?key=' + encodeURIComponent(key) : '') }, '홈')];
+  categories.slice(0, 5).forEach((c) => {
+    items.push(el('a', { href: `${base}?${new URLSearchParams({ ...keyQ, category: c.id })}#all-posts` }, c.name));
+  });
+  if (blog.myRole) items.push(el('a', { href: `${base}/write`, class: 'menu-write' }, '글쓰기'));
+  menu.replaceChildren(...items);
+}
+
+/** 첫 화면(필터 없음)에서만 테마 칸을 그린다. 카테고리·태그·페이지를 고르면 전체 글 목록만 보인다. */
+async function renderFront(blog) {
+  const q = new URLSearchParams(location.search);
+  const filtered = q.has('category') || q.has('tag') || (Number(q.get('page')) || 1) > 1;
+  $('blog-shell').classList.toggle('filtered', filtered);
+  const href = (p) => postUrl(blog.slug, p.id, key);
+  const res = await api.get(`/api/blogs/${encodeURIComponent(blog.slug)}/posts?` + new URLSearchParams({ ...(key ? { key } : {}), size: 30 }))
+    .catch(() => null);
+  if (!res) return;
+  renderSideRecent($('side-recent'), res.items, res.notices, href);
+  if (filtered) return;
+  renderShowcase($('showcase'), look.theme, res.items, blog, href);
+  // Poster 틀은 "최근 올라온 글" 띠를 머리 사진 위에 둔다.
+  const strip = $('showcase').querySelector('.po-strip');
+  if (strip) {
+    strip.classList.add('po-top');
+    $('blog-hero').before(strip);
+  }
 }
 
 function renderActions(blog) {
@@ -81,8 +186,7 @@ function renderActions(blog) {
           throw new Error('');
         }
         await api.post(base + '/leave');
-        const loaded = await load();
-if (loaded) await initPostList(loaded, key);
+        await load();
       }, 'danger-outline'));
     }
     return;
@@ -92,8 +196,7 @@ if (loaded) await initPostList(loaded, key);
     actions.append(el('span', { class: 'badge' }, '참여 승인을 기다리는 중'));
     actions.append(button('신청 취소', async () => {
       await api.del(base + '/join');
-      const loaded = await load();
-if (loaded) await initPostList(loaded, key);
+      await load();
     }));
     return;
   }
@@ -104,11 +207,12 @@ if (loaded) await initPostList(loaded, key);
   const label = blog.joinPolicy === 'FREE' ? '참여하기' : '참여 신청하기';
   actions.append(button(label, async () => {
     const res = await api.post(base + '/join', key ? { key } : {});
-    const loaded = await load();
-if (loaded) await initPostList(loaded, key);
+    await load();
     $('action-message').textContent = res.joined ? '멤버가 되었습니다.' : '참여를 신청했습니다. 블로그장이 승인하면 멤버가 됩니다.';
   }, 'primary inline'));
 }
 
 const loaded = await load();
-if (loaded) await initPostList(loaded, key);
+if (loaded) {
+  await Promise.all([renderMenu(loaded), renderFront(loaded), initPostList(loaded, key)]);
+}

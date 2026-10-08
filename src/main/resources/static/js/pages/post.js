@@ -1,7 +1,8 @@
-import { api } from '../api.js';
-import { el, initLayout } from '../layout.js';
+import { api, ApiError } from '../api.js';
+import { el, initLayout, renderNotFound, toast } from '../layout.js';
+import { applyBlogLook } from '../theme.js';
 
-await initLayout();
+const me = await initLayout();
 
 const $ = (id) => document.getElementById(id);
 const [, , rawSlug, , rawId] = location.pathname.split('/');
@@ -10,6 +11,7 @@ const postId = Number(rawId);
 // 일부 공개 블로그의 공유 링크 값 (D-49)
 const key = new URLSearchParams(location.search).get('key');
 const blogHref = `/blog/${encodeURIComponent(slug)}` + (key ? '?key=' + encodeURIComponent(key) : '');
+const keyQuery = key ? '?key=' + encodeURIComponent(key) : '';
 
 function showError(text) {
   $('post').hidden = true;
@@ -24,7 +26,11 @@ try {
   if (err.code === 'SUSPENDED') {
     showError(`이 블로그에서 활동이 정지되어 ${err.details.suspendedUntil.replace('T', ' ')}까지 들어갈 수 없습니다.`);
   } else {
-    showError(err.status === 404 ? '글을 찾을 수 없습니다. 지워졌거나 볼 수 없는 글입니다.' : err.message);
+    if (err.status === 404) {
+      renderNotFound('글을 찾을 수 없어요. 지워졌거나 볼 수 없는 글이에요.');
+    } else {
+      showError(err.message);
+    }
   }
 }
 
@@ -47,7 +53,11 @@ if (post && post.blogSlug !== slug) {
     li.append(el('a', { href: `${blogHref}${key ? '&' : '?'}tag=${encodeURIComponent(t)}` }, '#' + t));
     return li;
   }));
-  $('counts').textContent = `조회 ${post.counts.views} · 공감 ${post.counts.likes} · 댓글 ${post.counts.comments}`;
+  $('counts').textContent = `조회 ${post.counts.views} · 댓글 ${post.counts.comments}`;
+  api.get(`/api/blogs/${encodeURIComponent(slug)}${keyQuery}`).then((blog) => applyBlogLook(blog.theme)).catch(() => {});
+  setupLike();
+  setupShare();
+  loadComments();
 
   const actions = $('actions');
   if (post.canEdit) {
@@ -69,4 +79,175 @@ if (post && post.blogSlug !== slug) {
     actions.append(del);
   }
   $('post').hidden = false;
+}
+
+// ----- 좋아요 (BRD-06): 누르면 좋아요, 한 번 더 누르면 취소 -----
+function setupLike() {
+  const button = $('like');
+  const render = (liked, likes) => {
+    button.setAttribute('aria-pressed', String(liked));
+    $('like-count').textContent = String(likes);
+  };
+  render(post.liked, post.counts.likes);
+  button.addEventListener('click', async () => {
+    if (!me) {
+      location.href = '/login.html?next=' + encodeURIComponent(location.pathname + location.search);
+      return;
+    }
+    button.disabled = true;
+    try {
+      const res = await api.post(`/api/posts/${post.id}/like${keyQuery}`);
+      render(res.liked, res.likes);
+    } catch (err) {
+      toast(err.message);
+    } finally {
+      button.disabled = false;
+    }
+  });
+}
+
+// ----- 공유 (BRD-07): 1차는 링크 복사. 일부 공개 블로그는 공유 키까지 붙인다 -----
+function setupShare() {
+  $('share').addEventListener('click', async () => {
+    const url = location.origin + `/blog/${encodeURIComponent(post.blogSlug)}/posts/${post.id}${keyQuery}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast('글 주소를 복사했어요.');
+    } catch {
+      prompt('아래 주소를 복사해 주세요.', url);
+    }
+  });
+}
+
+// ----- 댓글 (BRD-06, US5). 내용·닉네임은 모두 textContent -----
+async function loadComments() {
+  $('comments').hidden = false;
+  $('comment-form').hidden = !me;
+  $('comment-login').hidden = !!me;
+  let comments;
+  try {
+    comments = await api.get(`/api/posts/${post.id}/comments${keyQuery}`);
+  } catch (err) {
+    $('comment-list').replaceChildren(el('li', { class: 'muted' }, err.message));
+    return;
+  }
+  const total = comments.reduce((n, c) => n + (c.deleted ? 0 : 1) + c.replies.length, 0);
+  $('comment-count').textContent = String(total);
+  $('counts').textContent = `조회 ${post.counts.views} · 댓글 ${total}`;
+  $('comment-list').replaceChildren(...comments.map((c) => commentItem(c, c.id)));
+}
+
+function commentItem(c, rootId) {
+  const li = el('li', { class: c.deleted ? 'comment deleted' : 'comment' });
+  if (!c.deleted) {
+    const head = el('div', { class: 'comment-head' });
+    head.append(el('span', { class: 'comment-author' }, c.authorName), el('span', { class: 'muted' }, c.createdAt));
+    if (c.edited) head.append(el('span', { class: 'muted' }, '수정됨'));
+    li.append(head);
+  }
+  const body = el('p', { class: 'comment-body' });
+  if (c.replyTo) body.append(el('span', { class: 'mention' }, '@' + c.replyTo));
+  body.append(document.createTextNode(c.content));
+  li.append(body);
+
+  if (!c.deleted) {
+    const tools = el('div', { class: 'comment-tools' });
+    if (me) {
+      const reply = el('button', { type: 'button' }, '답글');
+      reply.addEventListener('click', () => openReply(li, c));
+      tools.append(reply);
+    }
+    if (c.mine) {
+      const edit = el('button', { type: 'button' }, '수정');
+      edit.addEventListener('click', () => openEdit(li, body, c));
+      tools.append(edit);
+    }
+    if (c.canDelete) {
+      const del = el('button', { type: 'button' }, '삭제');
+      del.addEventListener('click', async () => {
+        if (!confirm('댓글을 삭제할까요?')) return;
+        try {
+          await api.del(`/api/comments/${c.id}${keyQuery}`);
+          loadComments();
+        } catch (err) {
+          toast(err.message);
+        }
+      });
+      tools.append(del);
+    }
+    li.append(tools);
+  }
+  if (c.replies && c.replies.length) {
+    const ul = el('ul', { class: 'replies' });
+    ul.append(...c.replies.map((r) => commentItem(r, rootId)));
+    li.append(ul);
+  }
+  return li;
+}
+
+/** 답글에 다시 답하면 서버가 같은 줄기에 붙이고 @닉네임을 단다 (D-78). */
+function openReply(li, c) {
+  if (li.querySelector(':scope > .reply-form')) return;
+  const form = miniForm(`@${c.authorName}에게 답글`, '', async (content) => {
+    await api.post(`/api/posts/${post.id}/comments${keyQuery}`, { content, parentId: c.id });
+    loadComments();
+  });
+  li.append(form);
+  form.querySelector('textarea').focus();
+}
+
+function openEdit(li, body, c) {
+  if (li.querySelector(':scope > .reply-form')) return;
+  body.hidden = true;
+  const form = miniForm('댓글 수정', c.content, async (content) => {
+    await api.put(`/api/comments/${c.id}${keyQuery}`, { content });
+    loadComments();
+  }, () => { body.hidden = false; });
+  li.append(form);
+}
+
+function miniForm(placeholder, value, onSubmit, onCancel) {
+  const form = el('form', { class: 'reply-form' });
+  const area = el('textarea', { maxlength: '500', placeholder, 'aria-label': placeholder });
+  area.value = value;
+  const actions = el('div', { class: 'actions' });
+  const cancel = el('button', { type: 'button' }, '취소');
+  const save = el('button', { type: 'submit', class: 'dark' }, '등록');
+  const error = el('p', { class: 'error', role: 'alert' });
+  actions.append(cancel, save);
+  form.append(area, actions, error);
+  cancel.addEventListener('click', () => { form.remove(); if (onCancel) onCancel(); });
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    save.disabled = true;
+    try {
+      await onSubmit(area.value);
+    } catch (err) {
+      error.textContent = err instanceof ApiError ? err.message : '저장하지 못했어요.';
+      save.disabled = false;
+    }
+  });
+  return form;
+}
+
+if (post) {
+  const input = $('comment-input');
+  input.addEventListener('input', () => { $('comment-length').textContent = `${[...input.value].length} / 500`; });
+  $('comment-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const length = [...input.value.trim()].length;
+    if (length < 1 || length > 500) {
+      $('comment-error').textContent = '댓글은 1~500자로 써 주세요.';
+      return;
+    }
+    try {
+      await api.post(`/api/posts/${post.id}/comments${keyQuery}`, { content: input.value });
+      input.value = '';
+      $('comment-length').textContent = '0 / 500';
+      $('comment-error').textContent = '';
+      loadComments();
+    } catch (err) {
+      $('comment-error').textContent = err.message;
+    }
+  });
 }

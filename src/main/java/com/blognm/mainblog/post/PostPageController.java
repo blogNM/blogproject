@@ -69,7 +69,7 @@ public class PostPageController {
                 : url.buildAndExpand(slug, id, key).encode().toUriString();
         StringBuilder tags = new StringBuilder();
         tags.append(meta("og:type", "article"));
-        tags.append(meta("og:site_name", "메인블로그"));
+        tags.append(meta("og:site_name", "Creat_"));
         tags.append(meta("og:url", pageUrl));
         tags.append(meta("og:title", og.title() + " - " + og.blogName()));
         tags.append(meta("og:description", og.description()));

@@ -1,10 +1,17 @@
 package com.blognm.mainblog.common;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
@@ -36,8 +43,17 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of("FORBIDDEN", "이 블로그에서 할 수 있는 권한이 없습니다."));
     }
 
+    /** 없는 주소: API는 JSON, 화면 주소는 404 안내 화면을 보낸다. */
     @ExceptionHandler(NoResourceFoundException.class)
-    public ResponseEntity<ErrorResponse> handleNotFound(NoResourceFoundException e) {
+    public ResponseEntity<?> handleNotFound(NoResourceFoundException e, HttpServletRequest request) {
+        if (!request.getRequestURI().startsWith("/api/")) {
+            try (InputStream in = new ClassPathResource("static/error/404.html").getInputStream()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).contentType(MediaType.TEXT_HTML)
+                        .body(new String(in.readAllBytes(), StandardCharsets.UTF_8));
+            } catch (IOException ignored) {
+                // 안내 화면을 못 읽으면 아래 JSON으로 답한다
+            }
+        }
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ErrorResponse.of("NOT_FOUND", "찾는 페이지가 없습니다."));
     }
 

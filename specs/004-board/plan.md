@@ -1,4 +1,4 @@
-# Implementation Plan: 게시판 — 3단계 (글쓰기·읽기)
+# Implementation Plan: 게시판 — 3·4단계 (글쓰기·읽기, 댓글·검색·피드)
 
 **Branch**: `claude/project-thread-q5t8xs` | **Date**: 2026-10-08 | **Spec**: [spec.md](spec.md)
 
@@ -8,7 +8,7 @@
 
 **3단계**에서 004의 User Story 1(글 쓰고 읽기)·2(수정·삭제 권한)·3(목록·카테고리·태그)·4(사진 올리기)와 글 상세의 og 태그를 만든다. 여기까지 오면 "블로그를 만들고 글을 쓰고 읽는" 기본 블로그가 돌아간다.
 
-User Story 5~8(댓글·공감, 통합 검색, 메인 피드·공지, 링크 복사·조회수)은 4단계에서 만든다. 관리자 삭제·복구는 관리자 로그인이 생기는 6단계에서 만든다.
+User Story 5~8(댓글·공감, 통합 검색, 메인 피드·공지, 링크 복사·조회수)은 4단계에서 만든다 (아래 "4단계"). 관리자 삭제·복구는 관리자 로그인이 생기는 6단계에서 만든다.
 
 ## Technical Context
 
@@ -87,6 +87,30 @@ User Story 5~8(댓글·공감, 통합 검색, 메인 피드·공지, 링크 복�
 | GET | `/uploads/{UUID}` | 누구나 | 사진 |
 
 화면: `/blog/{주소}`(글 목록이 붙음), `/blog/{주소}/posts/{번호}`(글 상세, og), `/blog/{주소}/write`, `/blog/{주소}/posts/{번호}/edit`, 관리 화면의 카테고리.
+
+## 4단계 (댓글·좋아요·검색·피드·조회수, 테마)
+
+User Story 5~8과 블로그 테마 틀(D-89), 새 디자인(D-90)을 만든다.
+
+- 댓글: `comments.parent_id`는 첫 댓글만 가리키고(1단계), 답글의 답글은 `reply_to_member_id`로 `@닉네임`을 붙인다 (D-78). 지우면 `status = DELETED`, 답글이 남아 있으면 자리만 남긴다. `posts.comment_count`를 같이 고친다.
+- 좋아요: `post_likes`(회원, 글) 하나로 켜고 끈다. 알림은 `notifications`에 같은 사람·같은 글 하루 한 번.
+- 조회수: `post_views`에 `INSERT IGNORE`(글, 보는 사람, 날짜). 비회원은 IP를 HMAC으로 바꾼 값만 둔다 (D-77, 추천안 #13). 서버 메모리에 아무것도 두지 않는다 (SCL-01).
+- 검색: `MATCH … AGAINST ('"검색어"' IN BOOLEAN MODE)` + ngram. 연산자 문자는 공백으로 바꿔 사용자가 검색식을 못 넣게 한다. 공개·숨기지 않은 블로그의 글만, 차단한 사이는 뺀다.
+- 피드: 최신·인기(최근 7일, 좋아요 → 조회수)·팔로우·구독. 볼 때마다 모아 온다 (D-73).
+- 테마: `blogs.theme·theme_accent·theme_font·hero_title·hero_subtitle`(V3). 머리 사진은 `cover_image_id`. 화면은 블로그 글 목록 API 하나로 틀마다 칸을 다르게 그리고, 색은 CSSOM으로만 넣는다(CSP `style-src 'self'` 유지).
+- 숫자 설정: `board.*` (`BOARD_REACTIONS_PER_MINUTE` 등).
+
+| 메서드 | 주소 | 권한 | 내용 |
+|---|---|---|---|
+| GET·POST | `/api/posts/{id}/comments?key=` | 읽기: 글을 볼 수 있는 사람 / 쓰기: 로그인 | 댓글 목록(답글 포함), `{content, parentId}` |
+| PUT·DELETE | `/api/comments/{id}` | 작성자 (삭제는 글 관리 권한도) | 수정·삭제 |
+| POST | `/api/posts/{id}/like` | 로그인 | 켜기·끄기, `{liked, likes}` |
+| GET | `/api/feed?tab=LATEST\|POPULAR\|FOLLOWING\|SUBSCRIBED` | 누구나 (팔로우·구독은 로그인) | 피드 카드 |
+| GET | `/api/notices` | 누구나 | 메인 공지 |
+| GET | `/api/search?q=&type=POST\|BLOG\|TAG\|NICKNAME&sort=` | 누구나 | 건수와 결과 |
+| GET·DELETE | `/api/me/recent-searches[/{id}]` | 로그인 | 최근 검색어 |
+| PUT | `/api/blogs/{slug}/theme` | 정보 수정 권한 | `{theme, accent, font, heroTitle, heroSubtitle}` |
+| POST·DELETE | `/api/blogs/{slug}/cover` | 정보 수정 권한 | 머리 사진 올리기(`file`)·빼기 |
 
 ## Complexity Tracking
 

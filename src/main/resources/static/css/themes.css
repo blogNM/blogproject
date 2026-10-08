@@ -1,0 +1,247 @@
+/*
+ * 블로그 테마 틀 7가지 (D-89). 같은 칸(머리글·머리 사진·테마 칸·전체 글·사이드바)을 틀마다 다르게 놓는다.
+ * 블로그장이 고른 강조 색은 --accent, 머리 사진은 --hero-image로만 들어온다.
+ */
+:root { --accent: var(--purple); }
+
+.blog-page { background: #fff; }
+.blog-page .site-header { background: rgba(255, 255, 255, 0.9); }
+.blog-main { flex: 1; }
+.blog-main > .notice { margin: 24px auto; max-width: 960px; }
+
+.font-serif { --blog-font: "Nanum Myeongjo", "AppleMyungjo", "Batang", "Noto Serif KR", Georgia, serif; }
+.font-mono { --blog-font: "D2Coding", "SFMono-Regular", Menlo, Consolas, monospace; }
+.blog-shell.font-serif, .blog-shell.font-mono { font-family: var(--blog-font); }
+body.font-serif .post-content, body.font-serif .post-heading,
+body.font-mono .post-content, body.font-mono .post-heading { font-family: var(--blog-font); }
+body .post-blog a, body .post-content a { color: var(--accent); }
+
+.preview-bar { position: sticky; top: 64px; z-index: 15; display: flex; gap: 10px; align-items: center; justify-content: center; flex-wrap: wrap;
+  padding: 10px 16px; background: var(--ink); color: #fff; font-size: 0.9rem; }
+.preview-bar .button, .preview-bar button { padding: 6px 14px; }
+.preview-bar .button { background: #fff; color: var(--ink); border-color: #fff; }
+.preview-bar button.dark { background: var(--peach); color: var(--ink); border-color: var(--peach); }
+
+/* ----- 공통 칸 ----- */
+.blog-shell { --wrap: 1100px; color: var(--text); }
+.blog-masthead { max-width: var(--wrap); margin: 0 auto; padding: 22px 20px 12px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.blog-logo { font-weight: 850; font-size: 1.35rem; letter-spacing: -0.03em; text-decoration: none; color: var(--ink); overflow-wrap: anywhere; }
+.blog-menu { display: flex; gap: 4px 18px; flex-wrap: wrap; font-size: 0.92rem; }
+.blog-menu a { text-decoration: none; color: var(--navy); font-weight: 600; padding: 4px 0; border-bottom: 2px solid transparent; }
+.blog-menu a:hover { border-color: var(--accent); }
+.blog-menu .menu-write { color: var(--accent); }
+
+.blog-hero { position: relative; display: flex; align-items: center; min-height: 300px; padding: 48px 20px; color: #fff; overflow: hidden;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 88%, #000) 0%, var(--accent) 45%, #DFB79F 120%); }
+.blog-hero.has-cover { background: linear-gradient(90deg, rgba(23, 22, 43, 0.55), rgba(23, 22, 43, 0.1)), var(--hero-image) center / cover no-repeat; }
+.hero-inner { position: relative; width: 100%; max-width: var(--wrap); margin: 0 auto; }
+.hero-eyebrow { margin: 0 0 8px; font-size: 0.76rem; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.85; }
+.hero-title { color: #fff; font-size: clamp(1.8rem, 4.4vw, 2.9rem); font-weight: 860; margin: 0 0 10px; max-width: 16em; overflow-wrap: anywhere; }
+.hero-sub { margin: 0 0 22px; max-width: 34em; opacity: 0.92; white-space: pre-line; overflow-wrap: anywhere; }
+.hero-cta { display: inline-block; padding: 9px 22px; border-radius: 999px; background: #fff; color: var(--ink); font-weight: 700; font-size: 0.9rem; text-decoration: none; }
+
+.blog-body { max-width: var(--wrap); margin: 0 auto; padding: 36px 20px 24px; display: grid; grid-template-columns: 1fr 280px; gap: 40px; align-items: start; }
+.blog-content { min-width: 0; }
+.blog-side { position: sticky; top: 90px; display: grid; gap: 18px; }
+.blog-info { border: 1px solid var(--line); border-radius: var(--radius); padding: 22px; text-align: center; background: #fff; }
+.blog-info .actions, .blog-info .tags { justify-content: center; }
+.blog-info-name { margin: 10px 0 2px; font-size: 1.1rem; overflow-wrap: anywhere; }
+.profile { width: 96px; height: 96px; margin: 0 auto; border-radius: 50%; overflow: hidden; display: grid; place-items: center;
+  background: linear-gradient(135deg, var(--accent), #DFB79F); color: #fff; font-size: 2.2rem; font-weight: 850; }
+.profile img { width: 100%; height: 100%; object-fit: cover; }
+.side-box { border-top: 1px solid var(--line); padding-top: 14px; }
+.side-box h3 { font-size: 0.92rem; margin: 0 0 10px; }
+.side-box ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; font-size: 0.88rem; }
+.side-box a { text-decoration: none; }
+.side-box a:hover .side-title, .side-box a:hover { color: var(--accent); }
+.side-thumbs a { display: flex; gap: 10px; align-items: center; }
+.side-thumbs a > span { display: grid; min-width: 0; }
+.side-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.side-thumb { width: 48px; height: 48px; flex: none; border-radius: 8px; object-fit: cover; }
+
+/* 테마 칸 공통 */
+.showcase { display: grid; gap: 44px; margin-bottom: 44px; }
+.sc-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px; }
+.sc-title { margin: 0; font-size: 1rem; font-weight: 800; }
+.sc-more { font-size: 0.82rem; color: var(--muted); text-decoration: none; }
+.sc-grid { display: grid; gap: 18px; }
+.sc-grid.two { grid-template-columns: repeat(2, 1fr); }
+.sc-grid.three { grid-template-columns: repeat(3, 1fr); }
+.sc-grid.four { grid-template-columns: repeat(4, 1fr); }
+.sc-card, .sc-row, .sc-photo { text-decoration: none; color: inherit; display: block; min-width: 0; }
+.sc-card .thumb { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 10px; display: block; }
+.thumb.ph, .wh-img.ph, .le-img.ph, .side-thumb.ph { display: grid; place-items: center; color: rgba(255, 255, 255, 0.9); font-size: 2rem; font-weight: 850;
+  background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 40%, #DFB79F)); }
+.side-thumb.ph { font-size: 1rem; }
+.blog-shell div.ph { display: grid; place-items: center; }
+.sc-body { padding-top: 10px; }
+.sc-cat { margin: 0 0 4px; font-size: 0.76rem; font-weight: 800; color: var(--accent); letter-spacing: 0.02em; }
+.sc-card-title { margin: 0 0 6px; font-size: 1rem; line-height: 1.4; overflow-wrap: anywhere; }
+.sc-card:hover .sc-card-title, .sc-row:hover .sc-card-title { color: var(--accent); }
+.sc-excerpt { margin: 0 0 6px; font-size: 0.88rem; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.sc-meta { margin: 0; font-size: 0.78rem; color: var(--muted); }
+.sc-button { display: inline-block; margin-top: 10px; padding: 5px 12px; border-radius: 4px; background: var(--accent); color: #fff; font-size: 0.78rem; font-weight: 700; }
+.sc-button.ghost { background: none; color: var(--accent); border: 1px solid currentColor; }
+.sc-outline { display: block; width: max-content; margin: 22px auto 0; padding: 9px 26px; border: 1px solid var(--ink); color: var(--ink); text-decoration: none; font-size: 0.78rem; letter-spacing: 0.12em; font-weight: 700; }
+.sc-outline.wide { width: 100%; text-align: center; border-color: var(--line); }
+.sc-list { display: grid; gap: 0; }
+.sc-row { display: grid; grid-template-columns: 1fr 140px; gap: 18px; padding: 16px 0; border-bottom: 1px solid var(--line); }
+.sc-row .sc-body { padding: 0; order: 0; }
+.sc-row .thumb { width: 140px; height: 96px; object-fit: cover; border-radius: 6px; order: 1; }
+.left-thumb .sc-row { grid-template-columns: 140px 1fr; }
+.left-thumb .sc-row .thumb { order: -1; }
+.tall .sc-row .thumb { height: 120px; }
+.sc-photo { position: relative; overflow: hidden; border-radius: 4px; }
+.sc-photo .thumb { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; transition: transform 0.3s; }
+.sc-photo:hover .thumb { transform: scale(1.04); }
+.sc-photo .sc-body { position: absolute; inset: auto 0 0 0; padding: 30px 12px 10px; background: linear-gradient(transparent, rgba(0, 0, 0, 0.6)); color: #fff; opacity: 0; transition: opacity 0.2s; }
+.sc-photo:hover .sc-body, .sc-photo:focus .sc-body { opacity: 1; }
+.sc-photo .sc-meta, .sc-photo .sc-cat { color: #fff; }
+
+.all-posts { border-top: 1px solid var(--line); padding-top: 28px; }
+.blog-shell.filtered .showcase { display: none; }
+.blog-shell.filtered .all-posts { border-top: none; padding-top: 0; }
+.blog-shell .post-title:hover, .blog-shell .tag-button, .blog-shell .tags { color: var(--accent); }
+.blog-shell .category.active { background: color-mix(in srgb, var(--accent) 12%, #fff); color: var(--accent); }
+.blog-shell .button.primary, .blog-shell button.primary { background: var(--accent); border-color: var(--accent); }
+.blog-shell .badge { background: color-mix(in srgb, var(--accent) 12%, #fff); color: var(--accent); }
+
+/* 사이드바가 없는 틀은 블로그 정보를 아래 띠로 둔다 */
+.theme-poster .blog-body, .theme-whatever .blog-body, .theme-letter .blog-body,
+.theme-magazine .blog-body, .theme-portfolio .blog-body { grid-template-columns: 1fr; }
+.theme-poster .blog-side, .theme-whatever .blog-side, .theme-letter .blog-side,
+.theme-magazine .blog-side, .theme-portfolio .blog-side { position: static; order: 2; }
+.theme-whatever #side-recent, .theme-letter #side-recent,
+.theme-magazine #side-recent, .theme-portfolio #side-recent, .theme-poster #side-recent { display: none; }
+.theme-poster .blog-info, .theme-whatever .blog-info, .theme-letter .blog-info,
+.theme-magazine .blog-info, .theme-portfolio .blog-info { display: grid; grid-template-columns: auto 1fr; column-gap: 20px; text-align: left; align-items: center; }
+.theme-poster .blog-info > :not(.profile), .theme-whatever .blog-info > :not(.profile), .theme-letter .blog-info > :not(.profile),
+.theme-magazine .blog-info > :not(.profile), .theme-portfolio .blog-info > :not(.profile) { grid-column: 2; }
+.theme-poster .profile, .theme-whatever .profile, .theme-letter .profile, .theme-magazine .profile, .theme-portfolio .profile { grid-row: 1 / span 7; width: 72px; height: 72px; font-size: 1.6rem; }
+.theme-poster .blog-info .actions, .theme-whatever .blog-info .actions, .theme-letter .blog-info .actions,
+.theme-magazine .blog-info .actions, .theme-portfolio .blog-info .actions,
+.theme-poster .blog-info .tags, .theme-whatever .blog-info .tags, .theme-letter .blog-info .tags,
+.theme-magazine .blog-info .tags, .theme-portfolio .blog-info .tags { justify-content: flex-start; }
+
+/* ----- 1. Odyssey: 회색·흰색 단정함, 인기글 크게, 오른쪽 사이드바 ----- */
+.theme-odyssey .blog-hero { min-height: 280px; }
+.theme-odyssey .sc-card.big .thumb { aspect-ratio: 16 / 8; border-radius: 4px; }
+.theme-odyssey .sc-card.big .sc-card-title { font-size: 1.3rem; }
+
+/* ----- 2. Poster: 가운데 로고, 최근 글 띠가 머리 사진 위, 어두운 대각선 머리 ----- */
+.theme-poster .blog-masthead { justify-content: center; flex-direction: column; border-bottom: 1px solid var(--line); }
+.theme-poster .blog-logo { font-size: 1.2rem; letter-spacing: 0.32em; text-transform: uppercase; font-weight: 800; }
+.theme-poster .blog-shell, .theme-poster.blog-shell { display: flex; flex-direction: column; }
+.theme-poster .blog-masthead { order: 0; }
+.theme-poster .blog-body { order: 2; }
+.theme-poster .blog-hero { order: 1; justify-content: center; text-align: center; min-height: 260px;
+  background: linear-gradient(160deg, #111 0%, #2a2a2a 55%, #d9d9d9 55.2%, #f2f2f2 100%); }
+.theme-poster .blog-hero.has-cover { background: linear-gradient(rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.55)), var(--hero-image) center / cover; }
+.theme-poster .hero-inner { text-align: center; }
+.theme-poster .hero-title { margin: 0 auto 10px; font-family: Georgia, "Nanum Myeongjo", serif; font-weight: 400; text-transform: uppercase; letter-spacing: 0.04em; }
+.theme-poster .hero-sub { margin: 0 auto 20px; }
+.theme-poster .hero-cta { background: none; color: #fff; border: 1px solid #fff; border-radius: 0; font-size: 0.72rem; letter-spacing: 0.16em; }
+.theme-poster .po-strip { order: -1; }
+.theme-poster .sc-card .thumb { aspect-ratio: 1; border-radius: 0; }
+.theme-poster .sc-cat { font-family: Georgia, serif; text-decoration: underline; color: var(--muted); font-weight: 400; }
+.theme-poster .sc-masonry { columns: 3; column-gap: 20px; }
+.theme-poster .sc-masonry .sc-card { break-inside: avoid; margin-bottom: 22px; }
+.theme-poster .sc-masonry .sc-card:nth-child(3n+1) .thumb { aspect-ratio: 3 / 4; }
+.theme-poster .sc-masonry .sc-card:nth-child(3n+2) .thumb { aspect-ratio: 1; }
+.theme-poster .sc-masonry .sc-card:nth-child(3n) .thumb { aspect-ratio: 4 / 3; }
+.theme-poster .sc-excerpt { font-style: italic; font-family: Georgia, serif; }
+
+/* ----- 3. Whatever: 세이지 그린 머리, 갈색 글씨, 사진·글 번갈아 ----- */
+.theme-whatever .blog-masthead { border-bottom: 1px solid var(--line); }
+.theme-whatever .blog-logo { color: var(--accent); letter-spacing: 0.04em; text-transform: uppercase; font-size: 1.05rem; }
+.theme-whatever .blog-hero { justify-content: center; text-align: center; min-height: 340px; background: linear-gradient(135deg, #9fb0a0, #b9c6b6 60%, #cfd7c9); }
+.theme-whatever .blog-hero.has-cover { background: linear-gradient(rgba(60, 70, 60, 0.35), rgba(60, 70, 60, 0.35)), var(--hero-image) center / cover; }
+.theme-whatever .hero-inner { text-align: center; }
+.theme-whatever .hero-title, .theme-whatever .hero-sub { margin-left: auto; margin-right: auto; }
+.theme-whatever .hero-title { font-weight: 300; }
+.theme-whatever .hero-cta { background: none; color: #fff; border: 1px solid rgba(255, 255, 255, 0.8); border-radius: 0; font-weight: 500; }
+.theme-whatever .wh-intro { display: grid; grid-template-columns: 220px 1fr; gap: 24px; align-items: center; }
+.theme-whatever .wh-intro-text h2 { font-weight: 300; color: var(--accent); font-size: 1.5rem; margin: 0; }
+.theme-whatever .wh-intro-text::after { content: ""; display: block; width: 28px; height: 1px; margin-top: 14px; background: var(--accent); }
+.theme-whatever .sc-card .thumb { border-radius: 0; }
+.theme-whatever .sc-card { text-align: center; }
+.theme-whatever .wh-checker { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+.theme-whatever .wh-tile { display: contents; text-decoration: none; color: inherit; }
+.theme-whatever .wh-img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; }
+.theme-whatever .wh-text { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 28px; background: #fff; aspect-ratio: 1; }
+.theme-whatever .wh-tile.flip .wh-text { order: -1; }
+.theme-whatever .wh-tile.flip .wh-img { order: 0; }
+.theme-whatever .wh-text h3 { color: var(--accent); font-weight: 400; font-size: 1.3rem; margin: 4px 0 10px; }
+.theme-whatever .wh-rule { width: 24px; height: 1px; background: var(--accent); margin-bottom: 14px; }
+
+/* ----- 4. Letter: 가운데 한 줄, 큰 첫 글, Read More ----- */
+.theme-letter .blog-masthead { justify-content: center; flex-direction: column; padding-top: 30px; }
+.theme-letter .blog-logo { font-family: Georgia, "Nanum Myeongjo", serif; font-style: italic; font-weight: 700; font-size: 1.8rem; }
+.theme-letter .blog-hero { display: none; }
+.theme-letter .blog-body { max-width: 760px; }
+.theme-letter .le-hero-post { display: block; text-decoration: none; color: inherit; }
+.theme-letter .le-hero-post h2 { font-size: 1.6rem; margin: 0 0 4px; }
+.theme-letter .le-img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; display: block; margin: 16px 0; }
+.theme-letter .le-featured { border-bottom: 1px solid var(--line); padding-bottom: 36px; }
+.theme-letter .sc-card .thumb { border-radius: 0; aspect-ratio: 16 / 10; }
+.theme-letter .sc-card-title { font-size: 1.15rem; }
+
+/* ----- 5. Book Club: 소개 띠, 표지형 카드, 오른쪽 썸네일 목록 ----- */
+.theme-book-club .blog-masthead { border-bottom: 1px solid var(--line); }
+.theme-book-club .blog-logo { font-family: Georgia, "Nanum Myeongjo", serif; font-weight: 700; }
+.theme-book-club .blog-hero { min-height: 220px; background: linear-gradient(120deg, #6b7a8f, #8d9db3 50%, #c9b8a8); }
+.theme-book-club .hero-title { font-weight: 400; font-size: clamp(1.4rem, 3vw, 2rem); }
+.theme-book-club .covers .thumb { aspect-ratio: 3 / 4; border-radius: 2px; box-shadow: 0 10px 22px rgba(0, 0, 0, 0.18); }
+.theme-book-club .sc-row .thumb { width: 92px; height: 120px; }
+.theme-book-club .sc-row { grid-template-columns: 1fr 92px; }
+
+/* ----- 6. Magazine: 사진 위 제목, 빨간 강조 ----- */
+.theme-magazine .blog-logo { color: var(--accent); font-weight: 850; }
+.theme-magazine .blog-masthead { border-bottom: 1px solid var(--line); }
+.theme-magazine .blog-hero { align-items: flex-end; min-height: 360px; }
+.theme-magazine .hero-title { position: relative; padding-bottom: 14px; }
+.theme-magazine .hero-title::after { content: ""; position: absolute; left: 0; bottom: 0; width: 140px; height: 4px; background: var(--accent); }
+.theme-magazine .hero-cta { display: none; }
+.theme-magazine .sc-title { color: var(--accent); font-size: 0.86rem; }
+.theme-magazine .sc-grid.scroll { overflow-x: auto; }
+.theme-magazine .sc-card .thumb { border-radius: 0; }
+.theme-magazine .mg-trend .thumb { aspect-ratio: 16 / 7; }
+
+/* ----- 7. Portfolio: 투명 머리글, 꽉 찬 풍경, 세로 사진 격자 ----- */
+.theme-portfolio { position: relative; }
+.theme-portfolio .blog-masthead { position: absolute; z-index: 2; left: 0; right: 0; max-width: none; padding: 22px 40px; }
+.theme-portfolio .blog-logo, .theme-portfolio .blog-menu a { color: #fff; }
+.theme-portfolio .blog-logo { letter-spacing: 0.28em; text-transform: uppercase; font-size: 1rem; }
+.theme-portfolio .blog-hero { min-height: 480px; padding-top: 90px; background: linear-gradient(160deg, #1d3b4f, #2d6a7f 45%, #e9b99a 100%); }
+.theme-portfolio .blog-hero.has-cover { background: linear-gradient(rgba(10, 20, 30, 0.35), rgba(10, 20, 30, 0.35)), var(--hero-image) center / cover; }
+.theme-portfolio .hero-cta { background: var(--accent); color: #fff; border-radius: 2px; }
+.theme-portfolio .sc-grid.tall .thumb { aspect-ratio: 2 / 3; }
+.theme-portfolio .pf-popular .sc-title { border-bottom: 2px solid var(--ink); padding-bottom: 8px; width: 100%; }
+
+@media (max-width: 900px) {
+  .blog-body { grid-template-columns: 1fr; }
+  .blog-side { position: static; }
+  .sc-grid.four { grid-template-columns: repeat(2, 1fr); }
+  .sc-grid.three { grid-template-columns: repeat(3, 1fr); }
+  .theme-poster .sc-masonry { columns: 2; }
+  .theme-whatever .wh-intro { grid-template-columns: 1fr; }
+  .theme-portfolio .blog-masthead { padding: 18px 20px; }
+}
+
+@media (max-width: 600px) {
+  .sc-grid.two, .sc-grid.three { grid-template-columns: 1fr; }
+  .theme-book-club .sc-grid.three.covers { grid-template-columns: repeat(3, 1fr); }
+  .theme-whatever .wh-checker { grid-template-columns: 1fr; }
+  .theme-whatever .wh-tile.flip .wh-text { order: 0; }
+  .sc-row, .left-thumb .sc-row { grid-template-columns: 1fr 96px; }
+  .left-thumb .sc-row .thumb { order: 1; }
+  .sc-row .thumb { width: 96px; height: 72px; }
+  .blog-hero { min-height: 220px; }
+  .theme-poster .sc-masonry { columns: 1; }
+  .theme-poster .blog-info, .theme-whatever .blog-info, .theme-letter .blog-info,
+  .theme-magazine .blog-info, .theme-portfolio .blog-info { grid-template-columns: 1fr; text-align: center; }
+  .theme-poster .blog-info > :not(.profile), .theme-whatever .blog-info > :not(.profile), .theme-letter .blog-info > :not(.profile),
+  .theme-magazine .blog-info > :not(.profile), .theme-portfolio .blog-info > :not(.profile) { grid-column: 1; }
+  .theme-poster .profile, .theme-whatever .profile, .theme-letter .profile, .theme-magazine .profile, .theme-portfolio .profile { grid-row: auto; margin: 0 auto; }
+}
+.po-top { max-width: var(--wrap); margin: 0 auto; padding: 28px 20px 36px; width: 100%; }

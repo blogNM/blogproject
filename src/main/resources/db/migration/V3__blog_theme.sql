@@ -7,7 +7,7 @@ ALTER TABLE blogs
   ADD COLUMN hero_title VARCHAR(40) NULL COMMENT '머리 사진 위 큰 문구' AFTER theme_font,
   ADD COLUMN hero_subtitle VARCHAR(100) NULL COMMENT '머리 사진 위 작은 문구' AFTER hero_title,
   ADD CONSTRAINT ck_blogs_theme CHECK (theme IN ('ODYSSEY', 'POSTER', 'WHATEVER', 'LETTER', 'BOOK_CLUB', 'MAGAZINE', 'PORTFOLIO')),
-  ADD CONSTRAINT ck_blogs_theme_font CHECK (theme_font IN ('SANS', 'SERIF', 'ROUND', 'MONO')),
+  ADD CONSTRAINT ck_blogs_theme_font CHECK (theme_font IN ('SANS', 'SERIF', 'MONO')),
   ADD CONSTRAINT ck_blogs_theme_accent CHECK (theme_accent REGEXP '^#[0-9A-Fa-f]{6}$');
 
 -- 검색·피드에서 글 제목과 함께 최신순으로 자주 읽는다.

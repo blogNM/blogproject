@@ -3,47 +3,84 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>블로그 - 메인블로그</title>
+  <title>블로그 - Creat_</title>
+  <link rel="icon" href="/img/creat-mark.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/css/common.css">
+  <link rel="stylesheet" href="/css/themes.css">
   <script type="module" src="/js/pages/blog.js"></script>
 </head>
-<body>
+<body class="blog-page">
   <header class="site-header"></header>
-  <main class="container">
-    <p id="error" class="notice" hidden></p>
-    <article id="blog" class="card" hidden>
-      <p id="status-badge" class="badge warn" hidden></p>
-      <h1 id="blog-name"></h1>
-      <p id="blog-address" class="muted"></p>
-      <p id="blog-description" class="description"></p>
-      <ul id="blog-tags" class="tags"></ul>
-      <p id="blog-meta" class="muted"></p>
-      <div id="actions" class="actions"></div>
-      <p id="action-message" class="info" role="status"></p>
-    </article>
-    <section id="posts-section" class="card" hidden>
-      <div class="posts-head">
-        <h2 class="section-title">글</h2>
-        <a id="write-link" class="button primary inline" hidden>글쓰기</a>
+  <main id="blog-main" class="blog-main">
+    <p id="error" class="notice container" hidden></p>
+    <div id="preview-bar" class="preview-bar" hidden>
+      <span id="preview-text"></span>
+      <button id="preview-apply" type="button" class="dark">이 테마로 적용하기</button>
+      <a id="preview-close" class="button">그만 보기</a>
+    </div>
+
+    <!-- 블로그장이 고른 테마 틀(D-89)에 따라 theme-* 클래스가 붙고, 같은 칸들이 다르게 배치된다. -->
+    <div id="blog-shell" class="blog-shell" hidden>
+      <div class="blog-masthead">
+        <a id="blog-logo" class="blog-logo"></a>
+        <nav id="blog-menu" class="blog-menu" aria-label="블로그 메뉴"></nav>
       </div>
-      <div class="posts-layout">
-        <nav id="categories" class="category-nav" aria-label="카테고리"></nav>
-        <div class="posts-main">
-          <p id="filter-label" class="filter-label" hidden></p>
-          <ul id="notices" class="post-list notices"></ul>
-          <ul id="post-list" class="post-list"></ul>
-          <div class="list-foot">
-            <label class="inline-label" for="page-size">한 번에 보기</label>
-            <select id="page-size">
-              <option value="10">10개</option>
-              <option value="20">20개</option>
-              <option value="30">30개</option>
-            </select>
-          </div>
-          <div id="post-pager" class="pager"></div>
+
+      <section id="blog-hero" class="blog-hero">
+        <div class="hero-inner">
+          <p id="hero-eyebrow" class="hero-eyebrow"></p>
+          <h1 id="hero-title" class="hero-title"></h1>
+          <p id="hero-sub" class="hero-sub"></p>
+          <a id="hero-cta" class="hero-cta" href="#all-posts">글 보러 가기</a>
         </div>
+      </section>
+
+      <div class="blog-body">
+        <div class="blog-content">
+          <div id="showcase" class="showcase"></div>
+
+          <section id="posts-section" class="all-posts" hidden>
+            <span id="all-posts"></span>
+            <div class="posts-head">
+              <h2 class="section-title">전체 글</h2>
+              <a id="write-link" class="button primary inline" hidden>글쓰기</a>
+            </div>
+            <div class="posts-layout">
+              <nav id="categories" class="category-nav" aria-label="카테고리"></nav>
+              <div class="posts-main">
+                <p id="filter-label" class="filter-label" hidden></p>
+                <ul id="notices" class="post-list notices"></ul>
+                <ul id="post-list" class="post-list"></ul>
+                <div class="list-foot">
+                  <label class="inline-label" for="page-size">한 번에 보기</label>
+                  <select id="page-size">
+                    <option value="10">10개</option>
+                    <option value="20">20개</option>
+                    <option value="30">30개</option>
+                  </select>
+                </div>
+                <div id="post-pager" class="pager"></div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <aside class="blog-side">
+          <article id="blog" class="blog-info" hidden>
+            <div id="profile" class="profile"></div>
+            <p id="status-badge" class="badge warn" hidden></p>
+            <h2 id="blog-name" class="blog-info-name"></h2>
+            <p id="blog-address" class="muted"></p>
+            <p id="blog-description" class="description"></p>
+            <ul id="blog-tags" class="tags"></ul>
+            <p id="blog-meta" class="muted"></p>
+            <div id="actions" class="actions"></div>
+            <p id="action-message" class="info" role="status"></p>
+          </article>
+          <div id="side-recent" class="side-block"></div>
+        </aside>
       </div>
-    </section>
+    </div>
   </main>
   <footer class="site-footer"></footer>
 </body>

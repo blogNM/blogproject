@@ -130,6 +130,11 @@ erDiagram
         enum close_requested_by "OWNER, ADMIN (D-86)"
         datetime closed_at "30일 뒤 완전 삭제"
         tinyint notification_retention_days "블로그 알림 보관"
+        enum theme "테마 틀 7가지 (D-89)"
+        char theme_accent "강조 색 #RRGGBB"
+        enum theme_font "SANS, SERIF, MONO"
+        varchar hero_title "머리 사진 위 큰 문구, 40자"
+        varchar hero_subtitle "머리 사진 위 작은 문구, 100자"
         datetime created_at
     }
     blog_memberships {

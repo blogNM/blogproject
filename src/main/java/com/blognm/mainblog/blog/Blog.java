@@ -32,7 +32,7 @@ public class Blog {
     /** 테마 틀 7가지 (D-89). 화면 배치만 다르고 기능은 같다. */
     public enum Theme { ODYSSEY, POSTER, WHATEVER, LETTER, BOOK_CLUB, MAGAZINE, PORTFOLIO }
 
-    public enum Font { SANS, SERIF, ROUND, MONO }
+    public enum Font { SANS, SERIF, MONO }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
