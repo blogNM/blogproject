@@ -579,3 +579,31 @@ button.subscribe.on { background: var(--highlight); color: var(--primary-dark); 
   .profile-counts, .profile-card .actions { justify-content: center; }
   .profile-blogs, .setting-list { grid-template-columns: 1fr; }
 }
+
+/* ----- 글쓰기: 기울임·글자 색 (사용자 요청 2026-10-08) ----- */
+/* Pretendard에는 기울인 글꼴이 없고, Safari는 가변 글꼴을 비스듬히 만들어 주지 않는다.
+   기울임 글자만 시스템 글꼴로 바꾸고 비스듬히 그리게 한다. */
+em, i, .toastui-editor-md-emph, .toastui-editor-contents em {
+  font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif;
+  font-style: italic;
+  font-synthesis: style;
+}
+.tc-red { color: #D93A49; }
+.tc-orange { color: #E07B39; }
+.tc-green { color: #2FA58C; }
+.tc-blue { color: #3366CC; }
+.tc-purple { color: #7C0CB4; }
+.tc-mauve { color: #925B8F; }
+.tc-gray { color: #6B6880; }
+.tc-bg-red { background: #D93A49; }
+.tc-bg-orange { background: #E07B39; }
+.tc-bg-green { background: #2FA58C; }
+.tc-bg-blue { background: #3366CC; }
+.tc-bg-purple { background: #7C0CB4; }
+.tc-bg-mauve { background: #925B8F; }
+.tc-bg-gray { background: #6B6880; }
+.toastui-editor-toolbar .toolbar-color { font-weight: 800; font-size: 15px; color: #333; text-decoration: underline; text-decoration-color: #D93A49; text-decoration-thickness: 3px; text-underline-offset: 2px; background: none; border: 0; padding: 0; margin: 0 3px; width: 32px; height: 32px; border-radius: 3px; }
+.toastui-editor-toolbar .toolbar-color:hover { background: #fff; border: 1px solid #e4e7ee; }
+.color-popup { display: flex; gap: 6px; align-items: center; padding: 6px; }
+.color-popup .color-swatch { width: 24px; min-width: 0; margin: 0; height: 24px; padding: 0; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px var(--line); }
+.color-popup .color-clear { padding: 4px 10px; font-size: 0.8rem; margin-left: 4px; }

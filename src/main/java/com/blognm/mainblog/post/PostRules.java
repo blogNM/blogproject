@@ -19,6 +19,9 @@ public final class PostRules {
     /** 이미지 문법 ![설명](주소). 본문 글자 수에서 뺀다 (추천안 #14). */
     private static final Pattern IMAGE_SYNTAX = Pattern.compile("!\\[[^\\]\\n]*\\]\\([^)\\n]*\\)");
 
+    /** 글자 색 표시 <span class="tc-…">·</span>도 글자 수에 넣지 않는다. */
+    private static final Pattern COLOR_TAG = Pattern.compile("<span class=\"tc-[a-z]+\">|</span>");
+
     private PostRules() {
     }
 
@@ -48,7 +51,7 @@ public final class PostRules {
     }
 
     public static int contentLength(String content) {
-        String text = IMAGE_SYNTAX.matcher(content).replaceAll("");
+        String text = COLOR_TAG.matcher(IMAGE_SYNTAX.matcher(content).replaceAll("")).replaceAll("");
         return text.codePointCount(0, text.length());
     }
 

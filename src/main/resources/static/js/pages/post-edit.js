@@ -13,6 +13,9 @@ const slug = decodeURIComponent(parts[2] || '');
 const postId = parts[3] === 'posts' ? Number(parts[4]) : null;
 const blogBase = `/api/blogs/${encodeURIComponent(slug)}`;
 const blogHref = `/blog/${encodeURIComponent(slug)}`;
+// 글자 색 7가지. 서버의 MarkdownRenderer.TEXT_COLORS와 같다.
+const TEXT_COLORS = [['red', '빨강'], ['orange', '주황'], ['green', '초록'], ['blue', '파랑'], ['purple', '보라'],
+  ['mauve', '자주'], ['gray', '회색']];
 // 1차 임시저장은 브라우저에만 (004 6.6)
 const DRAFT_KEY = `post-draft:${slug}:${postId || 'new'}`;
 
@@ -88,10 +91,42 @@ if (blog) {
     language: 'ko-KR',
     usageStatistics: false,
     placeholder: '마크다운으로 쓰세요. 사진은 끌어다 놓거나 붙여 넣으면 올라갑니다.',
-    toolbarItems: [['heading', 'bold', 'italic', 'strike'], ['hr', 'quote'], ['ul', 'ol'], ['table', 'image', 'link'],
-      ['code', 'codeblock']],
+    toolbarItems: [['heading', 'bold', 'italic', 'strike', colorButton()], ['hr', 'quote'], ['ul', 'ol'],
+      ['table', 'image', 'link'], ['code', 'codeblock']],
     hooks: { addImageBlobHook: uploadImage },
   });
+
+  // 글자 색 (사용자 요청 2026-10-08). 고른 글자를 <span class="tc-색">으로 감싼다.
+  // 서버는 정해 둔 색 class만 남기고 나머지는 지운다 (MarkdownRenderer.TEXT_COLORS). CSP 때문에 style 속성은 쓰지 않는다.
+  function colorButton() {
+    const body = document.createElement('div');
+    body.className = 'color-popup';
+    TEXT_COLORS.forEach(([code, name]) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'color-swatch tc-bg-' + code;
+      b.title = name;
+      b.setAttribute('aria-label', name);
+      b.addEventListener('click', () => paint(code));
+      body.append(b);
+    });
+    const clear = document.createElement('button');
+    clear.type = 'button';
+    clear.className = 'color-clear';
+    clear.textContent = '색 빼기';
+    clear.addEventListener('click', () => paint(null));
+    body.append(clear);
+    return { name: 'color', tooltip: '글자 색', text: 'A', className: 'toolbar-color', popup: { body, style: { width: 'auto' } } };
+  }
+
+  function paint(code) {
+    const selected = editor.getSelectedText();
+    const plain = selected.replace(/<span class="tc-[a-z]+">|<\/span>/g, '');
+    if (code) editor.replaceSelection(`<span class="tc-${code}">${plain || '글자'}</span>`);
+    else editor.replaceSelection(plain);
+    editor.eventEmitter.emit('closePopup');
+    editor.focus();
+  }
 
   function fill(values) {
     $('title').value = values.title || '';

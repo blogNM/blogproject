@@ -26,7 +26,10 @@ export function mountBell(nav) {
   const badge = el('span', { class: 'bell-badge' });
   badge.hidden = true;
   bell.append(bellIcon(), badge);
-  nav.prepend(bell);
+  // 검색창 바로 뒤, 메뉴 맨 앞에 둔다.
+  const search = nav.querySelector('.header-search');
+  if (search) search.after(bell);
+  else nav.prepend(bell);
 
   const panel = buildPanel();
   document.body.append(panel.root);

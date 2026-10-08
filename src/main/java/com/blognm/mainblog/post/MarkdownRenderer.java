@@ -1,6 +1,7 @@
 package com.blognm.mainblog.post;
 
 import java.util.List;
+import java.util.Set;
 
 import org.commonmark.Extension;
 import org.commonmark.ext.autolink.AutolinkExtension;
@@ -27,10 +28,18 @@ public class MarkdownRenderer {
     /** 링크는 http·https·mailto. 이미지는 이 사이트에 올린 사진(/uploads/...)만 (CSP img-src 'self'). */
     private static final Safelist SAFELIST = Safelist.relaxed()
             .addTags("del", "s", "hr")
+            .addAttributes("span", "class")
             .removeProtocols("img", "src", "http", "https")
             .addProtocols("img", "src", "https")
             .addAttributes("a", "rel")
             .preserveRelativeLinks(true);
+
+    /**
+     * 글자 색 (사용자 요청 2026-10-08). 에디터가 {@code <span class="tc-red">글자</span>}로 넣는다.
+     * CSP가 style 속성을 막으므로 색은 정해 둔 class로만 준다. 다른 class나 style은 지우고 글자만 남긴다.
+     */
+    public static final Set<String> TEXT_COLORS = Set.of("tc-red", "tc-orange", "tc-green", "tc-blue", "tc-purple",
+            "tc-mauve", "tc-gray");
 
     private final Parser parser = Parser.builder().extensions(EXTENSIONS).build();
     private final HtmlRenderer renderer = HtmlRenderer.builder().extensions(EXTENSIONS).build();
@@ -41,6 +50,11 @@ public class MarkdownRenderer {
         Document dirty = Jsoup.parseBodyFragment(raw, "https://mainblog.invalid/");
         Document clean = new Cleaner(SAFELIST).clean(dirty);
         clean.select("a[href]").forEach(a -> a.attr("rel", "nofollow noopener noreferrer"));
+        clean.select("span").forEach(span -> {
+            if (!TEXT_COLORS.contains(span.attr("class"))) {
+                span.unwrap();
+            }
+        });
         clean.select("img[src]").forEach(img -> {
             if (!isAllowedImage(img.attr("src"))) {
                 img.remove();

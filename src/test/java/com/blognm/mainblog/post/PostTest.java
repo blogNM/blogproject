@@ -78,6 +78,19 @@ class PostTest extends IntegrationTest {
     }
 
     @Test
+    @DisplayName("글자 색은 정해 둔 색 class만 남고, 다른 class·style은 지워져 글자만 남는다. 색 표시는 글자 수에 넣지 않는다")
+    void textColor() throws Exception {
+        long id = write(writer, "food", "색",
+                "<span class=\\\"tc-red\\\">빨강</span> <span class=\\\"evil\\\">다른</span> "
+                        + "<span style=\\\"color:red\\\">스타일</span>");
+        String html = JsonPath.read(getAs("/api/posts/" + id).andReturn().getResponse().getContentAsString(),
+                "$.contentHtml");
+        assertThat(html).contains("<span class=\"tc-red\">빨강</span>", "다른", "스타일")
+                .doesNotContain("evil", "style=");
+        assertThat(PostRules.contentLength("<span class=\"tc-blue\">가나</span>")).isEqualTo(2);
+    }
+
+    @Test
     @DisplayName("제목 1~30자, 본문 1000자(사진 문법은 빼고 셈), 태그 10개. 태그는 #·공백 정리 후 소문자 하나로")
     void inputRules() throws Exception {
         postAs("/api/blogs/food/posts", """

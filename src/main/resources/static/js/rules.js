@@ -18,7 +18,9 @@ export const POST_CONTENT_MAX = 1000;
 export const POST_TAGS_MAX = 10;
 
 export function contentLength(markdown) {
-  return [...markdown.replace(/\r\n/g, '\n').replace(/!\[[^\]\n]*\]\([^)\n]*\)/g, '')].length;
+  // 사진 문법과 글자 색 표시(<span class="tc-…">)는 세지 않는다. 서버(PostRules)와 같다.
+  return [...markdown.replace(/\r\n/g, '\n').replace(/!\[[^\]\n]*\]\([^)\n]*\)/g, '')
+    .replace(/<span class="tc-[a-z]+">|<\/span>/g, '')].length;
 }
 
 // 사진: jpg·jpeg·png·gif·webp, 한 장 3MB (SEC-08). 서버가 확장자·MIME·시그니처를 다시 본다.

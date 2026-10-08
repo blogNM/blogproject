@@ -15,7 +15,11 @@ CREATE TABLE members (
   nickname VARCHAR(12) NOT NULL COMMENT '2~12자, 한글·영문·숫자, 예약어 불가',
   phone VARCHAR(20) NULL COMMENT '숫자만, 1차 중복 허용 (D-24). 탈퇴 30일 뒤 비움',
   profile_image_id BIGINT NULL COMMENT '프로필 사진',
-  bio VARCHAR(500) NULL COMMENT '소개, 선택',
+  bio VARCHAR(500) NULL COMMENT '소개, 선택. 화면은 150자까지',
+  show_posts BOOLEAN NOT NULL DEFAULT TRUE COMMENT '내가 쓴 글 다른 사람에게 보여주기 (D-91, V4)',
+  show_likes BOOLEAN NOT NULL DEFAULT TRUE COMMENT '좋아요 한 글 보여주기 (D-91, V4)',
+  show_following BOOLEAN NOT NULL DEFAULT TRUE COMMENT '팔로잉 보여주기 (D-91, V4)',
+  show_subscriptions BOOLEAN NOT NULL DEFAULT TRUE COMMENT '구독한 블로그 보여주기 (D-91, V4)',
   status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE' COMMENT '상태',
   notification_retention_days TINYINT NOT NULL DEFAULT 30 COMMENT '알림 보관 일수 (30 또는 7)',
   terms_agreed_at DATETIME NOT NULL COMMENT '이용약관 동의 시각',
@@ -348,6 +352,7 @@ CREATE TABLE post_likes (
   post_id BIGINT NOT NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (member_id, post_id),
+  KEY idx_post_likes_member (member_id, created_at) COMMENT '좋아요 한 글 목록 (V4)',
   CONSTRAINT fk_post_likes_member FOREIGN KEY (member_id) REFERENCES members (id),
   CONSTRAINT fk_post_likes_post FOREIGN KEY (post_id) REFERENCES posts (id)
 ) COMMENT '좋아요 (BRD-06)';
@@ -379,6 +384,7 @@ CREATE TABLE follows (
   followee_id BIGINT NOT NULL COMMENT '팔로우받는 회원',
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (follower_id, followee_id),
+  KEY idx_follows_followee (followee_id, created_at) COMMENT '팔로워 목록 (V4)',
   CONSTRAINT fk_follows_follower FOREIGN KEY (follower_id) REFERENCES members (id),
   CONSTRAINT fk_follows_followee FOREIGN KEY (followee_id) REFERENCES members (id)
 ) COMMENT '팔로우 (SOC-01, D-02)';
@@ -408,7 +414,7 @@ CREATE TABLE reports (
   target_id BIGINT NOT NULL COMMENT '신고 대상 번호',
   blog_id BIGINT NULL COMMENT '블로그 안의 일이면. 메인 프로필 신고는 NULL',
   handler VARCHAR(20) NOT NULL COMMENT '접수처. 신고할 때 정함 (D-85)',
-  reason_code VARCHAR(30) NOT NULL COMMENT '사유 선택지 미정',
+  reason_code VARCHAR(30) NOT NULL COMMENT 'SPAM, ABUSE, OBSCENE, PRIVACY, COPYRIGHT, ETC (추천안 #9, V4)',
   detail VARCHAR(1000) NULL,
   status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
   result VARCHAR(20) NULL COMMENT '처리 결과',
@@ -421,6 +427,7 @@ CREATE TABLE reports (
   KEY idx_reports_handler (handler, status, blog_id),
   CONSTRAINT ck_reports_target_type CHECK (target_type IN ('MEMBER', 'BLOG_OWNER', 'BLOG', 'POST', 'COMMENT')),
   CONSTRAINT ck_reports_handler CHECK (handler IN ('BLOG_OWNER', 'ADMIN')),
+  CONSTRAINT ck_reports_reason CHECK (reason_code IN ('SPAM', 'ABUSE', 'OBSCENE', 'PRIVACY', 'COPYRIGHT', 'ETC')),
   CONSTRAINT ck_reports_status CHECK (status IN ('PENDING', 'DONE')),
   CONSTRAINT ck_reports_result CHECK (result IN ('NONE', 'WARNING', 'SUSPEND', 'KICK', 'OWNER_WARNING', 'OWNER_KICK', 'BLOG_CLOSE')),
   CONSTRAINT fk_reports_reporter FOREIGN KEY (reporter_id) REFERENCES members (id),
@@ -442,6 +449,7 @@ CREATE TABLE notifications (
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '30일 또는 7일 뒤 삭제',
   PRIMARY KEY (id),
   KEY idx_notifications_unread (recipient_id, is_read, created_at),
+  KEY idx_notifications_tab (recipient_id, tab, created_at) COMMENT '탭별 목록 (V4)',
   CONSTRAINT ck_notifications_tab CHECK (tab IN ('COMMENT', 'LIKE', 'FOLLOW', 'BLOG', 'ADMIN')),
   CONSTRAINT fk_notifications_recipient FOREIGN KEY (recipient_id) REFERENCES members (id),
   CONSTRAINT fk_notifications_blog FOREIGN KEY (blog_id) REFERENCES blogs (id),
