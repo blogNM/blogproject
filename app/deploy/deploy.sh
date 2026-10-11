@@ -52,6 +52,21 @@ else
   echo "경고: 서버에서도 DB 포트에 접속되지 않습니다. DB_ADDRESS, DB_PORT 시크릿을 확인하세요." >&2
 fi
 
+# 손으로 돌린 배포에서 reset_db 에 reset 이라고 적었을 때만: DB의 테이블을 모두 지운다 (되돌릴 수 없음).
+# 앱(Flyway)은 빈 DB에서 테이블을 처음부터 만든다. 다른 도구로 만든 테이블이 있으면 앱이 뜨지 않는다.
+if [ "${RESET_DB:-}" = "reset" ]; then
+  echo "DB의 테이블을 모두 지웁니다."
+  $DOCKER run --rm --network host -e MYSQL_PWD="$DB_PASSWORD" "${MYSQL_CLIENT_IMAGE:-mysql:8.0}" sh -c '
+    set -e
+    M="mysql -h$0 -P$1 -u$2 --protocol=TCP -N"
+    T=$($M -e "SET SESSION group_concat_max_len=100000; SELECT GROUP_CONCAT(CONCAT(CHAR(96),table_name,CHAR(96))) FROM information_schema.tables WHERE table_schema=\"$3\"")
+    if [ -n "$T" ] && [ "$T" != "NULL" ]; then
+      $M "$3" -e "SET FOREIGN_KEY_CHECKS=0; DROP TABLE $T;"
+    fi
+    echo "남은 테이블 수: $($M -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=\"$3\"")"
+  ' "$DB_HOST" "$DB_PORT" "$DB_USERNAME" "$DB_NAME"
+fi
+
 BASE_URL="${APP_BASE_URL:-http://localhost:$APP_PORT}"
 # https가 아니면 로그인 쿠키에 Secure를 붙이면 로그인이 안 된다.
 if [ -z "${COOKIE_SECURE:-}" ]; then
