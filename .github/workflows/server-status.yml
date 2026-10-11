@@ -28,4 +28,8 @@ jobs:
             echo "== 이 포트에서 듣는 프로그램"; (ss -ltn 2>/dev/null || netstat -ltn 2>/dev/null) | grep ":${APP_PORT}" || echo "없음"
             echo "== 서버 안에서 열어 보기"; curl -sS -m 10 -o /dev/null -w "HTTP %{http_code}\n" "http://localhost:${APP_PORT}/" || true
             echo "== 서버 IP"; hostname -I 2>/dev/null || true
+            echo "== 서버에서 바깥 주소로 열어 보기"; curl -sS -m 10 -o /dev/null -w "HTTP %{http_code}\n" "http://$(hostname -f 2>/dev/null || hostname):${APP_PORT}/" || true
+            echo "== 방화벽 (읽기만)"; (sudo -n ufw status 2>/dev/null || ufw status 2>/dev/null || echo "ufw 확인 못 함") | head -20
+            (sudo -n iptables -S INPUT 2>/dev/null || echo "iptables 확인 못 함") | head -20
+            echo "== 다른 사람 앱이 듣는 포트 (참고)"; (ss -ltn 2>/dev/null || netstat -ltn) | awk '{print $4}' | grep -oE ':[0-9]+$' | sort -u | tr '\n' ' '; echo
             echo "== 마지막 로그"; docker logs --tail 40 creat-blog 2>&1 | cut -c1-300
