@@ -67,7 +67,49 @@ if [ "${RESET_DB:-}" = "reset" ]; then
   ' "$DB_HOST" "$DB_PORT" "$DB_USERNAME" "$DB_NAME"
 fi
 
-BASE_URL="${APP_BASE_URL:-http://localhost:$APP_PORT}"
+# 학교 서버는 포트를 밖에 바로 열지 않는다. 공용 Nginx가 도메인으로 받은 요청을 내 포트로 넘긴다.
+# APP_DOMAIN이 있으면 ~/nginx/<도메인>.conf 를 만든다. 파일이 새로 생기거나 바뀌면 강사에게 적용을 요청해야 반영된다.
+if [ -n "${APP_DOMAIN:-}" ]; then
+  NGINX_CONF="$HOME/nginx/${APP_DOMAIN}.conf"
+  NEW_CONF="$(cat <<NGINX
+server {
+    listen 80;
+    server_name ${APP_DOMAIN};
+
+    access_log $HOME/nginx/logs/${APP_DOMAIN}.access.log;
+    error_log  $HOME/nginx/logs/${APP_DOMAIN}.error.log;
+
+    client_max_body_size 20M;
+
+    location / {
+        proxy_pass http://127.0.0.1:${APP_PORT};
+
+        proxy_http_version 1.1;
+        proxy_set_header Host              \$host;
+        proxy_set_header X-Real-IP         \$remote_addr;
+        proxy_set_header X-Forwarded-For   \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+
+        proxy_set_header Upgrade    \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+
+        proxy_read_timeout 60s;
+    }
+}
+NGINX
+)"
+  if [ ! -d "$HOME/nginx" ]; then
+    echo "경고: $HOME/nginx 폴더가 없어 Nginx 설정을 만들지 못했습니다." >&2
+  elif [ -f "$NGINX_CONF" ] && [ "$(cat "$NGINX_CONF")" = "$NEW_CONF" ]; then
+    echo "Nginx 설정은 그대로입니다: $NGINX_CONF"
+  else
+    printf '%s\n' "$NEW_CONF" > "$NGINX_CONF"
+    echo "Nginx 설정을 만들었습니다: $NGINX_CONF  → 강사에게 파일 이름(${APP_DOMAIN}.conf)을 알려 적용을 요청하세요."
+  fi
+  # Nginx를 거쳐 들어오므로 손님 IP·주소는 X-Forwarded-* 헤더에서 읽는다 (요청 제한이 IP별로 맞게 동작).
+  FORWARD_HEADERS_STRATEGY="${FORWARD_HEADERS_STRATEGY:-native}"
+fi
+BASE_URL="${APP_BASE_URL:-http://${APP_DOMAIN:-localhost:$APP_PORT}}"
 # https가 아니면 로그인 쿠키에 Secure를 붙이면 로그인이 안 된다.
 if [ -z "${COOKIE_SECURE:-}" ]; then
   case "$BASE_URL" in https://*) COOKIE_SECURE=true ;; *) COOKIE_SECURE=false ;; esac
@@ -82,6 +124,7 @@ MAIL_MODE=log
   echo "DB_PASSWORD=${DB_PASSWORD}"
   echo "APP_BASE_URL=${BASE_URL}"
   echo "COOKIE_SECURE=${COOKIE_SECURE}"
+  [ -n "${FORWARD_HEADERS_STRATEGY:-}" ] && echo "FORWARD_HEADERS_STRATEGY=${FORWARD_HEADERS_STRATEGY}"
   echo "MAIL_MODE=${MAIL_MODE}"
   [ -n "${MAIL_USERNAME:-}" ] && echo "MAIL_USERNAME=${MAIL_USERNAME}"
   [ -n "${MAIL_PASSWORD:-}" ] && echo "MAIL_PASSWORD=${MAIL_PASSWORD}"
