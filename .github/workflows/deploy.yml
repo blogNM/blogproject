@@ -18,6 +18,11 @@ on:
       - 'app/**'
       - '.github/workflows/deploy.yml'
   workflow_dispatch:
+    inputs:
+      reset_db:
+        description: 'DB의 테이블을 모두 지우고 새로 만들기 (되돌릴 수 없음). 지우려면 reset 이라고 적기'
+        required: false
+        default: ''
 
 concurrency:
   group: deploy
@@ -105,6 +110,7 @@ jobs:
           DB_NAME: ${{ secrets.DB_NAME }}
           DB_USERNAME: ${{ secrets.DB_USERNAME || secrets.SSH_ID }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          RESET_DB: ${{ github.event.inputs.reset_db }}
           APP_BASE_URL: ${{ vars.APP_BASE_URL || format('http://{0}:{1}', secrets.SSH_ADDRESS, vars.APP_PORT || secrets.APP_PORT || '8340') }}
           MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
           MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
@@ -118,5 +124,5 @@ jobs:
           username: ${{ secrets.SSH_ID }}
           password: ${{ secrets.SSH_PASSWORD }}
           command_timeout: 10m
-          envs: APP_PORT,DB_ADDRESS,DB_PORT,DB_NAME,DB_USERNAME,DB_PASSWORD,APP_BASE_URL,MAIL_USERNAME,MAIL_PASSWORD,ADMIN_INITIAL_LOGIN_ID,ADMIN_INITIAL_PASSWORD,TURNSTILE_SITE_KEY,TURNSTILE_SECRET_KEY
+          envs: APP_PORT,DB_ADDRESS,DB_PORT,DB_NAME,DB_USERNAME,DB_PASSWORD,RESET_DB,APP_BASE_URL,MAIL_USERNAME,MAIL_PASSWORD,ADMIN_INITIAL_LOGIN_ID,ADMIN_INITIAL_PASSWORD,TURNSTILE_SITE_KEY,TURNSTILE_SECRET_KEY
           script: bash creat-blog/incoming/deploy.sh creat-blog/incoming/creat-blog.tar.gz
