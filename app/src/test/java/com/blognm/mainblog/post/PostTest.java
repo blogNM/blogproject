@@ -69,7 +69,7 @@ class PostTest extends IntegrationTest {
         long id = write(writer, "food", "XSS",
                 "<script>alert(1)</script>\\n\\n<img src=x onerror=alert(2)>\\n\\n[링크](javascript:alert(3))\\n\\n"
                         + "<iframe src=//evil.example></iframe>\\n\\n<p style=\\\"color:red\\\" onclick=\\\"x()\\\">글</p>\\n\\n"
-                        + "![밖 사진](https://evil.example/a.png)\\n\\n[좋은 링크](https://example.com)");
+                        + "![밖 사진](https://evil.example/a.png)\\n\\n[좋은 링크](https://example.com) 를 남긴다");
         String html = JsonPath.read(getAs("/api/posts/" + id).andReturn().getResponse().getContentAsString(),
                 "$.contentHtml");
         assertThat(html).doesNotContain("<script", "onerror", "javascript:", "<iframe", "style=", "onclick",
