@@ -43,15 +43,14 @@ if [ ! -s "$APP_HOME/secrets.env" ]; then
   } > "$APP_HOME/secrets.env"
 fi
 
-# 컨테이너 안의 localhost는 서버가 아니라 컨테이너 자신이라, 서버의 MySQL은 host.docker.internal 로 부른다.
+# 컨테이너는 서버의 네트워크를 그대로 쓴다 (--network host). 학교 서버처럼 도커 내부망에서
+# DB로 나가는 길이 막혀 있어도 서버에서 되는 접속은 컨테이너에서도 된다. localhost도 서버 자신이다.
 DB_HOST="$DB_ADDRESS"
-ADD_HOST=()
-case "$DB_HOST" in
-  localhost|127.0.0.1)
-    DB_HOST="host.docker.internal"
-    ADD_HOST=(--add-host "host.docker.internal:host-gateway")
-    ;;
-esac
+if (exec 3<>"/dev/tcp/${DB_HOST}/${DB_PORT}") 2>/dev/null; then
+  echo "서버에서 DB 포트에 접속됩니다."
+else
+  echo "경고: 서버에서도 DB 포트에 접속되지 않습니다. DB_ADDRESS, DB_PORT 시크릿을 확인하세요." >&2
+fi
 
 BASE_URL="${APP_BASE_URL:-http://localhost:$APP_PORT}"
 # https가 아니면 로그인 쿠키에 Secure를 붙이면 로그인이 안 된다.
@@ -89,11 +88,10 @@ gunzip -c "$IMAGE_FILE" | $DOCKER load
 start() {
   $DOCKER rm -f "$APP_NAME" >/dev/null 2>&1 || true
   $DOCKER run -d --name "$APP_NAME" --restart unless-stopped \
-    -p "${APP_PORT}:8080" \
+    --network host -e "SERVER_PORT=${APP_PORT}" \
     --env-file "$APP_HOME/secrets.env" --env-file "$APP_HOME/runtime.env" \
     -v "$APP_HOME/data/uploads:/app/data/uploads" \
     --user "$(id -u):$(id -g)" \
-    "${ADD_HOST[@]}" \
     "$1" >/dev/null
 }
 
