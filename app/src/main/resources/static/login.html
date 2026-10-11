@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>로그인 - Creat_</title>
+  <link rel="icon" href="/img/creat-mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/common.css">
+  <script type="module" src="/js/pages/login.js"></script>
+</head>
+<body>
+  <main class="auth-page">
+    <div class="auth-split">
+    <section class="auth-form">
+      <a class="wordmark" href="/" aria-label="Creat_ 메인으로"><span class="word">Creat</span><span class="cursor" aria-hidden="true">_</span></a>
+      <h1>반가워요!</h1>
+      <p class="sub">다시 만나서 기뻐요. 로그인해 주세요.</p>
+      <p id="notice" class="notice" hidden></p>
+      <form id="login-form" novalidate>
+        <label for="email">이메일</label>
+        <input id="email" name="email" type="email" autocomplete="username" placeholder="name@email.com" required>
+
+        <label for="password">비밀번호</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required>
+
+        <label class="checkbox"><input id="remember" type="checkbox"> 로그인 유지 (14일)</label>
+
+        <div id="captcha" class="captcha" hidden></div>
+        <p id="error" class="error" role="alert"></p>
+        <button type="submit" class="primary">로그인</button>
+      </form>
+      <p class="or">또는</p>
+      <a class="button dark wide-button" href="/signup.html">새 계정 만들기</a>
+      <div class="auth-links">
+        <a href="/forgot-password.html">비밀번호를 잊었어요</a>
+        <a href="/find-email.html">이메일 찾기</a>
+      </div>
+    </section>
+    <aside class="auth-art" aria-hidden="true"><img src="/img/login-art.svg" alt="" width="620" height="560"></aside>
+    </div>
+  </main>
+</body>
+</html>

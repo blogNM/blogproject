@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>공지사항 - Creat_</title>
+  <link rel="icon" href="/img/creat-mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/common.css">
+  <script type="module" src="/js/pages/notice.js"></script>
+</head>
+<body>
+  <header class="site-header"></header>
+  <main class="container">
+    <p id="error" class="notice" hidden></p>
+    <section id="list-view" class="card" hidden>
+      <h1 class="section-title">공지사항</h1>
+      <ul id="notice-list" class="notice-list"></ul>
+      <nav id="pager" class="pager" aria-label="공지 쪽"></nav>
+    </section>
+    <article id="detail-view" class="card post" hidden>
+      <p class="post-blog"><a href="/notices">공지사항</a></p>
+      <h1 id="title" class="post-heading"></h1>
+      <p id="meta" class="muted"></p>
+      <!-- 서버가 마크다운을 HTML로 바꾸고 jsoup으로 거른 본문. innerHTML은 여기에만 쓴다 (헌법 III). -->
+      <div id="content" class="post-content"></div>
+      <p><a href="/notices">목록으로</a></p>
+    </article>
+  </main>
+  <footer class="site-footer"></footer>
+</body>
+</html>

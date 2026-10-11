@@ -1,0 +1,28 @@
+# 테스트는 실제 MySQL의 blog_test 데이터베이스를 쓴다 (스키마에 MySQL 전용 문법이 있어서).
+spring:
+  datasource:
+    url: ${TEST_DB_URL:jdbc:mysql://localhost:3306/blog_test?serverTimezone=Asia/Seoul&characterEncoding=UTF-8}
+    username: ${TEST_DB_USERNAME:blog}
+    password: ${TEST_DB_PASSWORD:blog}
+  flyway:
+    clean-disabled: false
+
+app:
+  mail:
+    mode: log
+  auth:
+    jwt-secret: test-only-jwt-secret-0123456789-abcdefghij
+    code-hash-secret: test-only-code-secret
+    cookie-secure: true
+
+upload:
+  dir: ${java.io.tmpdir}/mainblog-test-uploads
+
+# 테스트는 이 컴퓨터에 띄운 가짜 사이트에서 미리보기를 받는다
+link-preview:
+  allow-private-hosts: true
+
+# 첫 관리자 만들기를 시험할 값. 테스트마다 관리자를 지우므로 AdminTest가 직접 다시 만든다.
+admin:
+  initial-login-id: rootadmin
+  initial-password: Temp1234!

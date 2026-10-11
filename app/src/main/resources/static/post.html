@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>글 - Creat_</title>
+<!--OG-->
+  <link rel="icon" href="/img/creat-mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/common.css">
+  <script type="module" src="/js/pages/post.js"></script>
+</head>
+<body>
+  <header class="site-header"></header>
+  <main class="container">
+    <p id="error" class="notice" hidden></p>
+    <article id="post" class="card post" hidden>
+      <p class="post-blog"><a id="blog-link" href="/"></a><a id="list-link-top" class="list-link" href="/">목록</a></p>
+      <div class="post-item-head">
+        <span id="notice-badge" class="badge" hidden>공지</span>
+        <span id="category" class="post-category" hidden></span>
+      </div>
+      <h1 id="title" class="post-heading"></h1>
+      <p id="meta" class="muted"></p>
+      <div id="actions" class="actions"></div>
+      <!-- 서버가 마크다운을 HTML로 바꾸고 jsoup으로 거른 본문. innerHTML은 여기에만 쓴다 (헌법 III). -->
+      <div id="content" class="post-content"></div>
+      <ul id="tags" class="tags post-tags"></ul>
+      <p id="counts" class="muted counts"></p>
+      <div class="post-actions">
+        <button id="like" type="button" class="like-button" aria-pressed="false"><span class="heart" aria-hidden="true">♥</span> 좋아요 <span id="like-count">0</span></button>
+        <button id="share" type="button">공유</button>
+        <span id="post-actions-extra" class="post-actions-extra"></span>
+      </div>
+      <div class="post-list-row"><a id="list-link" class="button" href="/">목록</a></div>
+    </article>
+
+    <section id="comments" class="card comments" hidden>
+      <h2 class="section-title">댓글 <span id="comment-count"></span></h2>
+      <form id="comment-form" class="comment-form" hidden>
+        <label for="comment-input" class="visually-hidden">댓글 쓰기</label>
+        <textarea id="comment-input" maxlength="500" placeholder="댓글을 남겨 주세요 (500자까지)"></textarea>
+        <div class="actions">
+          <span id="comment-length" class="muted">0 / 500</span>
+          <button type="submit" class="dark">댓글 달기</button>
+        </div>
+        <p id="comment-error" class="error" role="alert"></p>
+      </form>
+      <p id="comment-login" class="muted" hidden><a href="/login.html">로그인</a>하면 댓글을 달 수 있어요.</p>
+      <ul id="comment-list" class="comment-list"></ul>
+    </section>
+  </main>
+  <footer class="site-footer"></footer>
+</body>
+</html>

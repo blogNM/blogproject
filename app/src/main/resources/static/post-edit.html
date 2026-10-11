@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>글쓰기 - Creat_</title>
+  <link rel="stylesheet" href="/vendor/toastui/toastui-editor.css">
+  <link rel="icon" href="/img/creat-mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/common.css">
+  <script src="/vendor/toastui/toastui-editor-all.min.js"></script>
+  <script type="module" src="/js/pages/post-edit.js"></script>
+</head>
+<body>
+  <header class="site-header"></header>
+  <main class="container wide">
+    <p id="error" class="notice" hidden></p>
+    <form id="post-form" class="card" novalidate hidden>
+      <p class="post-blog"><a id="blog-link" href="/"></a></p>
+      <h1 id="heading">글쓰기</h1>
+      <p id="draft-message" class="info" role="status" hidden></p>
+
+      <label for="title">제목</label>
+      <input id="title" type="text" maxlength="30" placeholder="제목 (1~30자)">
+
+      <div class="form-row">
+        <div>
+          <label for="category">카테고리</label>
+          <select id="category"><option value="">분류 없음</option></select>
+        </div>
+        <label id="notice-box" class="checkbox" hidden><input id="notice" type="checkbox"> 공지로 올리기</label>
+      </div>
+
+      <label for="editor">본문</label>
+      <div id="editor"></div>
+      <p class="hint"><span id="length">0</span> / 1000자 (사진은 글자 수에 넣지 않습니다) · 사진은 jpg·png·gif·webp, 한 장 3MB, 글 하나에 10장까지</p>
+
+      <label for="tags">태그 (쉼표로 구분, 10개까지)</label>
+      <input id="tags" type="text" placeholder="예: 맛집, 서울">
+
+      <p id="form-message" class="error" role="alert"></p>
+      <div class="actions">
+        <button type="submit" class="primary inline" id="save">저장</button>
+        <a id="cancel" class="button" href="/">취소</a>
+      </div>
+      <p class="hint">쓰는 중인 글은 이 브라우저에 자동으로 저장됩니다.</p>
+    </form>
+  </main>
+  <footer class="site-footer"></footer>
+</body>
+</html>

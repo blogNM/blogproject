@@ -1,0 +1,146 @@
+# 바뀔 수 있는 값은 모두 환경변수로 덮어쓸 수 있다 (헌법 VI, D-68).
+spring:
+  application:
+    name: mainblog
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/blog?serverTimezone=Asia/Seoul&characterEncoding=UTF-8}
+    username: ${DB_USERNAME:blog}
+    password: ${DB_PASSWORD:blog}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      # 시각은 모두 한국 시간(app.time-zone) 그대로 저장한다. 서버 JVM 시간대(UTC 등)에 따라 값이 밀리지 않도록
+      # LocalDateTime을 변환 없이 JDBC에 넘긴다. JdbcTemplate으로 읽고 쓰는 값과도 같아진다.
+      hibernate.type.java_time_use_direct_jdbc: true
+  flyway:
+    enabled: true
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+      mail.smtp.connectiontimeout: 5000
+      mail.smtp.timeout: 5000
+      mail.smtp.writetimeout: 5000
+
+  servlet:
+    multipart:
+      # 사진 한 장 3MB, 한 번에 10MB (6.3)
+      max-file-size: ${UPLOAD_MAX_FILE_SIZE:3MB}
+      max-request-size: ${UPLOAD_MAX_REQUEST_SIZE:10MB}
+
+server:
+  forward-headers-strategy: ${FORWARD_HEADERS_STRATEGY:none}
+
+app:
+  time-zone: Asia/Seoul
+  base-url: ${APP_BASE_URL:http://localhost:8080}
+  mail:
+    # smtp: Gmail로 보냄, log: 메일을 보내지 않고 서버 콘솔에 찍음 (개발용)
+    mode: ${MAIL_MODE:smtp}
+    from: ${MAIL_FROM:${MAIL_USERNAME:}}
+  auth:
+    # JWT 서명 키. 운영에서는 32바이트 이상 임의 값을 반드시 환경변수로 준다.
+    jwt-secret: ${JWT_SECRET:}
+    access-token-ttl: ${ACCESS_TOKEN_TTL:5m}
+    remember-me-ttl: ${REMEMBER_ME_TTL:14d}
+    # 로그인 유지를 안 했을 때 무활동 로그아웃 (D-61, D-62)
+    idle-timeout: ${IDLE_TIMEOUT:30m}
+    # 로그인 유지를 안 했을 때도 Refresh Token에 두는 최대 수명 (브라우저를 계속 켜 둔 경우)
+    session-max-ttl: ${SESSION_MAX_TTL:1d}
+    cookie-secure: ${COOKIE_SECURE:true}
+    # 인증번호를 해시할 때 쓰는 비밀 키 (USR-02)
+    code-hash-secret: ${CODE_HASH_SECRET:}
+  signup:
+    code-ttl: ${SIGNUP_CODE_TTL:10m}
+    # 인증을 마친 뒤 가입을 끝낼 때까지 기다리는 시간
+    verified-ttl: ${SIGNUP_VERIFIED_TTL:30m}
+    resend-interval: ${SIGNUP_RESEND_INTERVAL:1m}
+    max-code-failures: ${SIGNUP_MAX_CODE_FAILURES:5}
+  password-reset:
+    # 비밀번호 재설정 인증번호: 30분, 1회용, 5번 틀리면 무효 (USR-06, SEC-05)
+    code-ttl: ${PASSWORD_RESET_CODE_TTL:30m}
+    max-code-failures: ${PASSWORD_RESET_MAX_FAILURES:5}
+  email-find:
+    # 이메일 찾기: 결과에서 비밀번호 재설정으로 넘어갈 때 쓰는 임시 토큰 10분 (D-26), 같은 IP 10분에 5번 (USR-08)
+    token-ttl: ${EMAIL_FIND_TOKEN_TTL:10m}
+    per-window: ${EMAIL_FIND_PER_WINDOW:5}
+    window: ${EMAIL_FIND_WINDOW:10m}
+  login:
+    captcha-after-failures: ${LOGIN_CAPTCHA_AFTER:3}
+    lock-after-failures: ${LOGIN_LOCK_AFTER:5}
+    lock-duration: ${LOGIN_LOCK_DURATION:5m}
+  rate-limit:
+    # IP별 요청 제한 (D-80). 수치는 추천안 #4 기본값, 1차는 서버 메모리에서 셈 (D-83 대기)
+    login-per-minute: ${RATE_LOGIN_PER_MINUTE:20}
+    mail-per-hour: ${RATE_MAIL_PER_HOUR:10}
+  turnstile:
+    # Cloudflare Turnstile (D-79). 기본값은 Cloudflare가 제공하는 "항상 통과" 테스트 키
+    site-key: ${TURNSTILE_SITE_KEY:1x00000000000000000000AA}
+    secret-key: ${TURNSTILE_SECRET_KEY:1x0000000000000000000000000000000AA}
+    verify-url: https://challenges.cloudflare.com/turnstile/v0/siteverify
+
+# 블로그 (002). 개수 제한은 설정 파일 + 환경변수 (BLG-10, D-52)
+blog:
+  limit:
+    # 공개(일부 공개 포함) 블로그 수. 5까지 올릴 수 있다 (D-51)
+    public: ${BLOG_LIMIT_PUBLIC:3}
+    private: ${BLOG_LIMIT_PRIVATE:5}
+  # 블로그 목록 한 페이지 개수
+  page-size: ${BLOG_PAGE_SIZE:12}
+  # 참여 신청이 거절된 뒤 다시 신청할 수 있을 때까지 (BLG-04)
+  rejoin-after-reject: ${BLOG_REJOIN_AFTER_REJECT:7d}
+
+# 사진 올리기 (004 6.3, SEC-08, D-75)
+upload:
+  # 1차는 서버 디스크. 이중화하면 S3로 바꾼다
+  dir: ${UPLOAD_DIR:./data/uploads}
+  max-file-size: ${UPLOAD_MAX_FILE_SIZE:3MB}
+  # 글 하나에 넣을 수 있는 사진 수
+  max-images-per-post: ${UPLOAD_MAX_IMAGES_PER_POST:10}
+
+# 글 속 링크 미리보기 카드 (D-92). 글을 저장할 때 서버가 한 번 받아 둔다
+link-preview:
+  enabled: ${LINK_PREVIEW_ENABLED:true}
+  # 바깥 사이트가 늦으면 이만큼만 기다리고 카드 없이 둔다
+  timeout: ${LINK_PREVIEW_TIMEOUT:3s}
+  max-links-per-post: ${LINK_PREVIEW_MAX_LINKS:5}
+  # 받아 둔 미리보기는 이만큼 지나면 글을 다시 저장할 때 새로 받는다 (실패한 것은 하루 뒤)
+  refresh-after: ${LINK_PREVIEW_REFRESH_AFTER:7d}
+  # 내부망 주소는 받지 않는다 (SSRF). 테스트에서만 켠다
+  allow-private-hosts: false
+
+# 댓글·좋아요·검색·피드 (004 4단계)
+board:
+  # 좋아요 연타로 알림을 쏟아내지 않도록 회원당 1분에 30번 (추천안 #11)
+  reactions-per-minute: ${BOARD_REACTIONS_PER_MINUTE:30}
+  comments-per-minute: ${BOARD_COMMENTS_PER_MINUTE:10}
+  # 피드 인기 글: 최근 7일 안에 쓴 글 중 좋아요 많은 순 (추천안 #15)
+  popular-window: ${BOARD_POPULAR_WINDOW:7d}
+  recent-search-max: ${BOARD_RECENT_SEARCH_MAX:10}
+  feed-notice-count: ${BOARD_FEED_NOTICE_COUNT:5}
+
+# 팔로우·구독·차단·신고·알림 (003 5단계)
+social:
+  # 팔로우·구독·차단을 연타해 알림을 쏟아내지 않도록 종류별로 회원당 1분에 30번 (추천안 #11)
+  actions-per-minute: ${SOCIAL_ACTIONS_PER_MINUTE:30}
+  # 같은 사람이 같은 대상을 다시 신고할 수 있기까지 (SOC-06)
+  report-cooldown: ${SOCIAL_REPORT_COOLDOWN:14d}
+  # 알림 기본 보관 일수 (4.5). 회원·블로그장이 7일로 줄일 수 있다
+  notification-retention-days: ${SOCIAL_NOTIFICATION_RETENTION_DAYS:30}
+  bio-max: ${SOCIAL_BIO_MAX:150}
+
+admin:
+  # 첫 관리자 (추천안 #16, 확인 대기). 관리자가 하나도 없을 때만 이 값으로 만들고, 첫 로그인에서 비밀번호를 바꾸게 한다.
+  # 값은 .env 등 환경변수로만 넣는다. 비워 두면 관리자를 만들지 않는다.
+  initial-login-id: ${ADMIN_INITIAL_LOGIN_ID:}
+  initial-password: ${ADMIN_INITIAL_PASSWORD:}
+  # 관리자 로그인 유지 시간. 쿠키는 브라우저를 닫으면 사라진다 (SEC-09)
+  session-ttl: ${ADMIN_SESSION_TTL:2h}
+  # IP마다 1분에 받는 관리자 로그인 시도 수
+  login-per-minute: ${ADMIN_LOGIN_PER_MINUTE:10}

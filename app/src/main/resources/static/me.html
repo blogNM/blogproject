@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>내 정보 - Creat_</title>
+  <link rel="icon" href="/img/creat-mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/common.css">
+  <script type="module" src="/js/pages/me.js"></script>
+</head>
+<body>
+  <header class="site-header"></header>
+  <main class="container">
+    <section class="card narrow">
+      <h1>내 정보</h1>
+      <dl class="info-list">
+        <dt>이메일</dt><dd id="email"></dd>
+        <dt>이름</dt><dd id="name"></dd>
+        <dt>가입일</dt><dd id="joined"></dd>
+      </dl>
+      <p class="hint">이메일과 이름은 바꿀 수 없습니다.</p>
+
+      <section id="profile-card">
+        <h2 class="section-title">프로필 (다른 사람에게 보이는 정보)</h2>
+        <div class="photo-row">
+          <div id="photo" class="avatar large"></div>
+          <div>
+            <label class="button file-button">사진 고르기<input id="photo-input" type="file" accept="image/jpeg,image/png,image/gif,image/webp" class="visually-hidden"></label>
+            <button id="photo-delete" type="button">사진 지우기</button>
+            <p class="hint">jpg·png·gif·webp</p>
+          </div>
+        </div>
+        <label for="bio">소개</label>
+        <textarea id="bio" maxlength="150" rows="3" placeholder="나를 한두 줄로 소개해 주세요."></textarea>
+        <p class="hint"><span id="bio-length">0</span> / 150자</p>
+        <p id="bio-message" class="error" role="alert"></p>
+        <div class="actions">
+          <button id="bio-save" type="button" class="dark">소개 저장</button>
+          <a id="my-activity" class="button" href="/members/">내 활동 보기</a>
+        </div>
+      </section>
+
+      <form id="profile-form" novalidate>
+        <h2 class="section-title">닉네임·전화번호</h2>
+        <label for="nickname">닉네임</label>
+        <input id="nickname" maxlength="12">
+        <p class="hint">2~12자, 한글·영문·숫자</p>
+        <label for="phone">전화번호</label>
+        <input id="phone" inputmode="numeric">
+        <p id="profile-message" class="error" role="alert"></p>
+        <button type="submit" class="primary">저장</button>
+      </form>
+
+      <form id="password-form" novalidate>
+        <h2 class="section-title">비밀번호 바꾸기</h2>
+        <label for="current-password">현재 비밀번호</label>
+        <input id="current-password" type="password" autocomplete="current-password" maxlength="15">
+        <label for="new-password">새 비밀번호</label>
+        <input id="new-password" type="password" autocomplete="new-password" maxlength="15">
+        <p class="hint">8~15자, 영문·숫자·특수문자를 모두 넣어 주세요. 바꾸면 다른 기기의 로그인이 풀립니다.</p>
+        <label for="new-password2">새 비밀번호 확인</label>
+        <input id="new-password2" type="password" autocomplete="new-password" maxlength="15">
+        <p id="password-message" class="error" role="alert"></p>
+        <button type="submit" class="primary">비밀번호 바꾸기</button>
+      </form>
+
+      <section id="notifications">
+        <h2 class="section-title">알림</h2>
+        <p class="hint">끈 동안 생긴 일은 다시 켜도 알림으로 오지 않아요.</p>
+        <div id="notice-settings" class="setting-list"></div>
+        <p class="hint">꼭 필요한 알림은 끌 수 없어요: <span id="always-on"></span></p>
+        <label for="retention">알림 보관 기간</label>
+        <select id="retention">
+          <option value="30">30일</option>
+          <option value="7">7일</option>
+        </select>
+        <p id="notice-message" class="info" role="status"></p>
+      </section>
+
+      <section id="blocked-section">
+        <h2 class="section-title">차단한 회원</h2>
+        <p class="hint">차단하면 서로의 글·댓글이 숨겨지고, 팔로우·댓글·좋아요를 할 수 없어요. 같은 블로그 멤버끼리는 그 블로그 안에서 보여요.</p>
+        <ul id="blocked" class="plain-list"></ul>
+      </section>
+
+      <form id="withdraw-form" novalidate>
+        <h2 class="section-title">회원탈퇴</h2>
+        <p class="hint">탈퇴하면 쓴 글은 "탈퇴한 회원"으로 남고, 이름·전화번호는 30일 뒤 지워집니다.
+          블로그장인 블로그가 있으면 블로그장을 넘기거나 블로그를 닫은 뒤에 탈퇴할 수 있습니다.</p>
+        <label for="withdraw-password">비밀번호 확인</label>
+        <input id="withdraw-password" type="password" autocomplete="current-password" maxlength="15">
+        <label class="checkbox"><input id="withdraw-confirm" type="checkbox"> 위 내용을 확인했고 탈퇴합니다.</label>
+        <p id="withdraw-message" class="error" role="alert"></p>
+        <ul id="owned-blogs" class="plain-list" hidden></ul>
+        <button type="submit" class="danger">탈퇴하기</button>
+      </form>
+    </section>
+  </main>
+  <footer class="site-footer"></footer>
+</body>
+</html>

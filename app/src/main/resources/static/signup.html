@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>회원가입 - Creat_</title>
+  <link rel="icon" href="/img/creat-mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/common.css">
+  <script type="module" src="/js/pages/signup.js"></script>
+</head>
+<body>
+  <main class="auth-page">
+    <div class="auth-split">
+    <section class="auth-form">
+      <a class="wordmark" href="/" aria-label="Creat_ 메인으로"><span class="word">Creat</span><span class="cursor" aria-hidden="true">_</span></a>
+      <h1>시작해 볼까요?</h1>
+      <p class="sub">세 단계면 내 블로그를 만들 수 있어요.</p>
+      <ol class="steps">
+        <li data-step="1" class="active">이메일 인증</li>
+        <li data-step="2">비밀번호</li>
+        <li data-step="3">회원 정보</li>
+      </ol>
+
+      <form id="step1" novalidate>
+        <label for="email">이메일</label>
+        <div class="row">
+          <input id="email" type="email" autocomplete="email" required>
+          <button id="send-code" type="button">인증번호 받기</button>
+        </div>
+        <p id="send-message" class="info"></p>
+        <div id="code-box" hidden>
+          <label for="code">인증번호 6자리</label>
+          <div class="row">
+            <input id="code" inputmode="numeric" maxlength="6" autocomplete="one-time-code">
+            <button type="submit">확인</button>
+          </div>
+        </div>
+        <p id="step1-error" class="error" role="alert"></p>
+      </form>
+
+      <form id="step2" novalidate hidden>
+        <label for="password">비밀번호</label>
+        <input id="password" type="password" autocomplete="new-password" maxlength="15">
+        <p class="hint">8~15자, 영문·숫자·특수문자를 모두 넣어 주세요. 대소문자를 구분합니다.</p>
+        <label for="password2">비밀번호 확인</label>
+        <input id="password2" type="password" autocomplete="new-password" maxlength="15">
+        <p id="step2-error" class="error" role="alert"></p>
+        <button type="submit" class="primary">다음</button>
+      </form>
+
+      <form id="step3" novalidate hidden>
+        <label for="name">이름</label>
+        <input id="name" autocomplete="name" maxlength="20">
+        <label for="nickname">닉네임</label>
+        <div class="row">
+          <input id="nickname" maxlength="12">
+          <button id="check-nickname" type="button">중복 확인</button>
+        </div>
+        <p class="hint">2~12자, 한글·영문·숫자</p>
+        <p id="nickname-message" class="info"></p>
+        <label for="phone">전화번호</label>
+        <input id="phone" inputmode="numeric" autocomplete="tel" maxlength="13" placeholder="01012345678">
+
+        <fieldset class="consents">
+          <legend>약관 동의</legend>
+          <label class="checkbox"><input id="agree-all" type="checkbox"> 모두 동의</label>
+          <label class="checkbox"><input id="agree-terms" type="checkbox" class="consent"> [필수] <a href="/terms.html" target="_blank" rel="noopener">이용약관</a> 동의</label>
+          <label class="checkbox"><input id="agree-privacy" type="checkbox" class="consent"> [필수] <a href="/privacy.html" target="_blank" rel="noopener">개인정보 수집·이용</a> 동의</label>
+          <label class="checkbox"><input id="age14" type="checkbox" class="consent"> [필수] 만 14세 이상입니다</label>
+        </fieldset>
+        <p id="step3-error" class="error" role="alert"></p>
+        <button type="submit" class="primary">가입하기</button>
+      </form>
+      <div class="auth-links">
+        <span>이미 계정이 있나요? <a href="/login.html">로그인</a></span>
+      </div>
+    </section>
+    <aside class="auth-art" aria-hidden="true"><img src="/img/login-art.svg" alt="" width="620" height="560"></aside>
+    </div>
+  </main>
+</body>
+</html>

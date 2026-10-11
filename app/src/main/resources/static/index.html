@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Creat_ - 함께 만드는 블로그</title>
+  <link rel="icon" href="/img/creat-mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/common.css">
+  <script type="module" src="/js/pages/index.js"></script>
+</head>
+<body>
+  <header class="site-header"></header>
+  <main class="container wide">
+    <section class="landing">
+      <div>
+        <span class="eyebrow">Write · Theme · Together</span>
+        <h1 id="headline">함께 쓰는 블로그,<br><span class="mark">나만의 테마</span>로</h1>
+        <p class="lead" id="welcome">블로그를 만들고, 테마 틀을 골라 꾸미고, 다른 회원과 함께 운영해 보세요.</p>
+        <div class="cta-row">
+          <a id="cta-main" class="button primary" href="/signup.html">무료로 시작하기</a>
+          <a class="button" href="#feed">글 둘러보기</a>
+        </div>
+      </div>
+      <img class="landing-art" src="/img/hero-art.svg" alt="" width="620" height="520">
+    </section>
+
+    <section class="feature-cards" aria-label="Creat_에서 할 수 있는 것">
+      <div class="feature g1"><h3>테마 틀 7가지</h3><p>Odyssey부터 Portfolio까지, 틀을 고르고 색·글꼴·머리 사진으로 나만의 블로그를 꾸며요.</p></div>
+      <div class="feature g2"><h3>함께 운영</h3><p>멤버를 받고 부블로그장에게 권한을 나눠 여러 사람이 한 블로그를 꾸려요.</p></div>
+      <div class="feature g3"><h3>댓글·좋아요·검색</h3><p>마음에 드는 글에 좋아요를 누르고, 댓글로 이야기를 나누고, 두 글자로 찾아요.</p></div>
+    </section>
+
+    <div class="main-grid" id="feed">
+      <section>
+        <h2 class="section-title">피드</h2>
+        <div class="tabs" role="tablist" id="feed-tabs">
+          <button type="button" class="tab active" data-tab="latest" role="tab">최신 글</button>
+          <button type="button" class="tab" data-tab="popular" role="tab">인기 글</button>
+          <button type="button" class="tab" data-tab="following" role="tab">팔로우</button>
+          <button type="button" class="tab" data-tab="subscribed" role="tab">구독</button>
+        </div>
+        <ul id="feed-list" class="feed"></ul>
+        <nav id="feed-pager" class="pager" aria-label="피드 페이지"></nav>
+      </section>
+      <aside>
+        <div class="side-card">
+          <h3>공지사항</h3>
+          <ul id="notices"></ul>
+          <p class="side-more"><a href="/notices">전체 보기</a></p>
+        </div>
+        <div class="side-card">
+          <h3>새로 생긴 블로그</h3>
+          <ul id="new-blogs"></ul>
+        </div>
+      </aside>
+    </div>
+
+    <section id="blogs">
+      <h2 class="section-title">블로그 둘러보기</h2>
+      <div class="tabs" role="tablist" id="blog-tabs">
+        <button type="button" class="tab active" data-sort="latest" role="tab">최신순</button>
+        <button type="button" class="tab" data-sort="popular" role="tab">인기순</button>
+      </div>
+      <p id="summary" class="muted"></p>
+      <ul id="blog-list" class="blog-grid"></ul>
+      <nav id="pager" class="pager" aria-label="블로그 페이지"></nav>
+    </section>
+  </main>
+  <footer class="site-footer"></footer>
+</body>
+</html>
