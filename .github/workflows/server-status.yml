@@ -1,0 +1,31 @@
+# 서버에서 앱이 잘 떠 있는지 본다. Actions 탭에서 [Run workflow]로 돌린다. 아무것도 바꾸지 않는다.
+name: 서버 상태 확인
+
+on:
+  workflow_dispatch:
+
+jobs:
+  status:
+    name: 상태 확인
+    runs-on: ubuntu-latest
+    env:
+      APP_PORT: ${{ vars.APP_PORT || secrets.APP_PORT || '8340' }}
+    steps:
+      - name: 밖에서 사이트 열어 보기
+        continue-on-error: true
+        run: curl -sS -m 15 -o /dev/null -w "HTTP %{http_code}\n" "http://${{ secrets.SSH_ADDRESS }}:${APP_PORT}/"
+
+      - name: 서버 안에서 보기
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_ADDRESS }}
+          port: ${{ secrets.SSH_PORT }}
+          username: ${{ secrets.SSH_ID }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          envs: APP_PORT
+          script: |
+            echo "== 컨테이너"; docker ps -a --filter name=creat-blog --format '{{.Names}} {{.Status}} {{.Image}}'
+            echo "== 이 포트에서 듣는 프로그램"; (ss -ltn 2>/dev/null || netstat -ltn 2>/dev/null) | grep ":${APP_PORT}" || echo "없음"
+            echo "== 서버 안에서 열어 보기"; curl -sS -m 10 -o /dev/null -w "HTTP %{http_code}\n" "http://localhost:${APP_PORT}/" || true
+            echo "== 서버 IP"; hostname -I 2>/dev/null || true
+            echo "== 마지막 로그"; docker logs --tail 40 creat-blog 2>&1 | cut -c1-300
