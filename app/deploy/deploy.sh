@@ -118,7 +118,12 @@ NGINX
   # Nginx를 거쳐 들어오므로 손님 IP·주소는 X-Forwarded-* 헤더에서 읽는다 (요청 제한이 IP별로 맞게 동작).
   FORWARD_HEADERS_STRATEGY="${FORWARD_HEADERS_STRATEGY:-native}"
 fi
-BASE_URL="${APP_BASE_URL:-http://${APP_DOMAIN:-localhost:$APP_PORT}}"
+# 강사가 인증서(Certbot)를 붙이면 설정 파일에 "listen 443"이 생긴다. 그때부터 사이트 주소는 https다.
+SCHEME=http
+if [ -n "${APP_DOMAIN:-}" ] && grep -q "listen 443" "$HOME/nginx/${APP_DOMAIN}.conf" 2>/dev/null; then
+  SCHEME=https
+fi
+BASE_URL="${APP_BASE_URL:-${SCHEME}://${APP_DOMAIN:-localhost:$APP_PORT}}"
 # https가 아니면 로그인 쿠키에 Secure를 붙이면 로그인이 안 된다.
 if [ -z "${COOKIE_SECURE:-}" ]; then
   case "$BASE_URL" in https://*) COOKIE_SECURE=true ;; *) COOKIE_SECURE=false ;; esac
