@@ -41,6 +41,10 @@ public class MarkdownRenderer {
     public static final Set<String> TEXT_COLORS = Set.of("tc-red", "tc-orange", "tc-green", "tc-blue", "tc-purple",
             "tc-mauve", "tc-gray");
 
+    /** 글자 크기와 형광펜 강조. 관리자 공지 편집기가 같은 방식(정해 둔 class의 span)으로 넣는다 (D-102). */
+    public static final Set<String> TEXT_SIZES = Set.of("ts-small", "ts-large", "ts-xlarge");
+    public static final Set<String> HIGHLIGHTS = Set.of("hl-yellow", "hl-green", "hl-pink", "hl-blue");
+
     private final Parser parser = Parser.builder().extensions(EXTENSIONS).build();
     private final HtmlRenderer renderer = HtmlRenderer.builder().extensions(EXTENSIONS).build();
 
@@ -51,7 +55,8 @@ public class MarkdownRenderer {
         Document clean = new Cleaner(SAFELIST).clean(dirty);
         clean.select("a[href]").forEach(a -> a.attr("rel", "nofollow noopener noreferrer"));
         clean.select("span").forEach(span -> {
-            if (!TEXT_COLORS.contains(span.attr("class"))) {
+            String cls = span.attr("class");
+            if (!TEXT_COLORS.contains(cls) && !TEXT_SIZES.contains(cls) && !HIGHLIGHTS.contains(cls)) {
                 span.unwrap();
             }
         });

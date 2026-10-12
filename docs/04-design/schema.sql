@@ -318,7 +318,8 @@ CREATE TABLE post_tags (
 
 CREATE TABLE images (
   id BIGINT NOT NULL AUTO_INCREMENT,
-  uploader_id BIGINT NOT NULL COMMENT '올린 회원',
+  uploader_id BIGINT NULL COMMENT '올린 회원. 관리자가 올린 공지 사진은 NULL',
+  admin_uploader_id BIGINT NULL COMMENT '공지 사진을 올린 관리자 (D-102)',
   post_id BIGINT NULL COMMENT '글 이미지일 때. 저장 전에는 NULL',
   sort_order INT NOT NULL DEFAULT 0 COMMENT '0번이 미리보기 이미지',
   stored_name CHAR(36) NOT NULL COMMENT 'UUID 파일 이름',
@@ -331,8 +332,9 @@ CREATE TABLE images (
   CONSTRAINT ck_images_mime CHECK (mime_type IN ('image/jpeg', 'image/png', 'image/gif', 'image/webp')),
   CONSTRAINT ck_images_size CHECK (size_bytes <= 3145728),
   CONSTRAINT fk_images_uploader FOREIGN KEY (uploader_id) REFERENCES members (id),
+  CONSTRAINT fk_images_admin_uploader FOREIGN KEY (admin_uploader_id) REFERENCES admins (id),
   CONSTRAINT fk_images_post FOREIGN KEY (post_id) REFERENCES posts (id)
-) COMMENT '이미지: 글·프로필·블로그 대표 (BRD-05, SEC-08, D-75)';
+) COMMENT '이미지: 글·프로필·블로그 대표·공지 (BRD-05, SEC-08, D-75, D-102)';
 
 CREATE TABLE comments (
   id BIGINT NOT NULL AUTO_INCREMENT,

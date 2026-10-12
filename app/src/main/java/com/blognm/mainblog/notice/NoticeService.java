@@ -105,6 +105,11 @@ public class NoticeService {
         return id;
     }
 
+    /** 공지 편집기 미리보기. 보여 줄 때와 같은 변환·거르기 (D-102). */
+    public String preview(String rawContent) {
+        return renderer.toSafeHtml(rawContent == null ? "" : rawContent);
+    }
+
     /**
      * 깃허브에서 버전(릴리스)을 만들면 같은 내용을 공지로 올린다 (D-97). 작성자는 가장 먼저 만든 관리자.
      * 같은 제목의 공지가 이미 있으면 새로 쓰지 않고 본문만 바꾼 뒤 그 번호를 돌려준다.

@@ -12,17 +12,22 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.blognm.mainblog.auth.AdminPrincipal;
+import com.blognm.mainblog.image.Image;
+import com.blognm.mainblog.image.ImageService;
 
 /** 메인 공지사항 (BRD-10). 읽기는 누구나, 쓰기는 메인 관리자만 (/api/admin/**). */
 @Controller
 public class NoticeController {
 
     private final NoticeService notices;
+    private final ImageService images;
 
-    public NoticeController(NoticeService notices) {
+    public NoticeController(NoticeService notices, ImageService images) {
         this.notices = notices;
+        this.images = images;
     }
 
     @GetMapping({"/notices", "/notices/{id}"})
@@ -62,11 +67,30 @@ public class NoticeController {
         return Map.of("updated", true);
     }
 
+    /** 공지에 넣을 사진 올리기. 메인 관리자만 (/api/admin/**). 돌려준 주소를 본문에 마크다운 그림으로 넣는다 (D-102). */
+    @PostMapping("/api/admin/notices/images")
+    @ResponseBody
+    public Map<String, Object> uploadImage(@RequestParam("file") MultipartFile file,
+            @AuthenticationPrincipal AdminPrincipal me) {
+        Image image = images.uploadByAdmin(me.adminId(), file);
+        return Map.of("id", image.getId(), "url", image.url());
+    }
+
+    /** 공지 편집기의 미리보기. 실제 공지와 같은 변환·거르기를 거친 HTML (D-102). */
+    @PostMapping("/api/admin/notices/preview")
+    @ResponseBody
+    public Map<String, String> preview(@RequestBody PreviewBody body) {
+        return Map.of("html", notices.preview(body.content()));
+    }
+
     @DeleteMapping("/api/admin/notices/{id}")
     @ResponseBody
     public Map<String, Boolean> delete(@PathVariable long id, @AuthenticationPrincipal AdminPrincipal me) {
         notices.delete(me.adminId(), id);
         return Map.of("deleted", true);
+    }
+
+    public record PreviewBody(String content) {
     }
 
     /** category는 비우면 일반 공지(NOTICE) (D-98). */

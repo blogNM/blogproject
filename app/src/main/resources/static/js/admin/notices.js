@@ -4,6 +4,7 @@ import { api } from '../api.js';
 import { NOTICE_CATEGORIES, categoryBadge } from '../notice-category.js';
 import { renderPager } from '../pager.js';
 import { act, button, el, errorLine, link, showError, table, td, toast } from './common.js';
+import { noticeEditor } from './notice-editor.js';
 
 let page = 1;
 
@@ -18,8 +19,9 @@ export async function mount(panel) {
   const category = el('select', { id: 'notice-category' });
   category.append(...NOTICE_CATEGORIES.map(([value, label]) => el('option', { value }, label)));
   const content = el('textarea', { id: 'notice-content', class: 'adm-textarea', rows: '10', maxlength: '5000',
-    placeholder: '마크다운으로 쓸 수 있어요. 5000자까지.' });
+    placeholder: '마크다운으로 쓸 수 있어요. 위 버튼으로 글자 크기·색·형광펜·사진을 넣을 수 있어요. 5000자까지.' });
   const msg = el('p', { class: 'adm-error', role: 'alert' });
+  const editor = noticeEditor(content, msg);
   const submit = el('button', { type: 'submit', class: 'adm-go' }, '공지 올리기');
   const cancel = button('수정 그만두기', '', () => reset());
   cancel.hidden = true;
@@ -27,7 +29,7 @@ export async function mount(panel) {
   buttons.append(submit, cancel);
   form.append(el('label', { for: 'notice-category' }, '카테고리'), category,
     el('label', { for: 'notice-title' }, '제목'), title,
-    el('label', { for: 'notice-content' }, '내용'), content,
+    el('label', { for: 'notice-content' }, '내용'), editor.element,
     el('p', { class: 'adm-note' }, '새 공지는 공지 알림을 끄지 않은 모든 회원에게 알림이 갑니다. 고칠 때는 알림을 다시 보내지 않아요.'),
     msg, buttons);
   formCard.append(heading, form);
@@ -35,6 +37,7 @@ export async function mount(panel) {
   function reset() {
     editingId = null;
     form.reset();
+    editor.reset();
     msg.textContent = '';
     heading.textContent = '공지 쓰기';
     submit.textContent = '공지 올리기';
@@ -48,6 +51,7 @@ export async function mount(panel) {
       title.value = n.title;
       category.value = n.category;
       content.value = n.content;
+      editor.reset();
       heading.textContent = `공지 #${id} 고치기`;
       submit.textContent = '고친 내용 저장';
       cancel.hidden = false;
