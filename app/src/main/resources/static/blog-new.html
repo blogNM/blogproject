@@ -11,7 +11,7 @@
 <body>
   <header class="site-header"></header>
   <main class="container">
-    <section class="card narrow">
+    <section class="card narrow create-card">
       <h1>블로그 만들기</h1>
       <form id="blog-form" novalidate>
         <label for="name">블로그 이름</label>
@@ -35,7 +35,8 @@
         <fieldset class="theme-picker">
           <legend>테마 틀</legend>
           <p class="hint">블로그 모양을 골라요. 색·글꼴·문구도 바꿀 수 있고, 나중에 블로그 관리에서 언제든 다시 꾸밀 수 있어요.</p>
-          <div id="theme-cards" class="theme-cards"></div>
+          <div id="theme-cards" class="theme-cards theme-squares"></div>
+          <p id="theme-summary" class="hint theme-summary" aria-live="polite"></p>
         </fieldset>
 
         <div class="theme-options">

@@ -503,6 +503,19 @@ select { padding: 10px 14px; border: 1px solid var(--line); border-radius: 999px
 .theme-card img { width: 100%; height: auto; border-radius: 8px; background: var(--soft); }
 .theme-card strong { color: var(--ink); font-size: 1rem; }
 .theme-card .muted { font-size: 0.8rem; }
+/* 블로그 만들기: 틀 7개를 내리지 않고 한눈에 보도록 정사각형 칸 4열 (D-101) */
+.card.create-card { max-width: 640px; }
+.theme-squares { grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.theme-squares .theme-card { aspect-ratio: 1; padding: 8px; gap: 2px; justify-content: flex-start; overflow: hidden; }
+.theme-squares .theme-card img { aspect-ratio: 3 / 2; object-fit: cover; object-position: top; }
+.theme-squares .theme-card strong { font-size: 0.9rem; line-height: 1.3; }
+.theme-squares .theme-card .muted { font-size: 0.72rem; line-height: 1.3; }
+.theme-summary { margin-top: 10px; }
+@media (max-width: 560px) {
+  .theme-squares { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .theme-squares .theme-card { padding: 6px; }
+  .theme-squares .theme-card .muted { display: none; }
+}
 .theme-options { display: grid; grid-template-columns: 1fr 220px; gap: 20px; margin-top: 8px; }
 .swatches { display: flex; gap: 8px; flex-wrap: wrap; }
 .swatch { width: 30px; height: 30px; padding: 0; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px var(--line); }
