@@ -14,11 +14,12 @@
     <p id="error" class="notice" hidden></p>
     <section id="list-view" class="card" hidden>
       <h1 class="section-title">공지사항</h1>
+      <div class="tabs" role="tablist" id="notice-tabs"></div>
       <ul id="notice-list" class="notice-list"></ul>
       <nav id="pager" class="pager" aria-label="공지 쪽"></nav>
     </section>
     <article id="detail-view" class="card post" hidden>
-      <p class="post-blog"><a href="/notices">공지사항</a></p>
+      <p class="post-blog"><a href="/notices">공지사항</a> <span id="category"></span></p>
       <h1 id="title" class="post-heading"></h1>
       <p id="meta" class="muted"></p>
       <!-- 서버가 마크다운을 HTML로 바꾸고 jsoup으로 거른 본문. innerHTML은 여기에만 쓴다 (헌법 III). -->

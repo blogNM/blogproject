@@ -43,7 +43,7 @@ public record AppProperties(
     public record Login(int captchaAfterFailures, int lockAfterFailures, Duration lockDuration) {
     }
 
-    public record RateLimit(int loginPerMinute, int mailPerHour) {
+    public record RateLimit(int loginPerMinute, int mailPerHour, int emailCheckPerMinute) {
     }
 
     public record Turnstile(String siteKey, String secretKey, String verifyUrl) {

@@ -532,6 +532,7 @@ CREATE TABLE notices (
   id BIGINT NOT NULL AUTO_INCREMENT,
   admin_id BIGINT NOT NULL COMMENT '작성한 관리자',
   title VARCHAR(100) NOT NULL,
+  category VARCHAR(20) NOT NULL DEFAULT 'NOTICE' COMMENT '일반 NOTICE, 업데이트 UPDATE(릴리스), 수정 FIX, 점검 MAINTENANCE (D-98)',
   content_md TEXT NOT NULL,
   status VARCHAR(20) NOT NULL DEFAULT 'NORMAL',
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -539,6 +540,7 @@ CREATE TABLE notices (
   PRIMARY KEY (id),
   KEY idx_notices_list (status, created_at),
   CONSTRAINT ck_notices_status CHECK (status IN ('NORMAL', 'DELETED')),
+  CONSTRAINT ck_notices_category CHECK (category IN ('NOTICE', 'UPDATE', 'FIX', 'MAINTENANCE')),
   CONSTRAINT fk_notices_admin FOREIGN KEY (admin_id) REFERENCES admins (id)
 ) COMMENT '메인 공지사항 (BRD-10)';
 

@@ -67,10 +67,10 @@ public class FeedService {
     /** 메인 공지사항 (BRD-10). 관리자는 관리자 화면의 공지 탭에서 쓴다. */
     public List<Notice> notices() {
         return jdbc.query("""
-                SELECT id, title, created_at FROM notices WHERE status = 'NORMAL'
+                SELECT id, title, category, created_at FROM notices WHERE status = 'NORMAL'
                 ORDER BY created_at DESC, id DESC LIMIT :limit
                 """, Map.of("limit", props.feedNoticeCount()), (rs, i) -> new Notice(rs.getLong("id"),
-                rs.getString("title"), rs.getObject("created_at", LocalDateTime.class).format(DATE)));
+                rs.getString("title"), rs.getString("category"), rs.getObject("created_at", LocalDateTime.class).format(DATE)));
     }
 
     private static void requireLogin(Long viewerId) {
@@ -80,6 +80,6 @@ public class FeedService {
         }
     }
 
-    public record Notice(long id, String title, String createdAt) {
+    public record Notice(long id, String title, String category, String createdAt) {
     }
 }

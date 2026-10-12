@@ -44,6 +44,11 @@ public class AuthController {
         return Map.of("message", "인증번호를 보냈습니다. 메일함을 확인해 주세요.");
     }
 
+    @GetMapping("/signup/email-available")
+    public Map<String, Boolean> emailAvailable(@RequestParam String email, HttpServletRequest request) {
+        return Map.of("available", signupService.isEmailAvailable(email, ClientIp.of(request)));
+    }
+
     @PostMapping("/signup/verify")
     public Map<String, Boolean> verifySignupCode(@RequestBody VerifyBody body) {
         signupService.verifyCode(body.email(), body.code());

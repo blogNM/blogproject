@@ -32,8 +32,9 @@ public class NoticeController {
 
     @GetMapping("/api/notices/all")
     @ResponseBody
-    public NoticeService.Page list(@RequestParam(defaultValue = "1") int page) {
-        return notices.list(page);
+    public NoticeService.Page list(@RequestParam(defaultValue = "1") int page,
+            @RequestParam(required = false) NoticeService.Category category) {
+        return notices.list(page, category);
     }
 
     @GetMapping("/api/notices/{id:\\d+}")
@@ -51,13 +52,13 @@ public class NoticeController {
     @PostMapping("/api/admin/notices")
     @ResponseBody
     public Map<String, Long> create(@RequestBody Body body, @AuthenticationPrincipal AdminPrincipal me) {
-        return Map.of("id", notices.create(me.adminId(), body.title(), body.content()));
+        return Map.of("id", notices.create(me.adminId(), body.title(), body.content(), body.category()));
     }
 
     @PutMapping("/api/admin/notices/{id}")
     @ResponseBody
     public Map<String, Boolean> update(@PathVariable long id, @RequestBody Body body, @AuthenticationPrincipal AdminPrincipal me) {
-        notices.update(me.adminId(), id, body.title(), body.content());
+        notices.update(me.adminId(), id, body.title(), body.content(), body.category());
         return Map.of("updated", true);
     }
 
@@ -68,6 +69,7 @@ public class NoticeController {
         return Map.of("deleted", true);
     }
 
-    public record Body(String title, String content) {
+    /** category는 비우면 일반 공지(NOTICE) (D-98). */
+    public record Body(String title, String content, NoticeService.Category category) {
     }
 }

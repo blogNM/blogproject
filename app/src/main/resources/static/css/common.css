@@ -677,6 +677,9 @@ select.reason-filter { width: auto; margin: 4px 0 8px; }
 .notice-list li { display: flex; justify-content: space-between; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--line); }
 .notice-list li a { min-width: 0; overflow-wrap: anywhere; font-weight: 600; }
 .notice-list li .muted { flex: none; }
+.notice-title { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.notice-cat { flex: none; }
+.badge.fix-badge { background: #E3F1EA; color: #2E6B4F; }
 .side-more { margin: 10px 0 0; font-size: 0.88rem; }
 
 /* ----- 글 화면의 목록 버튼 ----- */

@@ -8,7 +8,7 @@ if (me) {
 }
 
 const $ = (id) => document.getElementById(id);
-const state = { email: null, password: null, nicknameChecked: null };
+const state = { email: null, password: null, emailChecked: null, nicknameChecked: null };
 
 function showStep(n) {
   [1, 2, 3].forEach((i) => { $('step' + i).hidden = i !== n; });
@@ -20,26 +20,59 @@ function showStep(n) {
 
 // ① 이메일 인증 (USR-02)
 let resendTimer = null;
+let resendTimerRunning = false;
 function startResendCooldown(seconds) {
   const button = $('send-code');
   let left = seconds;
   button.disabled = true;
+  resendTimerRunning = true;
   clearInterval(resendTimer);
   resendTimer = setInterval(() => {
     left -= 1;
     button.textContent = left > 0 ? `다시 보내기 (${left}초)` : '다시 보내기';
     if (left <= 0) {
       clearInterval(resendTimer);
-      button.disabled = false;
+      resendTimerRunning = false;
+      button.disabled = state.emailChecked === null;
     }
   }, 1000);
 }
 
-$('send-code').addEventListener('click', async () => {
+// 이메일 중복 확인 (D-99). 확인한 이메일과 지금 칸의 값이 같을 때만 인증번호를 받을 수 있다.
+$('check-email').addEventListener('click', async () => {
+  const email = $('email').value.trim();
   $('step1-error').textContent = '';
   try {
-    const res = await api.post('/api/auth/signup/code', { email: $('email').value });
-    state.email = $('email').value;
+    const res = await api.get('/api/auth/signup/email-available?email=' + encodeURIComponent(email));
+    $('email-message').textContent = res.available
+      ? '가입할 수 있는 이메일입니다.'
+      : '이미 가입된 이메일입니다. 로그인하거나 비밀번호 찾기를 이용해 주세요.';
+    state.emailChecked = res.available ? email : null;
+  } catch (err) {
+    $('email-message').textContent = '';
+    $('step1-error').textContent = err.message;
+    state.emailChecked = null;
+  }
+  $('send-code').disabled = state.emailChecked === null || resendTimerRunning;
+});
+
+$('email').addEventListener('input', () => {
+  if (state.emailChecked !== null && $('email').value.trim() !== state.emailChecked) {
+    state.emailChecked = null;
+    $('email-message').textContent = '';
+    $('send-code').disabled = true;
+  }
+});
+
+$('send-code').addEventListener('click', async () => {
+  $('step1-error').textContent = '';
+  if (state.emailChecked === null) {
+    $('step1-error').textContent = '이메일 중복 확인을 먼저 해 주세요.';
+    return;
+  }
+  try {
+    const res = await api.post('/api/auth/signup/code', { email: state.emailChecked });
+    state.email = state.emailChecked;
     $('send-message').textContent = res.message;
     $('code-box').hidden = false;
     $('code').focus();

@@ -25,7 +25,7 @@
 
 - [x] T012 [US1] `Member`, `EmailVerification` 엔티티·리포지토리
 - [x] T013 [US1] `MemberRules`: 이메일 소문자, 비밀번호 규칙, 닉네임·예약어, 이름·전화번호(추천안 #5)
-- [x] T014 [US1] `SignupService.requestCode`: 1분 다시 보내기, IP당 1시간 10통, 이미 가입된 이메일도 같은 응답 (D-28)
+- [x] T014 [US1] `SignupService.requestCode`: 1분 다시 보내기, IP당 1시간 10통, 이미 가입된 이메일도 같은 응답 (D-28 → D-99에서 409 `EMAIL_TAKEN`과 중복 확인 버튼으로 바꿈)
 - [x] T015 [US1] `SignupService.verifyCode`: 10분 만료, 5번 틀리면 무효
 - [x] T016 [US1] `SignupService.signup`: 인증 완료 재확인, 필수 동의 3개, bcrypt 저장, 인증 행 삭제
 - [x] T017 [US1] `signup.html` + `signup.js`: 세 단계를 한 화면에서 (SC-001)

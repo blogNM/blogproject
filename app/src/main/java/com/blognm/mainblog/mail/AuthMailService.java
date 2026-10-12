@@ -47,19 +47,6 @@ public class AuthMailService {
                 """.formatted(code, ttlMinutes));
     }
 
-    /** 이미 가입된 이메일로 가입을 시도하면 인증번호 대신 이 안내를 보낸다 (D-28). */
-    @Async
-    public void sendAlreadyRegistered(String email) {
-        send(email, "[Creat_] 이미 가입된 이메일입니다", """
-                이 이메일로 회원가입을 시도했지만, 이미 가입된 이메일입니다.
-
-                비밀번호가 기억나지 않으면 로그인 화면의 [비밀번호 찾기]를 이용해 주세요.
-                %s/login.html
-
-                본인이 요청하지 않았다면 이 메일을 무시하세요.
-                """.formatted(props.baseUrl()));
-    }
-
     private void send(String to, String subject, String body) {
         try {
             gateway.send(to, subject, body);

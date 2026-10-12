@@ -1,6 +1,7 @@
 package com.blognm.mainblog.auth;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -39,19 +40,25 @@ class SignupTest extends IntegrationTest {
     }
 
     @Test
-    @DisplayName("이미 가입된 이메일도 화면 문구는 같고, 메일로만 '이미 가입된 이메일' 안내가 간다 (D-28)")
-    void alreadyRegisteredLooksTheSame() throws Exception {
+    @DisplayName("중복 확인 버튼: 가입된 이메일이면 화면에서 바로 알려 주고, 인증번호 메일도 보내지 않는다 (D-99)")
+    void emailTaken() throws Exception {
         signup("old@example.com", "Abcd1234!", "기존회원");
         mails.sent().clear();
         clock.advance(Duration.ofMinutes(2));
 
-        postJson("/api/auth/signup/code", "{\"email\":\"OLD@example.com\"}")
+        mvc.perform(get("/api/auth/signup/email-available").param("email", " OLD@example.com"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("인증번호를 보냈습니다. 메일함을 확인해 주세요."));
+                .andExpect(jsonPath("$.available").value(false));
+        mvc.perform(get("/api/auth/signup/email-available").param("email", "fresh@example.com"))
+                .andExpect(jsonPath("$.available").value(true));
+        mvc.perform(get("/api/auth/signup/email-available").param("email", "not-an-email"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_EMAIL"));
 
-        var mail = waitForMail("old@example.com");
-        assertThat(mail.subject()).contains("이미 가입된 이메일");
-        assertThat(mail.body()).doesNotContain("인증번호:");
+        postJson("/api/auth/signup/code", "{\"email\":\"OLD@example.com\"}")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("EMAIL_TAKEN"));
+        assertThat(mails.sent()).isEmpty();
     }
 
     @Test

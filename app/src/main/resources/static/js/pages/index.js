@@ -2,6 +2,7 @@ import { api, ApiError } from '../api.js';
 import { blogCard, blogUrl } from '../blog-card.js';
 import { feedCard, renderPager } from '../feed-card.js';
 import { el, initLayout } from '../layout.js';
+import { categoryBadge } from '../notice-category.js';
 
 const $ = (id) => document.getElementById(id);
 const me = await initLayout();
@@ -61,7 +62,7 @@ async function loadNotices() {
   }
   ul.replaceChildren(...notices.map((n) => {
     const li = el('li');
-    li.append(el('a', { href: '/notices/' + n.id }, n.title), el('span', { class: 'muted' }, ' · ' + n.createdAt));
+    li.append(categoryBadge(n.category), ' ', el('a', { href: '/notices/' + n.id }, n.title), el('span', { class: 'muted' }, ' · ' + n.createdAt));
     return li;
   }));
 }
