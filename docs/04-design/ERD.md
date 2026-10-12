@@ -485,6 +485,7 @@ erDiagram
         bigint id PK
         bigint admin_id FK
         varchar title
+        enum category "NOTICE, UPDATE (D-98)"
         text content_md
         enum status "NORMAL, DELETED"
         datetime created_at

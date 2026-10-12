@@ -1,6 +1,7 @@
 // 메인 공지사항 목록과 본문 (BRD-10). /notices, /notices/{id}
 import { ApiError, api } from '../api.js';
 import { el, initLayout, renderNotFound } from '../layout.js';
+import { categoryBadge } from '../notice-category.js';
 import { renderPager } from '../pager.js';
 
 await initLayout();
@@ -12,6 +13,7 @@ if (id) {
     const n = await api.get(`/api/notices/${encodeURIComponent(id)}`);
     document.title = `${n.title} - 공지사항 - Creat_`;
     $('title').textContent = n.title;
+    $('category').replaceChildren(categoryBadge(n.category));
     $('meta').textContent = n.updatedAt && n.updatedAt !== n.createdAt ? `${n.createdAt} · 고침 ${n.updatedAt}` : n.createdAt;
     $('content').innerHTML = n.html;
     $('detail-view').hidden = false;
@@ -32,7 +34,9 @@ if (id) {
       else {
         list.replaceChildren(...res.items.map((n) => {
           const li = el('li');
-          li.append(el('a', { href: '/notices/' + n.id }, n.title), el('span', { class: 'muted' }, n.createdAt));
+          const title = el('span', { class: 'notice-title' });
+          title.append(categoryBadge(n.category), el('a', { href: '/notices/' + n.id }, n.title));
+          li.append(title, el('span', { class: 'muted' }, n.createdAt));
           return li;
         }));
       }

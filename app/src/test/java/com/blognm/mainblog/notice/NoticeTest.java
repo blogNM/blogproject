@@ -67,7 +67,8 @@ class NoticeTest extends IntegrationTest {
         // 비회원도 목록·본문을 본다
         getAs("/api/notices").andExpect(jsonPath("$[0].id").value(id));
         getAs("/api/notices/all").andExpect(jsonPath("$.total").value(1))
-                .andExpect(jsonPath("$.items[0].title").value("점검 안내"));
+                .andExpect(jsonPath("$.items[0].title").value("점검 안내"))
+                .andExpect(jsonPath("$.items[0].category").value("NOTICE"));
         String detail = getAs("/api/notices/" + id).andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
         String html = JsonPath.read(detail, "$.html");
@@ -76,8 +77,9 @@ class NoticeTest extends IntegrationTest {
 
         // 고쳐도 알림은 다시 안 간다
         sendAs(HttpMethod.PUT, "/api/admin/notices/" + id, """
-                {"title":"점검 안내 (바뀜)","content":"일요일로 바뀌었습니다"}""", admin).andExpect(status().isOk());
-        getAs("/api/notices/" + id).andExpect(jsonPath("$.title").value("점검 안내 (바뀜)"));
+                {"title":"점검 안내 (바뀜)","content":"일요일로 바뀌었습니다","category":"UPDATE"}""", admin).andExpect(status().isOk());
+        getAs("/api/notices/" + id).andExpect(jsonPath("$.title").value("점검 안내 (바뀜)"))
+                .andExpect(jsonPath("$.category").value("UPDATE"));
         assertThat(notices("a@example.com")).isEqualTo(1);
 
         sendAs(HttpMethod.DELETE, "/api/admin/notices/" + id, null, admin).andExpect(status().isOk());

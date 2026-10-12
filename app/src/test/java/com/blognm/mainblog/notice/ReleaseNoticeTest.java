@@ -53,6 +53,8 @@ class ReleaseNoticeTest extends IntegrationTest {
         long id = jdbc.queryForObject("SELECT id FROM notices", Long.class);
         // 릴리스 캡처(/img/releases/)는 본문에 남고, 바깥 사진은 걸러진다
         String html = JsonPath.read(getAs("/api/notices/" + id).andReturn().getResponse().getContentAsString(), "$.html");
+        assertThat((String) JsonPath.read(getAs("/api/notices/" + id).andReturn().getResponse().getContentAsString(),
+                "$.category")).isEqualTo("UPDATE");
         assertThat(html).contains("src=\"/img/releases/v1.0.0/link-card.png\"").doesNotContain("example.com");
     }
 }

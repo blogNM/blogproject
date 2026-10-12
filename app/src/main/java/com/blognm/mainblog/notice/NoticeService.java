@@ -26,6 +26,9 @@ public class NoticeService {
     static final int TITLE_MAX = 100;
     static final int CONTENT_MAX = 5000;
     static final int PAGE_SIZE = 20;
+
+    /** 공지 카테고리 (D-98). 화면에는 "공지", "업데이트"로 보인다. */
+    public enum Category { NOTICE, UPDATE }
     private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("yyyy.MM.dd");
 
     private final NamedParameterJdbcTemplate jdbc;
@@ -46,10 +49,10 @@ public class NoticeService {
         long count = total == null ? 0 : total;
         int current = Math.max(page, 1);
         List<Item> items = jdbc.query("""
-                SELECT id, title, created_at FROM notices WHERE status = 'NORMAL'
+                SELECT id, title, category, created_at FROM notices WHERE status = 'NORMAL'
                 ORDER BY created_at DESC, id DESC LIMIT :size OFFSET :offset
                 """, new MapSqlParameterSource("size", PAGE_SIZE).addValue("offset", (current - 1) * PAGE_SIZE),
-                (rs, i) -> new Item(rs.getLong("id"), rs.getString("title"),
+                (rs, i) -> new Item(rs.getLong("id"), rs.getString("title"), rs.getString("category"),
                         rs.getObject("created_at", LocalDateTime.class).format(DATE)));
         return new Page(items, current, (int) ((count + PAGE_SIZE - 1) / PAGE_SIZE), count);
     }
@@ -57,26 +60,29 @@ public class NoticeService {
     @Transactional(readOnly = true)
     public Detail get(long id) {
         return jdbc.query("""
-                SELECT n.id, n.title, n.content_md, n.created_at, n.updated_at, a.name
+                SELECT n.id, n.title, n.category, n.content_md, n.created_at, n.updated_at, a.name
                 FROM notices n JOIN admins a ON a.id = n.admin_id WHERE n.id = :id AND n.status = 'NORMAL'
                 """, Map.of("id", id), (rs, i) -> {
                     LocalDateTime created = rs.getObject("created_at", LocalDateTime.class);
                     LocalDateTime updated = rs.getObject("updated_at", LocalDateTime.class);
                     String md = rs.getString("content_md");
-                    return new Detail(rs.getLong("id"), rs.getString("title"), md, renderer.toSafeHtml(md),
+                    return new Detail(rs.getLong("id"), rs.getString("title"), rs.getString("category"), md,
+                            renderer.toSafeHtml(md),
                             created.format(DATE), updated.isAfter(created.plusMinutes(1)) ? updated.format(DATE) : null);
                 }).stream().findFirst().orElseThrow(NoticeService::notFound);
     }
 
     @Transactional
-    public long create(long adminId, String rawTitle, String rawContent) {
+    public long create(long adminId, String rawTitle, String rawContent, Category category) {
         String title = title(rawTitle);
         String content = content(rawContent);
         LocalDateTime now = LocalDateTime.now(clock);
         org.springframework.jdbc.support.GeneratedKeyHolder keys = new org.springframework.jdbc.support.GeneratedKeyHolder();
         jdbc.update("""
-                INSERT INTO notices (admin_id, title, content_md, created_at, updated_at) VALUES (:admin, :title, :content, :now, :now)
+                INSERT INTO notices (admin_id, title, category, content_md, created_at, updated_at)
+                VALUES (:admin, :title, :category, :content, :now, :now)
                 """, new MapSqlParameterSource("admin", adminId).addValue("title", title).addValue("content", content)
+                .addValue("category", category(category))
                 .addValue("now", now), keys, new String[] {"id"});
         long id = keys.getKey().longValue();
         // 전체 회원에게 한 번에 넣는다. 공지 알림을 끈 회원은 뺀다 (SOC-04)
@@ -107,15 +113,17 @@ public class NoticeService {
         if (adminId == null) {
             throw new ApiException(HttpStatus.CONFLICT, "NO_ADMIN", "관리자 계정이 없어 공지를 쓸 수 없습니다.");
         }
-        return create(adminId, title, rawContent);
+        return create(adminId, title, rawContent, Category.UPDATE);
     }
 
     @Transactional
-    public void update(long adminId, long id, String rawTitle, String rawContent) {
+    public void update(long adminId, long id, String rawTitle, String rawContent, Category category) {
         String title = title(rawTitle);
         int n = jdbc.update("""
-                UPDATE notices SET title = :title, content_md = :content, updated_at = :now WHERE id = :id AND status = 'NORMAL'
+                UPDATE notices SET title = :title, category = :category, content_md = :content, updated_at = :now
+                WHERE id = :id AND status = 'NORMAL'
                 """, new MapSqlParameterSource("title", title).addValue("content", content(rawContent))
+                .addValue("category", category(category))
                 .addValue("now", LocalDateTime.now(clock)).addValue("id", id));
         if (n == 0) {
             throw notFound();
@@ -148,16 +156,21 @@ public class NoticeService {
         return c;
     }
 
+    private static String category(Category category) {
+        return (category == null ? Category.NOTICE : category).name();
+    }
+
     private static ApiException notFound() {
         return new ApiException(HttpStatus.NOT_FOUND, "NOTICE_NOT_FOUND", "공지를 찾을 수 없습니다.");
     }
 
-    public record Item(long id, String title, String createdAt) {
+    public record Item(long id, String title, String category, String createdAt) {
     }
 
     public record Page(List<Item> items, int page, int totalPages, long total) {
     }
 
-    public record Detail(long id, String title, String content, String html, String createdAt, String updatedAt) {
+    public record Detail(long id, String title, String category, String content, String html, String createdAt,
+            String updatedAt) {
     }
 }
