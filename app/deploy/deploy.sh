@@ -71,14 +71,19 @@ fi
 # APP_DOMAIN이 있으면 ~/nginx/<도메인>.conf 를 만든다. 파일이 새로 생기거나 바뀌면 강사에게 적용을 요청해야 반영된다.
 if [ -n "${APP_DOMAIN:-}" ]; then
   NGINX_CONF="$HOME/nginx/${APP_DOMAIN}.conf"
+  # 로그 폴더(~/nginx/logs)는 학교가 만들어 줄 때만 있다. 없는 폴더를 적으면 Nginx가 설정을 읽지 못하므로 그때는 로그 줄을 뺀다.
+  LOG_LINES=""
+  if [ -d "$HOME/nginx/logs" ]; then
+    LOG_LINES="    access_log $HOME/nginx/logs/${APP_DOMAIN}.access.log;
+    error_log  $HOME/nginx/logs/${APP_DOMAIN}.error.log;
+"
+  fi
   NEW_CONF="$(cat <<NGINX
 server {
     listen 80;
     server_name ${APP_DOMAIN};
 
-    access_log $HOME/nginx/logs/${APP_DOMAIN}.access.log;
-    error_log  $HOME/nginx/logs/${APP_DOMAIN}.error.log;
-
+${LOG_LINES}
     client_max_body_size 20M;
 
     location / {

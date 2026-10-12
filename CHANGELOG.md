@@ -9,6 +9,7 @@
 
 ### 블로그 공유 미리보기
 
+- **수정** `deploy.sh`가 만드는 Nginx 설정: `~/nginx/logs` 폴더가 없으면 로그 두 줄을 빼고 씀. 없는 폴더를 적어서 학교 Nginx가 `open() ... failed (2: No such file or directory)`로 설정을 읽지 못하던 문제
 - **기능** 블로그 주소를 카톡 등에 공유하면 미리보기에 블로그 이름·소개·대표 이미지가 보임. 대표 이미지가 없으면 Creat_ 로고 그림(`img/og-default.png`). 비공개 블로그는 채우지 않음 (D-96, 사용자 요청)
 - **문서** D-96 결정 기록, CLAUDE.md·헌법 기술 스택 줄, spec 002 Clarifications
 
