@@ -40,6 +40,12 @@ public class PostPageController {
         }
     }
 
+    /** 블로그를 정하지 않은 글쓰기. 화면에서 내가 속한 블로그 중 하나를 고른다 (D-101). */
+    @GetMapping("/write")
+    public String writeAny() {
+        return "forward:/post-edit.html";
+    }
+
     @GetMapping("/blog/{slug}/write")
     public String write(@PathVariable String slug) {
         return "forward:/post-edit.html";

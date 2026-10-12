@@ -7,17 +7,25 @@ import {
 await requireLogin();
 
 const $ = (id) => document.getElementById(id);
-// /blog/{주소}/write 또는 /blog/{주소}/posts/{번호}/edit
+// /blog/{주소}/write, /blog/{주소}/posts/{번호}/edit, 또는 블로그를 고르는 /write (D-101)
 const parts = location.pathname.split('/');
-const slug = decodeURIComponent(parts[2] || '');
-const postId = parts[3] === 'posts' ? Number(parts[4]) : null;
-const blogBase = `/api/blogs/${encodeURIComponent(slug)}`;
-const blogHref = `/blog/${encodeURIComponent(slug)}`;
+const chooseBlog = parts[1] === 'write';
+let slug = chooseBlog ? '' : decodeURIComponent(parts[2] || '');
+const postId = !chooseBlog && parts[3] === 'posts' ? Number(parts[4]) : null;
+let blogBase;
+let blogHref;
+function setSlug(value) {
+  slug = value;
+  blogBase = `/api/blogs/${encodeURIComponent(slug)}`;
+  blogHref = `/blog/${encodeURIComponent(slug)}`;
+}
+setSlug(slug);
 // 글자 색 7가지. 서버의 MarkdownRenderer.TEXT_COLORS와 같다.
 const TEXT_COLORS = [['red', '빨강'], ['orange', '주황'], ['green', '초록'], ['blue', '파랑'], ['purple', '보라'],
   ['mauve', '자주'], ['gray', '회색']];
 // 1차 임시저장은 브라우저에만 (004 6.6)
-const DRAFT_KEY = `post-draft:${slug}:${postId || 'new'}`;
+// 블로그를 고르는 글쓰기는 블로그를 바꿔도 쓰던 글이 남도록 한 자리에 저장한다.
+const DRAFT_KEY = chooseBlog ? 'post-draft:choose:new' : `post-draft:${slug}:${postId || 'new'}`;
 
 function showError(text) {
   $('post-form').hidden = true;
@@ -51,11 +59,36 @@ function clearDraft() {
 
 let blog;
 let post = null;
+// 글을 쓸 수 있는 블로그(만들었거나 참여한 블로그). 주소의 ?blog= 가 그중 하나면 그것을 먼저 고른다.
+let myBlogs = [];
+let loadError = null;
+if (chooseBlog) {
+  try {
+    const mine = await api.get('/api/me/blogs');
+    myBlogs = [...mine.owned, ...mine.joined].filter((b) => b.status === 'ACTIVE');
+  } catch (err) {
+    loadError = err;
+  }
+  const wanted = new URLSearchParams(location.search).get('blog');
+  const first = myBlogs.find((b) => b.slug === wanted) || myBlogs[0];
+  if (first) setSlug(first.slug);
+}
 try {
+  if (loadError) throw loadError;
+  if (chooseBlog && !slug) throw Object.assign(new Error(''), { noBlog: true });
   blog = await api.get(blogBase);
   if (postId) post = await api.get(`/api/posts/${postId}`);
 } catch (err) {
-  showError(err.status === 404 ? '블로그나 글을 찾을 수 없습니다.' : err.message);
+  if (err.noBlog) {
+    showError('글을 쓸 블로그가 없어요. 블로그를 만들거나 다른 블로그에 참여한 뒤 써 주세요.');
+    const make = document.createElement('a');
+    make.href = '/blog-new.html';
+    make.className = 'button primary inline';
+    make.textContent = '블로그 만들기';
+    $('error').after(make);
+  } else {
+    showError(err.status === 404 ? '블로그나 글을 찾을 수 없습니다.' : err.message);
+  }
 }
 if (blog && !blog.myRole) {
   showError('이 블로그의 멤버만 글을 쓸 수 있습니다.');
@@ -66,21 +99,60 @@ if (post && !post.canEdit) {
   blog = null;
 }
 
-if (blog) {
+/** 고른 블로그에 맞춰 위쪽 블로그 이름, 취소 주소, 공지 칸, 카테고리를 다시 채운다. */
+async function showBlog() {
   $('blog-link').textContent = blog.name;
   $('blog-link').href = blogHref;
   $('cancel').href = post ? `${blogHref}/posts/${post.id}` : blogHref;
   $('heading').textContent = post ? '글 수정' : '글쓰기';
   document.title = (post ? '글 수정' : '글쓰기') + ' - ' + blog.name;
   $('notice-box').hidden = !blog.canManagePosts;
+  if (!blog.canManagePosts) $('notice').checked = false;
 
   const categories = await api.get(blogBase + '/categories').catch(() => []);
-  categories.forEach((c) => {
+  const none = document.createElement('option');
+  none.value = '';
+  none.textContent = '분류 없음';
+  $('category').replaceChildren(none, ...categories.map((c) => {
     const option = document.createElement('option');
     option.value = String(c.id);
     option.textContent = c.name;
-    $('category').append(option);
-  });
+    return option;
+  }));
+}
+
+if (blog) {
+  await showBlog();
+  if (chooseBlog) {
+    $('blog-select').replaceChildren(...myBlogs.map((b) => {
+      const option = document.createElement('option');
+      option.value = b.slug;
+      option.textContent = b.myRole === 'OWNER' ? `${b.name} (내가 만든 블로그)` : b.name;
+      return option;
+    }));
+    $('blog-select').value = slug;
+    $('blog-choice').hidden = false;
+    $('blog-select').addEventListener('change', async () => {
+      const before = slug;
+      const msg = $('form-message');
+      msg.textContent = '';
+      $('blog-select').disabled = true;
+      try {
+        setSlug($('blog-select').value);
+        blog = await api.get(blogBase);
+        if (!blog.myRole) throw new Error('이 블로그의 멤버만 글을 쓸 수 있습니다.');
+        await showBlog();
+        history.replaceState(null, '', '/write?blog=' + encodeURIComponent(slug));
+      } catch (err) {
+        setSlug(before);
+        $('blog-select').value = before;
+        blog = await api.get(blogBase).catch(() => blog);
+        msg.textContent = err.message;
+      } finally {
+        $('blog-select').disabled = false;
+      }
+    });
+  }
 
   const editor = new window.toastui.Editor({
     el: $('editor'),

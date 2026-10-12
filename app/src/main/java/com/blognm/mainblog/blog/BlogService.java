@@ -80,6 +80,10 @@ public class BlogService {
             throw slugTaken();
         }
         Blog blog = Blog.create(slug, name, description, memberId, visibility, joinPolicy, now);
+        // 만들 때 테마도 고를 수 있다. 고르지 않으면 기본 틀(Odyssey) (D-101)
+        if (req.theme() != null) {
+            applyTheme(blog, req.theme());
+        }
         blog.replaceTags(findOrCreateTags(tagNames));
         try {
             blogs.saveAndFlush(blog);
@@ -199,6 +203,10 @@ public class BlogService {
     @Transactional
     public void updateTheme(String slug, ThemeRequest req) {
         Blog blog = blogs.findBySlug(slug).filter(b -> !b.isClosed()).orElseThrow(BlogService::notFound);
+        applyTheme(blog, req);
+    }
+
+    private static void applyTheme(Blog blog, ThemeRequest req) {
         if (req.theme() == null) {
             throw ApiException.badRequest("INVALID_THEME", "테마 틀을 골라 주세요.");
         }
@@ -474,8 +482,9 @@ public class BlogService {
         return new ApiException(HttpStatus.CONFLICT, "SLUG_TAKEN", "이미 쓰이는 주소입니다. 다른 주소를 정해 주세요.");
     }
 
+    /** theme은 없어도 된다 (만들기 화면에서 테마를 고르면 함께 온다, D-101). */
     public record CreateRequest(String slug, String name, String description, Blog.Visibility visibility,
-            Blog.JoinPolicy joinPolicy, List<String> tags) {
+            Blog.JoinPolicy joinPolicy, List<String> tags, ThemeRequest theme) {
     }
 
     public record UpdateRequest(String name, String description, Blog.Visibility visibility,
