@@ -291,7 +291,8 @@ erDiagram
     }
     images {
         bigint id PK
-        bigint uploader_id FK "members"
+        bigint uploader_id FK "members, 공지 사진은 NULL"
+        bigint admin_uploader_id FK "admins, 공지 사진 (D-102)"
         bigint post_id FK "글 이미지일 때"
         int sort_order "0번이 미리보기 이미지"
         char stored_name UK "UUID 파일 이름"

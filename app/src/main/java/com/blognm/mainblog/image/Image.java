@@ -21,6 +21,10 @@ public class Image {
     @Column(name = "uploader_id")
     private Long uploaderId;
 
+    /** 관리자가 공지에 넣은 사진이면 올린 관리자. 이때 uploaderId는 비어 있다 (D-102). */
+    @Column(name = "admin_uploader_id")
+    private Long adminUploaderId;
+
     /** 글에 붙기 전에는 비어 있다. 하루 지나도 붙지 않으면 지운다. */
     @Column(name = "post_id")
     private Long postId;
@@ -50,6 +54,18 @@ public class Image {
             int sizeBytes, LocalDateTime now) {
         Image i = new Image();
         i.uploaderId = uploaderId;
+        i.storedName = storedName;
+        i.originalName = originalName;
+        i.mimeType = mimeType;
+        i.sizeBytes = sizeBytes;
+        i.createdAt = now;
+        return i;
+    }
+
+    public static Image uploadedByAdmin(long adminId, String storedName, String originalName, String mimeType,
+            int sizeBytes, LocalDateTime now) {
+        Image i = new Image();
+        i.adminUploaderId = adminId;
         i.storedName = storedName;
         i.originalName = originalName;
         i.mimeType = mimeType;

@@ -633,6 +633,14 @@ em, i, .toastui-editor-md-emph, .toastui-editor-contents em {
 .tc-bg-purple { background: #7C0CB4; }
 .tc-bg-mauve { background: #925B8F; }
 .tc-bg-gray { background: #6B6880; }
+/* 글자 크기와 형광펜 강조 (D-102). 서버가 정해 둔 class만 남긴다 (MarkdownRenderer) */
+.ts-small { font-size: 0.85em; }
+.ts-large { font-size: 1.25em; }
+.ts-xlarge { font-size: 1.6em; font-weight: 700; }
+.hl-yellow { background: #FFF1A8; }
+.hl-green { background: #CDEFD9; }
+.hl-pink { background: #FBD3E0; }
+.hl-blue { background: #D3E3FB; }
 .toastui-editor-toolbar .toolbar-color { font-weight: 800; font-size: 15px; color: #333; text-decoration: underline; text-decoration-color: #D93A49; text-decoration-thickness: 3px; text-underline-offset: 2px; background: none; border: 0; padding: 0; margin: 0 3px; width: 32px; height: 32px; border-radius: 3px; }
 .toastui-editor-toolbar .toolbar-color:hover { background: #fff; border: 1px solid #e4e7ee; }
 .color-popup { display: flex; gap: 6px; align-items: center; padding: 6px; }

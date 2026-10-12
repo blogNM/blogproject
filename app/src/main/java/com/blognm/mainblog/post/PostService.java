@@ -241,7 +241,7 @@ public class PostService {
         }
         Map<String, Image> found = images.findByStoredNameIn(refs.isEmpty() ? List.of("") : refs).stream()
                 .filter(img -> post.getId().equals(img.getPostId())
-                        || (img.getPostId() == null && img.getUploaderId() == actorId))
+                        || (img.getPostId() == null && Long.valueOf(actorId).equals(img.getUploaderId())))
                 .collect(Collectors.toMap(Image::getStoredName, Function.identity()));
         List<Image> ordered = refs.stream().map(found::get).filter(i -> i != null).toList();
         if (ordered.size() > uploadProps.maxImagesPerPost()) {
