@@ -76,7 +76,9 @@ public class SecurityConfig {
         csrfHandler.setCsrfRequestAttributeName(null);
 
         http
-                .csrf(csrf -> csrf.csrfTokenRepository(csrfRepository).csrfTokenRequestHandler(csrfHandler))
+                .csrf(csrf -> csrf.csrfTokenRepository(csrfRepository).csrfTokenRequestHandler(csrfHandler)
+                        // 릴리스 공지는 브라우저가 아니라 서버 안의 워크플로가 토큰 헤더로 부른다 (D-97)
+                        .ignoringRequestMatchers(PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.POST, "/api/release-notices")))
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .formLogin(f -> f.disable())
                 .httpBasic(b -> b.disable())
@@ -96,6 +98,8 @@ public class SecurityConfig {
                         .requestMatchers("/admin/login.html", "/api/admin/auth/login").permitAll()
                         .requestMatchers("/admin", "/admin/**", "/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/auth/**", "/api/csrf").permitAll()
+                        // 릴리스 공지: 로그인 대신 서버에만 있는 토큰으로 확인한다 (D-97)
+                        .requestMatchers(HttpMethod.POST, "/api/release-notices").permitAll()
                         // 블로그 목록·검색·블로그 정보는 비회원도 본다. 비공개 여부는 서비스가 다시 확인한다.
                         .requestMatchers(HttpMethod.GET, "/api/blogs", "/api/blogs/*").permitAll()
                         // 글 목록·카테고리·글 상세도 공개 범위 안에서 비회원이 읽는다 (004).

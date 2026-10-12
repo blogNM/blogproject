@@ -7,6 +7,13 @@
 
 ## 2026-10-12
 
+### 릴리스 노트 → 사이트 공지
+
+- **기능** 깃허브에서 버전을 만들면(Actions → "버전 만들기") 깃허브 릴리스가 생기고, 같은 노트가 메인 공지사항에 올라가 회원에게 알림이 감. 같은 버전을 다시 돌려도 공지는 한 번만 (D-97, 사용자 요청)
+- **기능** 릴리스 노트에 캡처 사진을 넣을 수 있음: `img/releases/<버전>/`의 사진을 공지 본문에 허용 (D-97)
+- **설정** `.github/workflows/release.yml`, `.github/scripts/release_notes.py`: 노트는 `docs/releases/<버전>.md`, 없으면 CHANGELOG에서 지난 버전 뒤에 새로 적힌 줄. `deploy.sh`가 서버 `secrets.env`에 `RELEASE_NOTICE_TOKEN`을 한 번 붙임
+- **문서** 첫 버전 노트 [v1.0.0](docs/releases/v1.0.0.md)(캡처 3장), [릴리스-노트.md](docs/05-guides/릴리스-노트.md) 쓰는 법, D-97, spec 004 Clarifications
+
 ### 블로그 공유 미리보기
 
 - **설정** 사이트 주소를 `https://creat.java21.net`으로. 강사가 인증서를 붙여 Nginx 설정에 `listen 443`이 생기면 `deploy.sh`가 https 주소를 쓰고 로그인 쿠키에 Secure를 붙임. 공유 미리보기 주소도 https로

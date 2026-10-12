@@ -1,0 +1,93 @@
+# 버전 만들기: 깃허브 릴리스를 만들고, 같은 내용을 사이트 메인 공지사항에도 올린다 (D-97).
+#
+# 쓰는 법 (둘 중 하나)
+#   1) Actions 탭 → "버전 만들기" → [Run workflow] → 버전 이름(예: v1.1.0)을 적고 실행
+#   2) git tag v1.1.0 && git push origin v1.1.0
+#
+# 릴리스 노트 내용
+#   - docs/releases/<버전>.md 가 있으면 그 글을 쓴다 (첫 줄 "# 제목"이 공지 제목). 캡처 사진은
+#     app/src/main/resources/static/img/releases/<버전>/ 에 넣고 글에서 /img/releases/<버전>/파일.png 로 적는다.
+#     사진은 사이트에 배포된 뒤에야 보이므로, 그 글을 main에 합치고 배포가 끝난 다음에 이 워크플로를 돌린다.
+#   - 없으면 CHANGELOG.md 에서 지난 버전 뒤에 새로 적힌 줄을 모아 쓴다.
+#
+# 시크릿은 배포(deploy.yml)와 같은 SSH_ADDRESS, SSH_PORT, SSH_ID, SSH_PASSWORD 를 쓴다.
+# 공지를 올릴 때 쓰는 값(RELEASE_NOTICE_TOKEN)은 서버의 ~/creat-blog/secrets.env 에만 있다 (deploy.sh가 만듦).
+name: 버전 만들기
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '버전 이름 (예: v1.0.0, 기능이 늘면 v1.1.0, 고치기만 했으면 v1.0.1)'
+        required: true
+        default: 'v1.0.0'
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+# 배포가 돌고 있으면 끝난 뒤에 공지를 올린다 (새 사진이 사이트에 올라간 다음)
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: 릴리스와 사이트 공지
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ github.event.inputs.version || github.ref_name }}
+      APP_PORT: ${{ vars.APP_PORT || secrets.APP_PORT || '8340' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: 버전 이름 확인
+        run: |
+          if ! echo "$TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::버전 이름은 v1.0.0 모양으로 적어 주세요 (지금: $TAG)"
+            exit 1
+          fi
+      - name: 릴리스 노트 만들기
+        run: |
+          python3 .github/scripts/release_notes.py "$TAG" "$GITHUB_SHA" "$GITHUB_REPOSITORY" out
+          { echo "## $(cat out/title.txt)"; echo; cat out/github.md; } >> "$GITHUB_STEP_SUMMARY"
+      - name: 깃허브 릴리스 만들기
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" --title "$(cat out/title.txt)" --notes-file out/github.md
+          else
+            gh release create "$TAG" --target "$GITHUB_SHA" --title "$(cat out/title.txt)" --notes-file out/github.md
+          fi
+      - name: 공지 내용 준비
+        run: |
+          echo "PAYLOAD_B64=$(base64 -w0 out/payload.json)" >> "$GITHUB_ENV"
+          echo "IMAGES=$(cat out/images.txt)" >> "$GITHUB_ENV"
+      - name: 사이트 공지사항에 올리기
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_ADDRESS }}
+          port: ${{ secrets.SSH_PORT }}
+          username: ${{ secrets.SSH_ID }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          envs: APP_PORT,PAYLOAD_B64,IMAGES
+          script: |
+            set -e
+            TOKEN="$(grep '^RELEASE_NOTICE_TOKEN=' "$HOME/creat-blog/secrets.env" 2>/dev/null | cut -d= -f2-)"
+            if [ -z "$TOKEN" ]; then
+              echo "서버에 RELEASE_NOTICE_TOKEN이 없습니다. 배포를 한 번 끝낸 뒤 다시 돌려 주세요." >&2
+              exit 1
+            fi
+            for img in $IMAGES; do
+              if ! curl -fsS -o /dev/null "http://localhost:${APP_PORT}${img}"; then
+                echo "사이트에 사진이 아직 없습니다: ${img} → 그 사진이 들어간 main이 배포된 뒤 다시 돌려 주세요." >&2
+                exit 1
+              fi
+            done
+            echo "$PAYLOAD_B64" | base64 -d | curl -fsS -X POST "http://localhost:${APP_PORT}/api/release-notices" \
+              -H 'Content-Type: application/json' -H "X-Release-Token: ${TOKEN}" --data-binary @-
+            echo
+            echo "사이트 공지사항에 올렸습니다."
