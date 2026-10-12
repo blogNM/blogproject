@@ -68,6 +68,7 @@ public abstract class IntegrationTest {
         jdbc.update("DELETE FROM notifications");
         jdbc.update("DELETE FROM notification_settings");
         jdbc.update("DELETE FROM reports");
+        jdbc.update("DELETE FROM images WHERE admin_uploader_id IS NOT NULL");
         jdbc.update("DELETE FROM admins");
         jdbc.update("DELETE FROM comments WHERE parent_id IS NOT NULL");
         jdbc.update("DELETE FROM comments");
