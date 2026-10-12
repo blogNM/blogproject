@@ -133,6 +133,9 @@ BASE_URL="${APP_BASE_URL:-${SCHEME}://${APP_DOMAIN:-localhost:$APP_PORT}}"
 if [ -z "${COOKIE_SECURE:-}" ]; then
   case "$BASE_URL" in https://*) COOKIE_SECURE=true ;; *) COOKIE_SECURE=false ;; esac
 fi
+# 시크릿에 붙여 넣다 들어간 공백을 뺀다. Gmail 앱 비밀번호는 "abcd efgh ijkl mnop"처럼 띄어 보여 주지만 실제 값은 16자다.
+MAIL_USERNAME="$(printf '%s' "${MAIL_USERNAME:-}" | tr -d '[:space:]')"
+MAIL_PASSWORD="$(printf '%s' "${MAIL_PASSWORD:-}" | tr -d '[:space:]')"
 # 메일 계정이 없으면 메일을 보내지 않고 서버 로그에 찍는다.
 MAIL_MODE=log
 [ -n "${MAIL_USERNAME:-}" ] && [ -n "${MAIL_PASSWORD:-}" ] && MAIL_MODE=smtp

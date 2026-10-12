@@ -43,16 +43,26 @@ public class SignupService {
         this.clock = clock;
     }
 
-    /**
-     * 인증번호 요청. 가입 여부와 관계없이 같은 응답을 준다 (D-28).
-     * 이미 가입된 이메일도 인증 행을 만들어 다시 보내기 1분 제한이 똑같이 걸리게 하고,
-     * 그 행의 해시는 어떤 6자리로도 맞출 수 없는 값으로 둔다.
-     */
+    /** 이메일 중복 확인. 가입 화면에서 바로 알려 준다 (D-99). 하나씩 넣어 보는 것을 막으려고 IP별로 센다. */
+    public boolean isEmailAvailable(String rawEmail, String clientIp) {
+        String email = MemberRules.normalizeEmail(rawEmail);
+        if (!rateLimiter.tryAcquire("email-check:" + clientIp, props.rateLimit().emailCheckPerMinute(),
+                Duration.ofMinutes(1))) {
+            throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "TOO_MANY_REQUESTS",
+                    "요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.");
+        }
+        return !members.existsByEmail(email);
+    }
+
+    /** 인증번호 요청. 이미 가입된 이메일이면 메일을 보내지 않고 바로 알려 준다 (D-99). */
     @Transactional
     public void requestCode(String rawEmail, String clientIp) {
         String email = MemberRules.normalizeEmail(rawEmail);
         LocalDateTime now = LocalDateTime.now(clock);
         AppProperties.Signup cfg = props.signup();
+        if (members.existsByEmail(email)) {
+            throw emailTaken();
+        }
 
         verifications.findFirstByEmailAndPurposeOrderByIdDesc(email, Purpose.SIGNUP).ifPresent(prev -> {
             if (prev.getSentAt().plus(cfg.resendInterval()).isAfter(now)) {
@@ -68,16 +78,15 @@ public class SignupService {
         // 다시 보내면 이전 번호는 무효 (USR-02)
         verifications.deleteAllFor(email, Purpose.SIGNUP);
 
-        boolean registered = members.existsByEmail(email);
         String code = Hashing.sixDigitCode();
-        String codeHash = registered ? hashCode(email, Hashing.randomToken()) : hashCode(email, code);
-        verifications.save(EmailVerification.issue(email, Purpose.SIGNUP, codeHash, now, now.plus(cfg.codeTtl())));
+        verifications.save(EmailVerification.issue(email, Purpose.SIGNUP, hashCode(email, code), now,
+                now.plus(cfg.codeTtl())));
+        mail.sendSignupCode(email, code, cfg.codeTtl().toMinutes());
+    }
 
-        if (registered) {
-            mail.sendAlreadyRegistered(email);
-        } else {
-            mail.sendSignupCode(email, code, cfg.codeTtl().toMinutes());
-        }
+    private static ApiException emailTaken() {
+        return new ApiException(HttpStatus.CONFLICT, "EMAIL_TAKEN",
+                "이미 가입된 이메일입니다. 로그인하거나 비밀번호 찾기를 이용해 주세요.");
     }
 
     /** 인증번호 확인. 10분 만료, 5번 틀리면 무효 (USR-02). */

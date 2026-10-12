@@ -80,6 +80,10 @@ class NoticeTest extends IntegrationTest {
                 {"title":"점검 안내 (바뀜)","content":"일요일로 바뀌었습니다","category":"UPDATE"}""", admin).andExpect(status().isOk());
         getAs("/api/notices/" + id).andExpect(jsonPath("$.title").value("점검 안내 (바뀜)"))
                 .andExpect(jsonPath("$.category").value("UPDATE"));
+        // 공지사항 탭: 카테고리로 거른다 (D-98)
+        getAs("/api/notices/all?category=UPDATE").andExpect(jsonPath("$.total").value(1));
+        getAs("/api/notices/all?category=MAINTENANCE").andExpect(jsonPath("$.total").value(0));
+        getAs("/api/notices/all?category=WRONG").andExpect(status().isBadRequest());
         assertThat(notices("a@example.com")).isEqualTo(1);
 
         sendAs(HttpMethod.DELETE, "/api/admin/notices/" + id, null, admin).andExpect(status().isOk());

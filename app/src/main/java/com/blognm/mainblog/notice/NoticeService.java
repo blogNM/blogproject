@@ -27,8 +27,8 @@ public class NoticeService {
     static final int CONTENT_MAX = 5000;
     static final int PAGE_SIZE = 20;
 
-    /** 공지 카테고리 (D-98). 화면에는 "공지", "업데이트"로 보인다. */
-    public enum Category { NOTICE, UPDATE }
+    /** 공지 카테고리 (D-98). 화면에는 일반·업데이트·수정·점검으로 보인다. */
+    public enum Category { NOTICE, UPDATE, FIX, MAINTENANCE }
     private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("yyyy.MM.dd");
 
     private final NamedParameterJdbcTemplate jdbc;
@@ -45,13 +45,21 @@ public class NoticeService {
 
     @Transactional(readOnly = true)
     public Page list(int page) {
-        Long total = jdbc.queryForObject("SELECT COUNT(*) FROM notices WHERE status = 'NORMAL'", Map.of(), Long.class);
+        return list(page, null);
+    }
+
+    /** category가 있으면 그 카테고리만 (공지사항 화면의 탭, D-98). */
+    @Transactional(readOnly = true)
+    public Page list(int page, Category category) {
+        String where = "status = 'NORMAL'" + (category == null ? "" : " AND category = :category");
+        MapSqlParameterSource params = new MapSqlParameterSource("category", category == null ? null : category.name());
+        Long total = jdbc.queryForObject("SELECT COUNT(*) FROM notices WHERE " + where, params, Long.class);
         long count = total == null ? 0 : total;
         int current = Math.max(page, 1);
         List<Item> items = jdbc.query("""
-                SELECT id, title, category, created_at FROM notices WHERE status = 'NORMAL'
+                SELECT id, title, category, created_at FROM notices WHERE %s
                 ORDER BY created_at DESC, id DESC LIMIT :size OFFSET :offset
-                """, new MapSqlParameterSource("size", PAGE_SIZE).addValue("offset", (current - 1) * PAGE_SIZE),
+                """.formatted(where), params.addValue("size", PAGE_SIZE).addValue("offset", (current - 1) * PAGE_SIZE),
                 (rs, i) -> new Item(rs.getLong("id"), rs.getString("title"), rs.getString("category"),
                         rs.getObject("created_at", LocalDateTime.class).format(DATE)));
         return new Page(items, current, (int) ((count + PAGE_SIZE - 1) / PAGE_SIZE), count);

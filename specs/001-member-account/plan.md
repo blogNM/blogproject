@@ -50,7 +50,7 @@
 ### 가입 (USR-01, USR-02, D-28)
 
 - 인증번호는 `SecureRandom` 6자리, DB에는 `HMAC-SHA256(서버 비밀 키, 용도:이메일:번호)`만 저장.
-- 이미 가입된 이메일도 인증 행을 만들고(어떤 6자리로도 맞출 수 없는 해시) 1분 다시 보내기 제한을 똑같이 걸어, 응답으로 가입 여부를 알 수 없게 함. 메일만 "이미 가입된 이메일" 안내로 감.
+- ~~이미 가입된 이메일도 같은 응답(D-28)~~ → 가입 화면은 [중복 확인] 버튼으로 가입 여부를 알려 주고, 인증번호 요청도 409 `EMAIL_TAKEN` (D-99). 확인은 IP별 1분 20번.
 - 메일은 `@Async`로 보내 응답 시간 차이도 없앰.
 - 인증을 마치면 30분 안에 ②·③단계를 끝내야 함(`SIGNUP_VERIFIED_TTL`). 마지막 요청에서 서버가 인증 완료를 다시 확인함(US1-6).
 
@@ -105,7 +105,8 @@ app/src/test/java/…  # 통합 테스트(SignupTest, LoginTest, SecurityHeaders
 | 메서드·주소 | 설명 | 근거 |
 |---|---|---|
 | `GET /api/csrf` | XSRF-TOKEN 쿠키 발급 | SEC-10 |
-| `POST /api/auth/signup/code` | 인증번호 요청 `{email}` → 항상 같은 문구 | USR-02, D-28 |
+| `GET /api/auth/signup/email-available?email=` | 이메일 중복 확인 → `{available}` | USR-01, D-99 |
+| `POST /api/auth/signup/code` | 인증번호 요청 `{email}`. 이미 가입된 이메일은 409 `EMAIL_TAKEN` | USR-02, D-99 |
 | `POST /api/auth/signup/verify` | 인증번호 확인 `{email, code}` | USR-02 |
 | `GET /api/auth/signup/nickname-available?nickname=` | 닉네임 중복 확인 | USR-01 |
 | `POST /api/auth/signup` | 가입 `{email, password, name, nickname, phone, agreeTerms, agreePrivacy, age14}` | USR-01 |

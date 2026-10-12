@@ -32,8 +32,9 @@ public class NoticeController {
 
     @GetMapping("/api/notices/all")
     @ResponseBody
-    public NoticeService.Page list(@RequestParam(defaultValue = "1") int page) {
-        return notices.list(page);
+    public NoticeService.Page list(@RequestParam(defaultValue = "1") int page,
+            @RequestParam(required = false) NoticeService.Category category) {
+        return notices.list(page, category);
     }
 
     @GetMapping("/api/notices/{id:\\d+}")

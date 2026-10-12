@@ -1,7 +1,7 @@
 // 메인 공지사항 목록과 본문 (BRD-10). /notices, /notices/{id}
 import { ApiError, api } from '../api.js';
 import { el, initLayout, renderNotFound } from '../layout.js';
-import { categoryBadge } from '../notice-category.js';
+import { NOTICE_CATEGORIES, categoryBadge } from '../notice-category.js';
 import { renderPager } from '../pager.js';
 
 await initLayout();
@@ -25,12 +25,33 @@ if (id) {
     }
   }
 } else {
-  let page = Number(new URLSearchParams(location.search).get('page')) || 1;
+  const query = new URLSearchParams(location.search);
+  let page = Number(query.get('page')) || 1;
+  let category = NOTICE_CATEGORIES.some(([value]) => value === query.get('category')) ? query.get('category') : '';
+  const address = () => '/notices?' + new URLSearchParams({ ...(category && { category }), page }).toString();
+
+  // 전체·일반·업데이트·수정·점검 탭 (D-98)
+  const tabs = [['', '전체'], ...NOTICE_CATEGORIES].map(([value, label]) => {
+    const tab = el('button', { type: 'button', class: 'tab', role: 'tab' }, label);
+    tab.addEventListener('click', () => {
+      category = value;
+      page = 1;
+      history.replaceState(null, '', address());
+      load();
+    });
+    return [value, tab];
+  });
+  $('notice-tabs').replaceChildren(...tabs.map(([, tab]) => tab));
+
   const load = async () => {
+    tabs.forEach(([value, tab]) => {
+      tab.classList.toggle('active', value === category);
+      tab.setAttribute('aria-selected', String(value === category));
+    });
     try {
-      const res = await api.get('/api/notices/all?page=' + page);
+      const res = await api.get('/api/notices/all?page=' + page + (category ? '&category=' + category : ''));
       const list = $('notice-list');
-      if (res.items.length === 0) list.replaceChildren(el('li', { class: 'muted' }, '아직 공지가 없어요.'));
+      if (res.items.length === 0) list.replaceChildren(el('li', { class: 'muted' }, category ? '이 카테고리에는 아직 글이 없어요.' : '아직 공지가 없어요.'));
       else {
         list.replaceChildren(...res.items.map((n) => {
           const li = el('li');
@@ -42,7 +63,7 @@ if (id) {
       }
       renderPager($('pager'), res.page, res.totalPages, (p) => {
         page = p;
-        history.replaceState(null, '', '/notices?page=' + p);
+        history.replaceState(null, '', address());
         load();
       });
       $('list-view').hidden = false;

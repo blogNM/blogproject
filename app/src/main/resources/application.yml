@@ -81,6 +81,8 @@ app:
     # IP별 요청 제한 (D-80). 수치는 추천안 #4 기본값, 1차는 서버 메모리에서 셈 (D-83 대기)
     login-per-minute: ${RATE_LOGIN_PER_MINUTE:20}
     mail-per-hour: ${RATE_MAIL_PER_HOUR:10}
+    # 가입 화면 이메일 중복 확인 (D-99)
+    email-check-per-minute: ${RATE_EMAIL_CHECK_PER_MINUTE:20}
   turnstile:
     # Cloudflare Turnstile (D-79). 기본값은 Cloudflare가 제공하는 "항상 통과" 테스트 키
     site-key: ${TURNSTILE_SITE_KEY:1x00000000000000000000AA}
