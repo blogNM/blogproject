@@ -51,7 +51,8 @@ class BlogTest extends IntegrationTest {
         getAs("/api/me/blogs", owner).andExpect(jsonPath("$.owned[0].slug").value("travel-log"));
         mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/blog/travel-log"))
                 .andExpect(status().isOk())
-                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.forwardedUrl("/blog.html"));
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content()
+                        .string(org.hamcrest.Matchers.containsString("/js/pages/blog.js")));
     }
 
     @Test

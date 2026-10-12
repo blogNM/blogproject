@@ -19,7 +19,7 @@
 
 - 백엔드: Spring Boot, Spring Security (보안 헤더, CSRF, 인증·인가), MySQL
 - 로그인: JWT + HttpOnly 쿠키, "로그인 유지" 체크박스
-- 화면: 정적 HTML + JS. 글 상세 페이지의 og 태그만 서버가 채움
+- 화면: 정적 HTML + JS. 글 상세와 블로그 홈의 og 태그만 서버가 채움 (D-96)
 - 에디터: Toast UI Editor (마크다운)
 - 메일: Gmail SMTP, 6자리 인증번호를 Spring에서 직접 발송·검증
 - 검색: MySQL FULLTEXT + ngram
@@ -48,6 +48,6 @@
 
 ## 문서를 고칠 때
 
-- 새 결정은 `docs/03-decisions/`에 기록하고 `D-번호`를 이어서 붙입니다 (현재 마지막 번호는 D-95, D-83은 IP별 요청 제한 결정용으로 비워 둠). 관련 spec의 Clarifications에도 한 줄 남깁니다.
+- 새 결정은 `docs/03-decisions/`에 기록하고 `D-번호`를 이어서 붙입니다 (현재 마지막 번호는 D-96, D-83은 IP별 요청 제한 결정용으로 비워 둠). 관련 spec의 Clarifications에도 한 줄 남깁니다.
 - "꼭 지킬 규칙"을 고치면 헌법(`.specify/memory/constitution.md`)도 같이 고칩니다.
 - 문서나 spec을 추가하면 `docs/README.md`와 `specs/README.md`의 목록도 함께 고칩니다.
