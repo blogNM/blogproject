@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.blognm.mainblog.blog.Blog;
 import com.blognm.mainblog.blog.BlogMembership;
 import com.blognm.mainblog.blog.BlogMembershipRepository;
+import com.blognm.mainblog.blog.BlogOgImage;
 import com.blognm.mainblog.blog.BlogRepository;
 import com.blognm.mainblog.blog.BlogService;
 import com.blognm.mainblog.blog.Tag;
@@ -49,6 +50,7 @@ public class PostService {
     private final CategoryRepository categories;
     private final BlogRepository blogs;
     private final BlogService blogService;
+    private final BlogOgImage ogImage;
     private final BlogMembershipRepository memberships;
     private final TagRepository tags;
     private final ImageRepository images;
@@ -62,7 +64,8 @@ public class PostService {
     public PostService(PostRepository posts, CategoryRepository categories, BlogRepository blogs,
             BlogService blogService, BlogMembershipRepository memberships, TagRepository tags, ImageRepository images,
             MemberRepository members, MarkdownRenderer markdown, NotificationWriter notifications,
-            UploadProperties uploadProps, LinkPreviewService linkPreviews, Clock clock) {
+            UploadProperties uploadProps, LinkPreviewService linkPreviews, BlogOgImage ogImage, Clock clock) {
+        this.ogImage = ogImage;
         this.linkPreviews = linkPreviews;
         this.posts = posts;
         this.categories = categories;
@@ -188,7 +191,7 @@ public class PostService {
             return Optional.empty();
         }
         String image = images.findFirstByPostIdOrderBySortOrderAscIdAsc(post.getId()).map(Image::url)
-                .orElse(coverImage(blog).orElse(null));
+                .orElseGet(() -> ogImage.path(blog, key));
         return Optional.of(new OgInfo(post.getTitle(), blog.getName(), markdown.toPlainText(post.getContentMd(), 100),
                 image));
     }
@@ -253,10 +256,6 @@ public class PostService {
         for (int i = 0; i < ordered.size(); i++) {
             ordered.get(i).attachTo(post.getId(), i);
         }
-    }
-
-    private Optional<String> coverImage(Blog blog) {
-        return blogs.coverImageName(blog.getId()).map(name -> "/uploads/" + name);
     }
 
     private Optional<BlogMembership> activeMembership(Blog blog, long memberId) {

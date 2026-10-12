@@ -5,6 +5,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+
+import javax.imageio.ImageIO;
+
 import jakarta.servlet.http.Cookie;
 
 import org.hamcrest.Matchers;
@@ -46,10 +51,13 @@ class OgTagTest extends IntegrationTest {
         String html = mvc.perform(MockMvcRequestBuilders.get("/blog/food/posts/" + id))
                 .andExpect(status().isOk()).andExpect(header().string("Content-Type", Matchers.containsString("text/html")))
                 .andReturn().getResponse().getContentAsString();
-        assertThat(html).contains("<meta property=\"og:title\" content=\"&lt;script&gt;&quot;제목&quot; - 맛집 &quot;블로그&quot;\">");
+        assertThat(html).contains("<meta property=\"og:title\" content=\"&lt;script&gt;&quot;제목&quot;\">");
         assertThat(html).contains("<meta property=\"og:description\" content=\"국밥 맛집 이야기\">");
         assertThat(html).contains("og:url\" content=\"http://localhost:8080/blog/food/posts/" + id + "\"");
         assertThat(html).doesNotContain("<script>\"");
+        // 글에 사진이 없고 블로그에 머리 사진도 없으면 블로그 머리 배경 그림을 쓴다 (D-100)
+        assertThat(html).contains("<meta property=\"og:image\" content=\"http://localhost:8080/blog/food/og-image.png\">");
+        assertThat(html).contains("<meta name=\"twitter:card\" content=\"summary_large_image\">");
     }
 
     @Test
@@ -62,16 +70,29 @@ class OgTagTest extends IntegrationTest {
     }
 
     @Test
-    @DisplayName("블로그 주소는 서버가 블로그 이름·소개와 대표 이미지(없으면 사이트 로고)를 og 태그로 채운다 (D-96)")
+    @DisplayName("블로그 주소는 서버가 블로그 이름·소개와 머리 사진(없으면 머리 배경 그림)을 og 태그로 채운다 (D-96, D-100)")
     void blogOgTags() throws Exception {
         String html = mvc.perform(MockMvcRequestBuilders.get("/blog/food"))
                 .andExpect(status().isOk()).andExpect(header().string("Content-Type", Matchers.containsString("text/html")))
                 .andReturn().getResponse().getContentAsString();
         assertThat(html).contains("<meta property=\"og:title\" content=\"맛집 &quot;블로그&quot;\">");
         assertThat(html).contains("<meta property=\"og:description\" content=\"맛집 &quot;블로그&quot; 블로그입니다.\">");
-        assertThat(html).contains("<meta property=\"og:image\" content=\"http://localhost:8080/img/og-default.png\">");
+        assertThat(html).contains("<meta property=\"og:image\" content=\"http://localhost:8080/blog/food/og-image.png\">");
         assertThat(html).contains("og:url\" content=\"http://localhost:8080/blog/food\"");
         assertThat(html).contains("/js/pages/blog.js");
+    }
+
+    @Test
+    @DisplayName("머리 배경 그림은 1200×630 PNG. 비회원이 볼 수 없는 블로그는 404 (D-100)")
+    void blogOgImage() throws Exception {
+        byte[] png = mvc.perform(MockMvcRequestBuilders.get("/blog/food/og-image.png"))
+                .andExpect(status().isOk()).andExpect(header().string("Content-Type", "image/png"))
+                .andReturn().getResponse().getContentAsByteArray();
+        BufferedImage image = ImageIO.read(new ByteArrayInputStream(png));
+        assertThat(image.getWidth()).isEqualTo(1200);
+        assertThat(image.getHeight()).isEqualTo(630);
+        mvc.perform(MockMvcRequestBuilders.get("/blog/secret/og-image.png")).andExpect(status().isNotFound());
+        mvc.perform(MockMvcRequestBuilders.get("/blog/nope/og-image.png")).andExpect(status().isNotFound());
     }
 
     @Test
