@@ -10,10 +10,21 @@ jobs:
     runs-on: ubuntu-latest
     env:
       APP_PORT: ${{ vars.APP_PORT || secrets.APP_PORT || '8340' }}
+      APP_DOMAIN: ${{ vars.APP_DOMAIN || 'creat.java21.net' }}
     steps:
       - name: 밖에서 사이트 열어 보기
         continue-on-error: true
         run: curl -sS -m 15 -o /dev/null -w "HTTP %{http_code}\n" "http://${{ secrets.SSH_ADDRESS }}:${APP_PORT}/"
+
+      - name: 밖에서 도메인으로 열어 보기
+        continue-on-error: true
+        env:
+          APP_DOMAIN: ${{ vars.APP_DOMAIN || 'creat.java21.net' }}
+        run: |
+          echo "DNS: $(getent hosts "$APP_DOMAIN" || echo '등록 안 됨')"
+          for u in "http://$APP_DOMAIN/" "https://$APP_DOMAIN/"; do
+            echo "$u → $(curl -sS -m 15 -o /dev/null -w 'HTTP %{http_code} %{redirect_url}' "$u" 2>&1)"
+          done
 
       - name: 서버 안에서 보기
         uses: appleboy/ssh-action@v1.2.0
@@ -22,7 +33,7 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           username: ${{ secrets.SSH_ID }}
           password: ${{ secrets.SSH_PASSWORD }}
-          envs: APP_PORT
+          envs: APP_PORT,APP_DOMAIN
           script: |
             echo "== 컨테이너"; docker ps -a --filter name=creat-blog --format '{{.Names}} {{.Status}} {{.Image}}'
             echo "== 이 포트에서 듣는 프로그램"; (ss -ltn 2>/dev/null || netstat -ltn 2>/dev/null) | grep ":${APP_PORT}" || echo "없음"
@@ -32,4 +43,7 @@ jobs:
             echo "== 방화벽 (읽기만)"; (sudo -n ufw status 2>/dev/null || ufw status 2>/dev/null || echo "ufw 확인 못 함") | head -20
             (sudo -n iptables -S INPUT 2>/dev/null || echo "iptables 확인 못 함") | head -20
             echo "== 다른 사람 앱이 듣는 포트 (참고)"; (ss -ltn 2>/dev/null || netstat -ltn) | awk '{print $4}' | grep -oE ':[0-9]+$' | sort -u | tr '\n' ' '; echo
+            echo "== 서버 Nginx에 도메인으로 물어보기"; curl -sS -m 10 -o /dev/null -w "HTTP %{http_code}\n" -H "Host: ${APP_DOMAIN}" http://127.0.0.1/ || true
+            echo "== Nginx 설정 파일"; ls -l ~/nginx/ 2>&1; ls ~/nginx/logs/ 2>&1 | head
+            tail -n 5 ~/nginx/logs/${APP_DOMAIN}.error.log 2>/dev/null || true
             echo "== 마지막 로그"; docker logs --tail 40 creat-blog 2>&1 | cut -c1-300
