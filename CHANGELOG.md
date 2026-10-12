@@ -10,7 +10,7 @@
 ### 배포 고침
 
 - **설정** 사이트 주소를 `http://creat.java21.net`으로 (사용자 요청). 학교 서버는 포트를 밖에 열지 않고 공용 Nginx가 도메인으로 받아 넘기므로, `deploy.sh`가 `~/nginx/creat.java21.net.conf`를 만들고 앱은 `X-Forwarded-*` 헤더로 손님 IP를 읽음. 도메인은 `APP_DOMAIN` 변수로 바꿀 수 있음
-- **설정** `.github/workflows/server-status.yml`: Actions에서 손으로 돌리면 밖에서 사이트가 열리는지, 서버 안 컨테이너 상태·포트·마지막 로그를 보여 줌. 아무것도 바꾸지 않음. 서버에서 바깥 주소로 열어 보기, 방화벽 규칙, 듣는 포트 목록도 보여 줌
+- **설정** `.github/workflows/server-status.yml`: Actions에서 손으로 돌리면 밖에서 사이트가 열리는지, 서버 안 컨테이너 상태·포트·마지막 로그를 보여 줌. 아무것도 바꾸지 않음. 서버에서 바깥 주소로 열어 보기, 방화벽 규칙, 듣는 포트 목록도 보여 줌. 도메인(DNS·http·https)과 서버 Nginx가 도메인을 내 앱으로 넘기는지, Nginx 로그도 확인
 - **설정** 손으로 돌리는 배포(Run workflow)에 `reset_db` 칸 추가. `reset`이라고 적으면 앱을 띄우기 전에 DB의 테이블을 모두 지움(되돌릴 수 없음). 학교 DB에 CrowFoot ERD로 만든 테이블이 있어 앱(Flyway)이 뜨지 않던 문제 (사용자 요청)
 - **설정** `deploy.sh`: 컨테이너가 서버 네트워크를 그대로 쓰게 함(`--network host`, 앱은 `APP_PORT`로 바로 열림). 학교 서버에서 도커 내부망으로는 DB에 접속되지 않아 앱이 뜨지 않던 문제. 띄우기 전에 서버에서 DB 포트가 열리는지도 확인해 알려 줌
 
