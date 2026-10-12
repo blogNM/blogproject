@@ -48,6 +48,7 @@ public class SecurityConfig {
 
     static final RequestMatcher EDITOR_PAGES = new OrRequestMatcher(
             PathPatternRequestMatcher.withDefaults().matcher("/blog/*/write"),
+            PathPatternRequestMatcher.withDefaults().matcher("/write"),
             PathPatternRequestMatcher.withDefaults().matcher("/blog/*/posts/*/edit"),
             PathPatternRequestMatcher.withDefaults().matcher("/post-edit.html"));
 

@@ -11,6 +11,10 @@ if (me) {
   $('welcome').textContent = '블로그를 만들고 테마 틀로 꾸며 보세요. 팔로우·구독한 글은 피드에서 모아 볼 수 있어요.';
   $('cta-main').textContent = '블로그 만들기';
   $('cta-main').href = '/blog-new.html';
+  // 만들었거나 참여한 블로그가 있으면 [글 작성하기]. 어느 블로그에 쓸지는 글쓰기 화면에서 고른다 (D-101)
+  api.get('/api/me/blogs').then((mine) => {
+    $('cta-write').hidden = mine.owned.length + mine.joined.length === 0;
+  }).catch(() => {});
 }
 
 // ----- 피드: 최신·인기·팔로우·구독 (BRD-09, D-65). 볼 때마다 새로 모아 온다 (D-73) -----
