@@ -35,7 +35,7 @@ class ReleaseNoticeTest extends IntegrationTest {
     }
 
     @Test
-    @DisplayName("토큰이 맞으면 CSRF 없이 공지가 올라가고 회원에게 알림이 가며, 같은 버전을 다시 보내면 새로 쓰지 않는다")
+    @DisplayName("토큰이 맞으면 CSRF 없이 공지가 올라가고 회원에게 알림이 가며, 같은 버전을 다시 보내면 새로 쓰지 않고 본문만 바꾼다")
     void publishOnce() throws Exception {
         member("a@example.com", "회원에이");
         String body = """
@@ -44,7 +44,8 @@ class ReleaseNoticeTest extends IntegrationTest {
         publish(null, body).andExpect(status().isForbidden());
         publish("wrong", body).andExpect(status().isForbidden());
 
-        publish("test-release-token", body).andExpect(status().isOk());
+        publish("test-release-token", """
+                {"title":"Creat_ v1.0.0 업데이트 소식","content":"처음 노트"}""").andExpect(status().isOk());
         publish("test-release-token", body).andExpect(status().isOk());
 
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM notices", Integer.class)).isEqualTo(1);

@@ -21,7 +21,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import com.blognm.mainblog.support.IntegrationTest;
 import com.jayway.jsonpath.JsonPath;
 
-/** 글 상세의 og 태그 (D-66, D-59), 글쓰기 화면 주소 */
+/** 글 상세·블로그 홈·사이트 첫 화면의 og 태그 (D-66, D-59, D-96, D-100), 글쓰기 화면 주소 */
 class OgTagTest extends IntegrationTest {
 
     private Cookie[] owner;
@@ -93,6 +93,18 @@ class OgTagTest extends IntegrationTest {
         assertThat(image.getHeight()).isEqualTo(630);
         mvc.perform(MockMvcRequestBuilders.get("/blog/secret/og-image.png")).andExpect(status().isNotFound());
         mvc.perform(MockMvcRequestBuilders.get("/blog/nope/og-image.png")).andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("사이트 첫 화면은 사이트 이름과 로고·사이트 색 그림을 og 태그로 채운다 (D-100)")
+    void siteOgTags() throws Exception {
+        String html = mvc.perform(MockMvcRequestBuilders.get("/"))
+                .andExpect(status().isOk()).andExpect(header().string("Content-Type", Matchers.containsString("text/html")))
+                .andReturn().getResponse().getContentAsString();
+        assertThat(html).contains("<meta property=\"og:title\" content=\"Creat_ - 함께 만드는 블로그\">");
+        assertThat(html).contains("<meta property=\"og:image\" content=\"http://localhost:8080/img/og-default.png\">");
+        assertThat(html).contains("og:url\" content=\"http://localhost:8080/\"");
+        assertThat(html).contains("/js/pages/index.js").doesNotContain("<!--OG-->");
     }
 
     @Test
