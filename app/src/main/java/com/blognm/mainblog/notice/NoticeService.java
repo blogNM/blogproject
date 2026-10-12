@@ -91,6 +91,25 @@ public class NoticeService {
         return id;
     }
 
+    /**
+     * 깃허브에서 버전(릴리스)을 만들면 같은 내용을 공지로 올린다 (D-97). 작성자는 가장 먼저 만든 관리자.
+     * 같은 제목의 공지가 이미 있으면 새로 쓰지 않고 그 번호를 돌려준다 (워크플로를 다시 돌려도 알림이 두 번 가지 않게).
+     */
+    @Transactional
+    public long publishRelease(String rawTitle, String rawContent) {
+        String title = title(rawTitle);
+        List<Long> existing = jdbc.queryForList("SELECT id FROM notices WHERE title = :title AND status = 'NORMAL'",
+                Map.of("title", title), Long.class);
+        if (!existing.isEmpty()) {
+            return existing.get(0);
+        }
+        Long adminId = jdbc.queryForObject("SELECT MIN(id) FROM admins", Map.of(), Long.class);
+        if (adminId == null) {
+            throw new ApiException(HttpStatus.CONFLICT, "NO_ADMIN", "관리자 계정이 없어 공지를 쓸 수 없습니다.");
+        }
+        return create(adminId, title, rawContent);
+    }
+
     @Transactional
     public void update(long adminId, long id, String rawTitle, String rawContent) {
         String title = title(rawTitle);

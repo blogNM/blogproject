@@ -12,6 +12,7 @@
 # 서버 폴더 (APP_HOME, 기본 ~/creat-blog)
 #   data/uploads   올린 사진. 컨테이너를 바꿔도 남는다 (백업 대상)
 #   secrets.env    JWT_SECRET·CODE_HASH_SECRET. 처음 한 번 만들고 계속 쓴다 (바꾸면 모두 로그아웃)
+#                  RELEASE_NOTICE_TOKEN: 릴리스 워크플로가 공지를 올릴 때 쓰는 값 (D-97). 없으면 한 번 붙인다
 #   runtime.env    이번 배포의 DB·메일 설정. 배포할 때마다 새로 쓴다
 set -euo pipefail
 
@@ -41,6 +42,10 @@ if [ ! -s "$APP_HOME/secrets.env" ]; then
     echo "JWT_SECRET=$(head -c 48 /dev/urandom | base64 | tr -d '\n/+=')"
     echo "CODE_HASH_SECRET=$(head -c 32 /dev/urandom | base64 | tr -d '\n/+=')"
   } > "$APP_HOME/secrets.env"
+fi
+# 릴리스 공지용 값 (D-97). 예전에 만든 secrets.env에는 없으므로 따로 붙인다. release.yml이 서버에서 이 파일을 읽어 쓴다.
+if ! grep -q '^RELEASE_NOTICE_TOKEN=' "$APP_HOME/secrets.env"; then
+  echo "RELEASE_NOTICE_TOKEN=$(head -c 32 /dev/urandom | base64 | tr -d '\n/+=')" >> "$APP_HOME/secrets.env"
 fi
 
 # 컨테이너는 서버의 네트워크를 그대로 쓴다 (--network host). 학교 서버처럼 도커 내부망에서

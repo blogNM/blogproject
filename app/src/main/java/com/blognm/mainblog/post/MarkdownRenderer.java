@@ -25,7 +25,7 @@ public class MarkdownRenderer {
     private static final List<Extension> EXTENSIONS = List.of(TablesExtension.create(),
             StrikethroughExtension.create(), AutolinkExtension.create());
 
-    /** 링크는 http·https·mailto. 이미지는 이 사이트에 올린 사진(/uploads/...)만 (CSP img-src 'self'). */
+    /** 링크는 http·https·mailto. 이미지는 이 사이트에 올린 사진(/uploads/...)과 릴리스 캡처(/img/releases/..., D-97)만 (CSP img-src 'self'). */
     private static final Safelist SAFELIST = Safelist.relaxed()
             .addTags("del", "s", "hr")
             .addAttributes("span", "class")
@@ -74,6 +74,6 @@ public class MarkdownRenderer {
     }
 
     private static boolean isAllowedImage(String src) {
-        return src.startsWith("/uploads/");
+        return src.startsWith("/uploads/") || src.startsWith("/img/releases/");
     }
 }
