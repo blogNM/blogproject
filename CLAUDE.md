@@ -19,7 +19,7 @@
 
 - 백엔드: Spring Boot, Spring Security (보안 헤더, CSRF, 인증·인가), MySQL
 - 로그인: JWT + HttpOnly 쿠키, "로그인 유지" 체크박스
-- 화면: 정적 HTML + JS. 글 상세와 블로그 홈의 og 태그만 서버가 채움 (D-96)
+- 화면: 정적 HTML + JS. 글 상세·블로그 홈·사이트 첫 화면의 og 태그만 서버가 채움 (D-96, D-100)
 - 에디터: Toast UI Editor (마크다운)
 - 메일: Gmail SMTP, 6자리 인증번호를 Spring에서 직접 발송·검증
 - 검색: MySQL FULLTEXT + ngram

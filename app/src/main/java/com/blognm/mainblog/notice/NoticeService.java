@@ -107,7 +107,8 @@ public class NoticeService {
 
     /**
      * 깃허브에서 버전(릴리스)을 만들면 같은 내용을 공지로 올린다 (D-97). 작성자는 가장 먼저 만든 관리자.
-     * 같은 제목의 공지가 이미 있으면 새로 쓰지 않고 그 번호를 돌려준다 (워크플로를 다시 돌려도 알림이 두 번 가지 않게).
+     * 같은 제목의 공지가 이미 있으면 새로 쓰지 않고 본문만 바꾼 뒤 그 번호를 돌려준다.
+     * 워크플로를 다시 돌려도 알림이 두 번 가지 않고, 노트에 더한 내용은 공지에도 반영된다.
      */
     @Transactional
     public long publishRelease(String rawTitle, String rawContent) {
@@ -115,7 +116,11 @@ public class NoticeService {
         List<Long> existing = jdbc.queryForList("SELECT id FROM notices WHERE title = :title AND status = 'NORMAL'",
                 Map.of("title", title), Long.class);
         if (!existing.isEmpty()) {
-            return existing.get(0);
+            long id = existing.get(0);
+            jdbc.update("UPDATE notices SET content_md = :content, updated_at = :now WHERE id = :id",
+                    new MapSqlParameterSource("content", content(rawContent))
+                            .addValue("now", LocalDateTime.now(clock)).addValue("id", id));
+            return id;
         }
         Long adminId = jdbc.queryForObject("SELECT MIN(id) FROM admins", Map.of(), Long.class);
         if (adminId == null) {
