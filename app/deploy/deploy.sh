@@ -68,7 +68,8 @@ if [ "${RESET_DB:-}" = "reset" ]; then
 fi
 
 # 학교 서버는 포트를 밖에 바로 열지 않는다. 공용 Nginx가 도메인으로 받은 요청을 내 포트로 넘긴다.
-# APP_DOMAIN이 있으면 ~/nginx/<도메인>.conf 를 만든다. 파일이 새로 생기거나 바뀌면 강사에게 적용을 요청해야 반영된다.
+# APP_DOMAIN이 있으면 ~/nginx/<도메인>.conf 를 만든다. 파일이 새로 생기면 강사에게 적용을 요청해야 반영된다.
+# 이미 있는 파일은 덮어쓰지 않는다 (배포할 때마다 강사에게 다시 부탁하지 않도록).
 if [ -n "${APP_DOMAIN:-}" ]; then
   NGINX_CONF="$HOME/nginx/${APP_DOMAIN}.conf"
   # 로그 폴더(~/nginx/logs)는 학교가 만들어 줄 때만 있다. 없는 폴더를 적으면 Nginx가 설정을 읽지 못하므로 그때는 로그 줄을 뺀다.
@@ -107,6 +108,9 @@ NGINX
     echo "경고: $HOME/nginx 폴더가 없어 Nginx 설정을 만들지 못했습니다." >&2
   elif [ -f "$NGINX_CONF" ] && [ "$(cat "$NGINX_CONF")" = "$NEW_CONF" ]; then
     echo "Nginx 설정은 그대로입니다: $NGINX_CONF"
+  elif [ -f "$NGINX_CONF" ]; then
+    # 이미 적용된 파일을 바꾸면 강사가 다시 적용해야 하므로, 있는 파일은 건드리지 않는다. 새로 만들려면 파일을 지우고 배포한다.
+    echo "Nginx 설정 파일이 이미 있어 그대로 둡니다: $NGINX_CONF (새로 만들려면 지우고 다시 배포)"
   else
     printf '%s\n' "$NEW_CONF" > "$NGINX_CONF"
     echo "Nginx 설정을 만들었습니다: $NGINX_CONF  → 강사에게 파일 이름(${APP_DOMAIN}.conf)을 알려 적용을 요청하세요."
