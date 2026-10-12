@@ -40,7 +40,7 @@
 | `03-decisions/` | 기술 결정 기록 (D-번호) | D-01~81은 위 PDF의 8장. [D-82 Spec Kit 도입](03-decisions/D-82-spec-kit-도입.md)부터 여기에 한 건씩 기록 (지금 D-82, D-84~D-97) |
 | `04-design/` | 화면 설계, ERD, API 명세 | [ERD.md](04-design/ERD.md) 전체 DB 설계 초안. 기능별 data-model·contracts는 `specs/00N-*/`에서 `/speckit-plan`으로 만듦 |
 | `05-guides/` | 개발 환경, 코드 컨벤션, 배포 방법 | [로컬-실행.md](05-guides/로컬-실행.md) 내 컴퓨터에서 실행·테스트, 단계별 직접 확인 목록. [테스트-데이터.md](05-guides/테스트-데이터.md) 테스트 계정 넣기. [사진-출처.md](05-guides/사진-출처.md) 테스트 사진 출처. [배포-계획.md](05-guides/배포-계획.md) 진짜 홈페이지로 열 때. [도커-배포.md](05-guides/도커-배포.md) GitHub Actions로 도커 이미지를 만들어 서버에 올리기. [릴리스-노트.md](05-guides/릴리스-노트.md) 버전을 만들어 깃허브 릴리스와 사이트 공지에 올리기 |
-| `releases/` | 버전별 릴리스 노트 (사이트 공지에도 올라감, D-97) | [v1.0.0](releases/v1.0.0.md) 첫 버전 |
+| `releases/` | 버전별 릴리스 노트 (사이트 공지에도 올라감, D-97) | [v1.0.0](releases/v1.0.0.md) 첫 버전, [v1.0.1](releases/v1.0.1.md) 가입 화면 이메일 안내 |
 | `archive/` | 지난 버전, "복사본" 파일 | 아직 없음 |
 
 ## 요구사항 ID 규칙
