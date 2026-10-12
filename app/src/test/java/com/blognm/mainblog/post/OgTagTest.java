@@ -62,6 +62,28 @@ class OgTagTest extends IntegrationTest {
     }
 
     @Test
+    @DisplayName("블로그 주소는 서버가 블로그 이름·소개와 대표 이미지(없으면 사이트 로고)를 og 태그로 채운다 (D-96)")
+    void blogOgTags() throws Exception {
+        String html = mvc.perform(MockMvcRequestBuilders.get("/blog/food"))
+                .andExpect(status().isOk()).andExpect(header().string("Content-Type", Matchers.containsString("text/html")))
+                .andReturn().getResponse().getContentAsString();
+        assertThat(html).contains("<meta property=\"og:title\" content=\"맛집 &quot;블로그&quot;\">");
+        assertThat(html).contains("<meta property=\"og:description\" content=\"맛집 &quot;블로그&quot; 블로그입니다.\">");
+        assertThat(html).contains("<meta property=\"og:image\" content=\"http://localhost:8080/img/og-default.png\">");
+        assertThat(html).contains("og:url\" content=\"http://localhost:8080/blog/food\"");
+        assertThat(html).contains("/js/pages/blog.js");
+    }
+
+    @Test
+    @DisplayName("비회원이 볼 수 없는 블로그는 og 태그를 채우지 않는다")
+    void privateBlogNoOg() throws Exception {
+        String html = mvc.perform(MockMvcRequestBuilders.get("/blog/secret"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertThat(html).doesNotContain("og:title").doesNotContain("비밀");
+        mvc.perform(MockMvcRequestBuilders.get("/blog/nope")).andExpect(status().isOk());
+    }
+
+    @Test
     @DisplayName("글쓰기·수정 화면 주소는 글쓰기 화면을 보여준다. 이 화면만 인라인 style을 허용한다")
     void editorPages() throws Exception {
         mvc.perform(MockMvcRequestBuilders.get("/blog/food/write")).andExpect(forwardedUrl("/post-edit.html"))
