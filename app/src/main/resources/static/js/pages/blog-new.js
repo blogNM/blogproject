@@ -22,12 +22,20 @@ $('theme-cards').replaceChildren(...Object.entries(THEMES).map(([value, info]) =
   const input = el('input', { type: 'radio', name: 'theme', value });
   input.checked = value === 'ODYSSEY';
   // 틀을 바꾸면 그 틀의 기본 색을 권한다. 만들기 전에는 언제든 다른 색으로 바꿀 수 있다.
-  input.addEventListener('change', () => setAccent(info.accent));
+  input.addEventListener('change', () => {
+    setAccent(info.accent);
+    showSummary(info);
+  });
+  // 한눈에 고르도록 정사각형 칸에는 그림·이름·태그만 두고, 설명은 아래 한 줄에 보여 준다.
+  label.title = info.summary;
   label.append(input, el('img', { src: `/img/themes/${value.toLowerCase()}.svg`, alt: '', width: '240', height: '160' }),
-    el('strong', {}, info.name), el('span', { class: 'muted' }, info.summary),
-    el('span', { class: 'muted' }, info.tags.map((x) => '#' + x).join(' ')));
+    el('strong', {}, info.name), el('span', { class: 'muted' }, info.tags.map((x) => '#' + x).join(' ')));
   return label;
 }));
+function showSummary(info) {
+  $('theme-summary').textContent = `${info.name}: ${info.summary}`;
+}
+showSummary(THEMES.ODYSSEY);
 $('swatches').replaceChildren(...SWATCHES.map((c) => {
   const b = el('button', { type: 'button', class: 'swatch', 'data-color': c, 'aria-label': '색 ' + c, 'aria-pressed': 'false' });
   b.style.setProperty('background', c);
