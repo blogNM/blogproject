@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 150" role="img" aria-label="화분에서 자라는 보라색 새싹">
+<title>화분에서 자라는 보라색 새싹</title>
+<defs>
+  <linearGradient id="tube" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5720C3"/><stop offset=".55" stop-color="#7C0CB4"/><stop offset="1" stop-color="#925B8F"/></linearGradient>
+  <linearGradient id="peach" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F2D3C0"/><stop offset="1" stop-color="#DFB79F"/></linearGradient>
+  <linearGradient id="violet" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8A5BE0"/><stop offset="1" stop-color="#5720C3"/></linearGradient>
+  <radialGradient id="ball" cx=".35" cy=".3" r=".75"><stop offset="0" stop-color="#F7E3D6"/><stop offset=".6" stop-color="#C39496"/><stop offset="1" stop-color="#925B8F"/></radialGradient>
+</defs>
+<ellipse cx="80" cy="140" rx="44" ry="7" fill="#39385B" opacity=".08"/>
+<g id="sprout">
+  <path d="M80,92 C78,72 84,56 80,40" fill="none" stroke="#5720C3" stroke-width="5" stroke-linecap="round"/>
+  <path d="M80,74 C50,70 38,48 44,42 C62,42 76,56 80,74 Z" fill="url(#violet)"/>
+  <path d="M81,58 C110,56 124,32 118,26 C96,26 84,40 81,58 Z" fill="url(#tube)"/>
+  <circle cx="80" cy="36" r="7" fill="url(#ball)"/>
+</g>
+<ellipse cx="80" cy="134" rx="30" ry="9" fill="#D4A88E"/>
+<path d="M50,92 L56,132 A24,8 0 0 0 104,132 L110,92 Z" fill="url(#peach)"/>
+<ellipse cx="80" cy="92" rx="30" ry="10" fill="#F5DCCB"/>
+<ellipse cx="80" cy="93" rx="24" ry="7" fill="#7A4A3A"/>
+<path d="M30,40 Q31.4,46.6 38,48 Q31.4,49.4 30,56 Q28.6,49.4 22,48 Q28.6,46.6 30,40 Z" fill="#DFB79F"/>
+<path d="M136,70 Q137,74.8 142,76 Q137,77.2 136,82 Q135,77.2 130,76 Q135,74.8 136,70 Z" fill="#C39496"/>
+</svg>

@@ -806,3 +806,4 @@ a.feature:hover .feature-more span, a.feature:focus-visible .feature-more span {
 @keyframes art-sway { from { transform: rotate(-4deg); } to { transform: rotate(4deg); } }
 @keyframes art-drip { 0% { opacity: 0; transform: translateY(-8px); } 30% { opacity: 0.8; } 100% { opacity: 0; transform: translateY(16px); } }
 @media (prefers-reduced-motion: reduce) { .art, .art * { animation: none !important; } }
+.notice-empty .empty-art { display: block; margin: 0 auto 8px; }

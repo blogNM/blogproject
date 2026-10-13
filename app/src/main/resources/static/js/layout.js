@@ -18,6 +18,16 @@ export function el(tag, attrs = {}, text) {
   return node;
 }
 
+/**
+ * 움직이는 그림(/img의 정적 SVG). 동작 줄이기를 켠 사람에게는 멈춘 그림을 보여 준다 (D-105).
+ */
+export function motionImage(src, stillSrc, attrs = {}) {
+  const picture = el('picture');
+  picture.append(el('source', { srcset: stillSrc, media: '(prefers-reduced-motion: reduce)' }),
+    el('img', { src, alt: '', ...attrs }));
+  return picture;
+}
+
 /** 사이트 이름 Creat_ 워드마크. 밑줄만 복숭아색으로 깜빡인다. */
 export function wordmark(light = false) {
   const a = el('a', { href: '/', class: light ? 'wordmark light' : 'wordmark', 'aria-label': 'Creat_ 메인으로' });
@@ -108,7 +118,7 @@ export function toast(message) {
 export function renderNotFound(message) {
   const main = document.querySelector('main');
   const page = el('section', { class: 'error-page' });
-  page.append(el('img', { src: '/img/lost.svg', alt: '', width: '180', height: '160' }),
+  page.append(motionImage('/img/lost.svg', '/img/lost-still.svg', { width: '180', height: '160' }),
     el('p', { class: 'code' }, '404'),
     el('h1', {}, '앗, 길이 막혔어요!'),
     el('p', {}, message || '찾는 페이지가 없거나 볼 수 없는 페이지예요.'));

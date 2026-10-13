@@ -4,6 +4,11 @@ import { feedCard, renderPager } from '../feed-card.js';
 import { el, initLayout } from '../layout.js';
 import { categoryBadge } from '../notice-category.js';
 
+// 첫 화면 그림: 들어오거나 새로 고칠 때마다 블록 쌓기(a)와 종이비행기(b) 중 하나 (D-105)
+const arts = document.querySelectorAll('.landing-art[data-art]');
+const shown = arts[Math.floor(Math.random() * arts.length)];
+arts.forEach((art) => art.toggleAttribute('hidden', art !== shown));
+
 const $ = (id) => document.getElementById(id);
 const me = await initLayout();
 if (me) {
