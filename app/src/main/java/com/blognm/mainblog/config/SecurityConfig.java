@@ -44,7 +44,8 @@ public class SecurityConfig {
     static final String CSP = csp("'self'");
 
     /**
-     * 글쓰기 화면만 인라인 style을 허용한다. Toast UI Editor가 style 속성으로 화면을 그리기 때문이다.
+     * 글쓰기 화면과 관리자 화면(공지 쓰기, D-106)만 인라인 style을 허용한다. Toast UI Editor가 style 속성으로 화면을 그리기 때문이다.
+     * 관리자 화면은 탭을 주소의 #로 고르는 한 페이지라 공지 탭만 따로 고를 수 없다. 관리자만 열 수 있다.
      * 에디터 파일은 서버에 두고(/vendor/toastui) 바깥 주소에서 받지 않는다. 스크립트 규칙은 같다.
      */
     static final String EDITOR_CSP = csp("'self' 'unsafe-inline'");
@@ -53,7 +54,8 @@ public class SecurityConfig {
             PathPatternRequestMatcher.withDefaults().matcher("/blog/*/write"),
             PathPatternRequestMatcher.withDefaults().matcher("/write"),
             PathPatternRequestMatcher.withDefaults().matcher("/blog/*/posts/*/edit"),
-            PathPatternRequestMatcher.withDefaults().matcher("/post-edit.html"));
+            PathPatternRequestMatcher.withDefaults().matcher("/post-edit.html"),
+            PathPatternRequestMatcher.withDefaults().matcher("/admin/index.html"));
 
     private static String csp(String styleSrc) {
         return String.join("; ",

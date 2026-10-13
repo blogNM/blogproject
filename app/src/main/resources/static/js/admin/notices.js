@@ -18,10 +18,14 @@ export async function mount(panel) {
   const title = el('input', { id: 'notice-title', type: 'text', maxlength: '100', autocomplete: 'off' });
   const category = el('select', { id: 'notice-category' });
   category.append(...NOTICE_CATEGORIES.map(([value, label]) => el('option', { value }, label)));
-  const content = el('textarea', { id: 'notice-content', class: 'adm-textarea', rows: '10', maxlength: '5000',
-    placeholder: '마크다운으로 쓸 수 있어요. 위 버튼으로 글자 크기·색·형광펜·사진을 넣을 수 있어요. 5000자까지.' });
   const msg = el('p', { class: 'adm-error', role: 'alert' });
-  const editor = noticeEditor(content, msg);
+  let editor;
+  try {
+    editor = await noticeEditor(msg);
+  } catch (err) {
+    showError(err);
+    return;
+  }
   const submit = el('button', { type: 'submit', class: 'adm-go' }, '공지 올리기');
   const cancel = button('수정 그만두기', '', () => reset());
   cancel.hidden = true;
@@ -29,7 +33,7 @@ export async function mount(panel) {
   buttons.append(submit, cancel);
   form.append(el('label', { for: 'notice-category' }, '카테고리'), category,
     el('label', { for: 'notice-title' }, '제목'), title,
-    el('label', { for: 'notice-content' }, '내용'), editor.element,
+    el('label', { id: 'notice-content-label' }, '내용'), editor.element,
     el('p', { class: 'adm-note' }, '새 공지는 공지 알림을 끄지 않은 모든 회원에게 알림이 갑니다. 고칠 때는 알림을 다시 보내지 않아요.'),
     msg, buttons);
   formCard.append(heading, form);
@@ -50,8 +54,8 @@ export async function mount(panel) {
       editingId = id;
       title.value = n.title;
       category.value = n.category;
-      content.value = n.content;
       editor.reset();
+      editor.setValue(n.content);
       heading.textContent = `공지 #${id} 고치기`;
       submit.textContent = '고친 내용 저장';
       cancel.hidden = false;
@@ -65,13 +69,17 @@ export async function mount(panel) {
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     msg.textContent = '';
-    const body = { title: title.value.trim(), content: content.value.trim(), category: category.value };
+    const body = { title: title.value.trim(), content: editor.getValue().trim(), category: category.value };
     if (!body.title || body.title.length > 100) {
       msg.textContent = '제목은 1~100자로 써 주세요.';
       return;
     }
     if (!body.content) {
       msg.textContent = '내용을 써 주세요.';
+      return;
+    }
+    if (body.content.length > 5000) {
+      msg.textContent = '내용은 5000자까지 쓸 수 있습니다.';
       return;
     }
     submit.disabled = true;

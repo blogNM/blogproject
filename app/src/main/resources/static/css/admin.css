@@ -217,20 +217,8 @@ a.adm-stat.adm-alert .adm-stat-value { color: var(--adm-purple); }
 .adm-form button.adm-go { margin-top: 14px; padding: 10px 20px; }
 .adm-form .adm-textarea { width: 100%; padding: 10px 14px; font: inherit; font-size: 0.93rem; line-height: 1.6; resize: vertical; }
 .adm-form .adm-actions { align-items: center; }
-/* 공지 편집 도구 (D-102) */
-.adm-editor { border: 1px solid var(--line); border-radius: var(--radius-sm); overflow: hidden; background: #fff; }
-.adm-editor .adm-textarea { border: 0; border-radius: 0; min-height: 260px; }
-.adm-editor-bar { display: flex; flex-wrap: wrap; gap: 6px 14px; padding: 8px 10px; border-bottom: 1px solid var(--line); background: var(--soft); }
-.adm-tool-group { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
-.adm-form .adm-tool, .adm-tool { min-width: 30px; height: 30px; margin: 0; padding: 0 8px; border: 1px solid var(--line); border-radius: 6px; background: #fff; color: var(--ink); font-size: 0.86rem; line-height: 1; }
-.adm-tool:hover:not(:disabled) { border-color: var(--purple); }
-.adm-tool-bold { font-weight: 800; }
-.adm-tool-italic { font-style: italic; }
-.adm-tool-strike { text-decoration: line-through; }
-.adm-tool.adm-swatch { width: 24px; min-width: 24px; height: 24px; padding: 0; border-radius: 50%; color: var(--ink); font-size: 0.72rem; }
-.adm-tool.adm-swatch[class*="tc-bg-"] { border: 2px solid #fff; box-shadow: 0 0 0 1px var(--line); }
-.adm-tool-select { height: 30px; padding: 0 8px; font-size: 0.86rem; border-radius: 6px; }
-.adm-editor-preview { margin: 0; padding: 14px 18px; min-height: 260px; }
+/* 공지 편집 도구 (D-102, D-106): 보이는 그대로 쓰는 편집기는 common.css의 .rich-editor */
+.adm-form .rich-editor button { margin: 0; }
 .adm-form .adm-actions button:not(.adm-go) { margin-top: 14px; }
 .adm-error { color: var(--adm-error); font-size: 0.88rem; min-height: 1.2em; margin: 8px 0 0; }
 .adm-ok-text { color: var(--adm-ok); font-size: 0.88rem; margin: 8px 0 0; }

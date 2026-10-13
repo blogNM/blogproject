@@ -19,8 +19,8 @@ public final class PostRules {
     /** 이미지 문법 ![설명](주소). 본문 글자 수에서 뺀다 (추천안 #14). */
     private static final Pattern IMAGE_SYNTAX = Pattern.compile("!\\[[^\\]\\n]*\\]\\([^)\\n]*\\)");
 
-    /** 글자 색 표시 <span class="tc-…">·</span>도 글자 수에 넣지 않는다. */
-    private static final Pattern COLOR_TAG = Pattern.compile("<span class=\"tc-[a-z]+\">|</span>");
+    /** 글자 색·크기·형광펜 표시 <span class="tc-…|ts-…|hl-…">·</span>도 글자 수에 넣지 않는다 (D-93, D-106). */
+    private static final Pattern COLOR_TAG = Pattern.compile("<span class=\"(?:tc|ts|hl)-[a-z]+\">|</span>");
 
     private PostRules() {
     }

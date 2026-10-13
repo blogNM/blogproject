@@ -657,11 +657,50 @@ em, i, .toastui-editor-md-emph, .toastui-editor-contents em {
 .hl-green { background: #CDEFD9; }
 .hl-pink { background: #FBD3E0; }
 .hl-blue { background: #D3E3FB; }
-.toastui-editor-toolbar .toolbar-color { font-weight: 800; font-size: 15px; color: #333; text-decoration: underline; text-decoration-color: #D93A49; text-decoration-thickness: 3px; text-underline-offset: 2px; background: none; border: 0; padding: 0; margin: 0 3px; width: 32px; height: 32px; border-radius: 3px; }
-.toastui-editor-toolbar .toolbar-color:hover { background: #fff; border: 1px solid #e4e7ee; }
-.color-popup { display: flex; gap: 6px; align-items: center; padding: 6px; }
-.color-popup .color-swatch { width: 24px; min-width: 0; margin: 0; height: 24px; padding: 0; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px var(--line); }
+/* 도구 막대의 글자 색(A)·형광펜(형)·크기(가) 버튼. 밑줄·바탕이 지금 커서 자리의 서식을 보여 준다 (D-106) */
+.toastui-editor-toolbar .toolbar-color, .toastui-editor-toolbar .toolbar-highlight, .toastui-editor-toolbar .toolbar-size { font-weight: 800; font-size: 15px; color: #333; background: none; border: 0; padding: 0; margin: 7px 3px; width: 32px; height: 32px; border-radius: 3px; }
+.toastui-editor-toolbar .toolbar-color { text-decoration: underline; text-decoration-color: #333; text-decoration-thickness: 3px; text-underline-offset: 2px; }
+.toastui-editor-toolbar .toolbar-color[data-now="red"] { text-decoration-color: #D93A49; }
+.toastui-editor-toolbar .toolbar-color[data-now="orange"] { text-decoration-color: #E07B39; }
+.toastui-editor-toolbar .toolbar-color[data-now="green"] { text-decoration-color: #2FA58C; }
+.toastui-editor-toolbar .toolbar-color[data-now="blue"] { text-decoration-color: #3366CC; }
+.toastui-editor-toolbar .toolbar-color[data-now="purple"] { text-decoration-color: #7C0CB4; }
+.toastui-editor-toolbar .toolbar-color[data-now="mauve"] { text-decoration-color: #925B8F; }
+.toastui-editor-toolbar .toolbar-color[data-now="gray"] { text-decoration-color: #6B6880; }
+.toastui-editor-toolbar .toolbar-highlight { font-size: 14px; box-shadow: inset 0 -9px 0 #FFF1A8; }
+.toastui-editor-toolbar .toolbar-highlight[data-now="green"] { box-shadow: inset 0 -9px 0 #CDEFD9; }
+.toastui-editor-toolbar .toolbar-highlight[data-now="pink"] { box-shadow: inset 0 -9px 0 #FBD3E0; }
+.toastui-editor-toolbar .toolbar-highlight[data-now="blue"] { box-shadow: inset 0 -9px 0 #D3E3FB; }
+.toastui-editor-toolbar .toolbar-size { font-size: 13px; }
+.toastui-editor-toolbar .toolbar-size[data-now="small"] { font-size: 11px; }
+.toastui-editor-toolbar .toolbar-size[data-now="large"] { font-size: 17px; }
+.toastui-editor-toolbar .toolbar-size[data-now="xlarge"] { font-size: 20px; }
+.toastui-editor-toolbar .toolbar-color:hover, .toastui-editor-toolbar .toolbar-highlight:hover, .toastui-editor-toolbar .toolbar-size:hover { background-color: #fff; border: 1px solid #e4e7ee; }
+.color-popup { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 6px; }
+.color-popup .color-swatch { width: 24px; min-width: 0; margin: 0; height: 24px; padding: 0; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px var(--line); font-size: 0.72rem; color: var(--ink); }
 .color-popup .color-clear { padding: 4px 10px; font-size: 0.8rem; margin-left: 4px; }
+.color-popup .size-choice { padding: 4px 10px; margin: 0; line-height: 1.2; }
+
+/* 보이는 그대로 쓰는 편집기와 HTML 구조 칸 (D-106) */
+.rich-editor-head { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; justify-content: space-between; margin: 0 0 6px; }
+.rich-editor-tip { margin: 0; font-size: 0.82rem; color: var(--muted); flex: 1 1 240px; }
+.rich-editor .rich-html-toggle { padding: 6px 14px; font-size: 0.84rem; margin: 0; }
+.rich-editor .rich-html-toggle[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
+.rich-editor-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.rich-editor-main { min-width: 0; }
+.rich-editor.with-html .rich-editor-body { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.rich-html { display: flex; flex-direction: column; min-width: 0; max-height: 460px; border: 1px solid var(--line); border-radius: 4px; background: #FAF9FD; }
+.rich-html[hidden] { display: none; }
+.rich-html-head { display: flex; gap: 8px; align-items: center; padding: 8px 10px; border-bottom: 1px solid var(--line); font-size: 0.86rem; }
+.rich-html-note { color: var(--muted); font-size: 0.78rem; flex: 1; }
+.rich-editor .rich-html-close { padding: 4px 10px; font-size: 0.8rem; margin: 0; }
+.rich-html-code { flex: 1; min-height: 0; margin: 0; padding: 10px 12px; overflow: auto; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.8rem; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--text); background: none; }
+.rich-html-tag { color: #7C0CB4; }
+.rich-editor .toastui-editor-contents { font-size: 15px; }
+@media (max-width: 900px) {
+  .rich-editor.with-html .rich-editor-body { grid-template-columns: minmax(0, 1fr); }
+  .rich-html { max-height: 320px; }
+}
 
 /* ----- 블로그 관리: 멤버·신고·블랙리스트·위임·폐쇄 (6단계) ----- */
 .sub-title { font-size: 0.95rem; margin: 18px 0 6px; }
