@@ -4,6 +4,7 @@
 
 1) docs/releases/<버전>.md 가 있으면 그 글을 쓴다. 첫 줄이 "# 제목"이면 제목으로 쓴다.
    캡처 사진은 app/src/main/resources/static/img/releases/<버전>/ 에 넣고 글에서 /img/releases/<버전>/파일.png 로 적는다.
+   <!-- github-only --> 와 <!-- /github-only --> 사이 글은 깃허브 릴리스에만 넣고 사이트 공지에서는 뺀다 (관리자용 내용 등).
 2) 없으면 CHANGELOG.md 에서 지난 버전 뒤에 새로 적힌 줄만 뽑는다 (날짜·묶음 제목은 따라 붙인다).
 
 출력: title.txt, github.md (깃허브 릴리스용, 사진은 깃허브 주소), payload.json (사이트 공지용, 사진은 사이트 주소)
@@ -16,6 +17,9 @@ import sys
 
 NOTICE_MAX = 5000  # NoticeService.CONTENT_MAX
 TITLE_MAX = 100
+# 깃허브 릴리스에만 넣을 글 (사이트 공지에서는 뺀다)
+GITHUB_ONLY = re.compile(r"<!--\s*github-only\s*-->.*?<!--\s*/github-only\s*-->", re.S)
+GITHUB_ONLY_MARK = re.compile(r"<!--\s*/?github-only\s*-->")
 
 
 def git(*args):
@@ -79,8 +83,9 @@ def main():
     # 저장소 안 상대 주소(docs/...)는 깃허브 주소로 바꾼다. 사이트·깃허브 모두에서 열리게
     body = re.sub(r"\]\((?!https?:|mailto:|/|#)([^)]+)\)", lambda m: f"]({blob}{m.group(1)})", body)
 
-    github = re.sub(r"\]\(/img/releases/", f"]({raw}/img/releases/", body)
-    site = body
+    github = re.sub(r"\]\(/img/releases/", f"]({raw}/img/releases/", GITHUB_ONLY_MARK.sub("", body))
+    github = re.sub(r"\n{3,}", "\n\n", github).strip()
+    site = re.sub(r"\n{3,}", "\n\n", GITHUB_ONLY.sub("", body)).strip()
     more = f"\n\n[전체 변경 내용 보기]({release_url})"
     if len(site) + len(more) > NOTICE_MAX:
         cut = site[: NOTICE_MAX - len(more) - 20]
