@@ -48,7 +48,8 @@ class SignupTest extends IntegrationTest {
 
         mvc.perform(get("/api/auth/signup/email-available").param("email", " OLD@example.com"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.available").value(false));
+                .andExpect(jsonPath("$.available").value(false))
+                .andExpect(jsonPath("$.google").value(false));
         mvc.perform(get("/api/auth/signup/email-available").param("email", "fresh@example.com"))
                 .andExpect(jsonPath("$.available").value(true));
         mvc.perform(get("/api/auth/signup/email-available").param("email", "not-an-email"))

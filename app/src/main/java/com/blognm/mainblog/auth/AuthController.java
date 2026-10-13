@@ -46,7 +46,8 @@ public class AuthController {
 
     @GetMapping("/signup/email-available")
     public Map<String, Boolean> emailAvailable(@RequestParam String email, HttpServletRequest request) {
-        return Map.of("available", signupService.isEmailAvailable(email, ClientIp.of(request)));
+        SignupService.EmailStatus s = signupService.checkEmail(email, ClientIp.of(request));
+        return Map.of("available", s.available(), "google", s.google());
     }
 
     @PostMapping("/signup/verify")
