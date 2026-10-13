@@ -44,9 +44,9 @@ $('check-email').addEventListener('click', async () => {
   $('step1-error').textContent = '';
   try {
     const res = await api.get('/api/auth/signup/email-available?email=' + encodeURIComponent(email));
-    // 구글·네이버로 로그인하던 이메일이면 그 회사로 로그인하라고 알려 준다 (D-103, D-107)
+    // 구글·네이버·카카오로 로그인하던 이메일이면 그 회사로 로그인하라고 알려 준다 (D-103, D-107, D-108)
     const provider = res.provider || (res.google ? 'google' : null);
-    const label = provider === 'naver' ? '네이버' : '구글';
+    const label = { naver: '네이버', kakao: '카카오' }[provider] || '구글';
     $('email-message').textContent = res.available
       ? '가입할 수 있는 이메일입니다.'
       : provider

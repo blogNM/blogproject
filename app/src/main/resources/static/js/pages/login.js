@@ -27,23 +27,27 @@ if (new URLSearchParams(location.search).has('joined')) {
   notice.hidden = false;
 }
 
-// 구글 로그인 (D-103)·네이버 로그인 (D-107). 서버에 앱 값이 있는 회사의 버튼만 보인다.
+// 구글 로그인 (D-103)·네이버 로그인 (D-107)·카카오 로그인 (D-108). 서버에 앱 값이 있는 회사의 버튼만 보인다.
 const params = new URLSearchParams(location.search);
 const social = params.get('social');
-const providerName = params.get('provider') === 'naver' ? '네이버' : '구글';
+const provider = params.get('provider');
+const providerName = { naver: '네이버', kakao: '카카오' }[provider] || '구글';
 if (social === 'failed') {
   errorBox.textContent = `${providerName} 로그인을 끝내지 못했어요. 다시 시도해 주세요.`;
 } else if (social === 'unverified') {
-  errorBox.textContent = params.get('provider') === 'naver'
-    ? '이 네이버 계정으로는 로그인할 수 없어요. 이메일로 로그인해 주세요.'
+  errorBox.textContent = provider === 'naver' || provider === 'kakao'
+    ? `이 ${providerName} 계정으로는 로그인할 수 없어요. 이메일로 로그인해 주세요.`
     : '이 구글 계정으로는 로그인할 수 없어요. 이메일이 확인된 구글 계정을 쓰거나 이메일로 로그인해 주세요.';
 } else if (social === 'no-email') {
-  errorBox.textContent = '네이버에서 이메일 제공에 동의해야 가입할 수 있어요. 네이버로 로그인을 다시 눌러 이메일 주소 제공에 동의해 주세요.';
+  errorBox.textContent = provider === 'kakao'
+    ? '카카오에서 인증된 이메일 제공에 동의해야 가입할 수 있어요. 카카오로 로그인을 다시 눌러 이메일 제공에 동의하거나, 카카오계정의 이메일 인증을 마쳐 주세요.'
+    : '네이버에서 이메일 제공에 동의해야 가입할 수 있어요. 네이버로 로그인을 다시 눌러 이메일 주소 제공에 동의해 주세요.';
 }
 api.get('/api/auth/social/config')
   .then((config) => {
     document.getElementById('google-login').hidden = !config.google;
     document.getElementById('naver-login').hidden = !config.naver;
+    document.getElementById('kakao-login').hidden = !config.kakao;
   })
   .catch(() => {});
 

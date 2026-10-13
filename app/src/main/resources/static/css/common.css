@@ -497,6 +497,11 @@ a.button.google-button[hidden] { display: none; }
 a.button.naver-button, a.button.naver-button:hover { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 10px; background: #03A94D; border-color: #03A94D; color: #FFFFFF; font-weight: 700; }
 a.button.naver-button svg { flex: none; }
 a.button.naver-button[hidden] { display: none; }
+/* 카카오 로그인 버튼 (D-108). 카카오 로그인 디자인 가이드: 배경 #FEE500, 심볼 #000000, 글자 rgba(0,0,0,0.85).
+   색은 바꾸지 않고(마우스를 올려도 그대로), 크기·모서리는 구글·네이버 버튼과 같으며 심볼과 글자는 가운데로 모아 8px 띄운다 */
+a.button.kakao-button, a.button.kakao-button:hover { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 10px; background: #FEE500; border-color: #FEE500; color: rgba(0, 0, 0, 0.85); font-weight: 700; }
+a.button.kakao-button svg { flex: none; }
+a.button.kakao-button[hidden] { display: none; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .reply-form { margin-top: 8px; }
 .reply-form textarea { min-height: 64px; }
