@@ -12,7 +12,8 @@
   <header class="site-header"></header>
   <main class="error-main">
     <section class="error-page">
-      <img src="/img/lost.svg" alt="" width="180" height="160">
+      <!-- 움직이는 그림. 동작 줄이기를 켜면 멈춘 그림 (D-105) -->
+      <picture><source srcset="/img/lost-still.svg" media="(prefers-reduced-motion: reduce)"><img src="/img/lost.svg" alt="" width="180" height="160"></picture>
       <p class="code">500</p>
       <h1>잠깐 숨을 고르는 중이에요</h1>
       <p>서버에 문제가 생겼어요. 잠시 뒤에 다시 시도해 주세요.</p>
