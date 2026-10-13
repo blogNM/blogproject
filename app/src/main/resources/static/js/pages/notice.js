@@ -16,6 +16,12 @@ if (id) {
     $('category').replaceChildren(categoryBadge(n.category));
     $('meta').textContent = n.updatedAt && n.updatedAt !== n.createdAt ? `${n.createdAt} · 고침 ${n.updatedAt}` : n.createdAt;
     $('content').innerHTML = n.html;
+    // 사용 방법 안내 공지면 다른 안내도 옆으로 넘겨 볼 수 있게 (D-104)
+    if (n.category === 'NOTICE' && n.title.startsWith('사용 방법')) {
+      const more = el('p', { class: 'guide-more' });
+      more.append(el('a', { class: 'button', href: '/guides?id=' + encodeURIComponent(n.id) }, '다른 사용 방법 넘겨 보기'));
+      $('content').after(more);
+    }
     $('detail-view').hidden = false;
   } catch (err) {
     if (err instanceof ApiError && (err.status === 404 || err.status === 400)) renderNotFound('공지를 찾을 수 없어요. 지워졌을 수 있어요.');

@@ -29,6 +29,8 @@ public class NoticeService {
 
     /** 공지 카테고리 (D-98). 화면에는 일반·업데이트·수정·점검으로 보인다. */
     public enum Category { NOTICE, UPDATE, FIX, MAINTENANCE }
+    /** 사용 방법 안내 공지의 제목 머리 (D-104). 일반 공지 중 제목이 이렇게 시작하는 글을 /guides에서 넘겨 본다. */
+    public static final String GUIDE_PREFIX = "사용 방법";
     private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("yyyy.MM.dd");
 
     private final NamedParameterJdbcTemplate jdbc;
@@ -78,6 +80,19 @@ public class NoticeService {
                             renderer.toSafeHtml(md),
                             created.format(DATE), updated.isAfter(created.plusMinutes(1)) ? updated.format(DATE) : null);
                 }).stream().findFirst().orElseThrow(NoticeService::notFound);
+    }
+
+    /**
+     * 사용 방법 안내 (D-104). 지우지 않은 일반(NOTICE) 공지 중 제목이 "사용 방법"으로 시작하는 글을 id 순서로.
+     * 본문은 공지 상세와 같이 서버가 바꾸고 거른 HTML.
+     */
+    @Transactional(readOnly = true)
+    public List<Guide> guides() {
+        return jdbc.query("""
+                SELECT id, title, content_md FROM notices
+                WHERE status = 'NORMAL' AND category = 'NOTICE' AND title LIKE :prefix ORDER BY id
+                """, Map.of("prefix", GUIDE_PREFIX + "%"),
+                (rs, i) -> new Guide(rs.getLong("id"), rs.getString("title"), renderer.toSafeHtml(rs.getString("content_md"))));
     }
 
     @Transactional
@@ -180,6 +195,9 @@ public class NoticeService {
 
     private static ApiException notFound() {
         return new ApiException(HttpStatus.NOT_FOUND, "NOTICE_NOT_FOUND", "공지를 찾을 수 없습니다.");
+    }
+
+    public record Guide(long id, String title, String html) {
     }
 
     public record Item(long id, String title, String category, String createdAt) {
