@@ -102,6 +102,30 @@ class BoardTest extends IntegrationTest {
     }
 
     @Test
+    @DisplayName("검색 목록의 건수는 분류바 건수와 같다. 건수를 한 번만 세도 쪽 나누기가 맞다 (D-109)")
+    void searchTotalsMatchCounts() throws Exception {
+        for (int i = 1; i <= 12; i++) {
+            write("food", "국밥 맛집 " + i, "국밥");
+        }
+        write("secret", "비밀 국밥집", "국밥");
+        getAs("/api/search?q=국밥&type=post&size=10&page=2")
+                .andExpect(jsonPath("$.counts.POST").value(12))
+                .andExpect(jsonPath("$.posts.total").value(12))
+                .andExpect(jsonPath("$.posts.totalPages").value(2))
+                .andExpect(jsonPath("$.posts.items.length()").value(2));
+        getAs("/api/search?q=국밥&type=tag")
+                .andExpect(jsonPath("$.counts.TAG").value(12))
+                .andExpect(jsonPath("$.posts.total").value(12));
+        getAs("/api/search?q=블로그장&type=nickname")
+                .andExpect(jsonPath("$.counts.NICKNAME").value(12))
+                .andExpect(jsonPath("$.posts.total").value(12));
+        getAs("/api/search?q=맛집&type=blog")
+                .andExpect(jsonPath("$.counts.BLOG").value(1))
+                .andExpect(jsonPath("$.blogs.total").value(1))
+                .andExpect(jsonPath("$.blogs.totalPages").value(1));
+    }
+
+    @Test
     @DisplayName("1글자·21자·특수문자만 있는 검색어는 막힌다 (US6-1)")
     void invalidQueries() throws Exception {
         getAs("/api/search?q=국").andExpect(status().isBadRequest());

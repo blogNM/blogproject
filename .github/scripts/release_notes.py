@@ -7,6 +7,10 @@
    <!-- github-only --> 와 <!-- /github-only --> 사이 글은 깃허브 릴리스에만 넣고 사이트 공지에서는 뺀다 (관리자용 내용 등).
 2) 없으면 CHANGELOG.md 에서 지난 버전 뒤에 새로 적힌 줄만 뽑는다 (날짜·묶음 제목은 따라 붙인다).
 
+강조 (D-109): 사이트 공지는 MarkdownRenderer가 허용하는 강조를 그대로 쓴다.
+   인용(> ), **굵게**, <u>밑줄</u>, <span class="hl-yellow">형광펜</span>, <span class="ts-large">큰 글자</span>, <span class="tc-red">글자 색</span>
+   깃허브는 class를 지우므로 깃허브 글에서만 바꾼다: hl-* → <mark>, ts-large·ts-xlarge → **굵게**, ts-small → <sub>, tc-* → 글자만, <u> → <ins>.
+
 출력: title.txt, github.md (깃허브 릴리스용, 사진은 깃허브 주소), payload.json (사이트 공지용, 사진은 사이트 주소)
 """
 import json
@@ -20,6 +24,28 @@ TITLE_MAX = 100
 # 깃허브 릴리스에만 넣을 글 (사이트 공지에서는 뺀다)
 GITHUB_ONLY = re.compile(r"<!--\s*github-only\s*-->.*?<!--\s*/github-only\s*-->", re.S)
 GITHUB_ONLY_MARK = re.compile(r"<!--\s*/?github-only\s*-->")
+
+
+# 사이트 공지 강조(span class)를 깃허브에서도 보이는 모양으로 바꾼다. 안쪽 span부터 바꿔서 겹친 강조도 처리한다.
+INNER_SPAN = re.compile(r'<span class="([a-z]+-[a-z]+)">((?:(?!<span\b).)*?)</span>', re.S)
+
+
+def github_emphasis(text):
+    def swap(m):
+        cls, inner = m.group(1), m.group(2)
+        if cls.startswith("hl-"):
+            return f"<mark>{inner}</mark>"
+        if cls in ("ts-large", "ts-xlarge"):
+            return f"<b>{inner}</b>"
+        if cls == "ts-small":
+            return f"<sub>{inner}</sub>"
+        return inner
+    while True:
+        changed = INNER_SPAN.sub(swap, text)
+        if changed == text:
+            break
+        text = changed
+    return re.sub(r"<(/?)u>", r"<\1ins>", text)
 
 
 def git(*args):
@@ -84,7 +110,7 @@ def main():
     body = re.sub(r"\]\((?!https?:|mailto:|/|#)([^)]+)\)", lambda m: f"]({blob}{m.group(1)})", body)
 
     github = re.sub(r"\]\(/img/releases/", f"]({raw}/img/releases/", GITHUB_ONLY_MARK.sub("", body))
-    github = re.sub(r"\n{3,}", "\n\n", github).strip()
+    github = re.sub(r"\n{3,}", "\n\n", github_emphasis(github)).strip()
     site = re.sub(r"\n{3,}", "\n\n", GITHUB_ONLY.sub("", body)).strip()
     more = f"\n\n[전체 변경 내용 보기]({release_url})"
     if len(site) + len(more) > NOTICE_MAX:

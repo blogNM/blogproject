@@ -56,7 +56,12 @@ public class PostCards {
     private static final Pattern USES_MEMBER = Pattern.compile("\\bm\\.");
 
     public Page page(String where, String orderBy, MapSqlParameterSource params, int page, int size) {
-        return page(POSTS_AND_BLOGS, where, orderBy, params, page, size);
+        return page(POSTS_AND_BLOGS, where, orderBy, params, page, size, null);
+    }
+
+    /** 건수를 이미 센 목록 (통합 검색). 같은 조건의 COUNT를 다시 돌리지 않는다. */
+    public Page page(String where, String orderBy, MapSqlParameterSource params, int page, int size, long total) {
+        return page(POSTS_AND_BLOGS, where, orderBy, params, page, size, total);
     }
 
     /**
@@ -65,15 +70,17 @@ public class PostCards {
      */
     public Page latestPage(String where, MapSqlParameterSource params, int page, int size) {
         return page(" FROM posts p FORCE INDEX (idx_posts_status_created) STRAIGHT_JOIN blogs b ON b.id = p.blog_id",
-                where, "p.created_at DESC, p.id DESC", params, page, size);
+                where, "p.created_at DESC, p.id DESC", params, page, size, null);
     }
 
-    private Page page(String postsAndBlogs, String where, String orderBy, MapSqlParameterSource params, int page, int size) {
+    private Page page(String postsAndBlogs, String where, String orderBy, MapSqlParameterSource params, int page, int size,
+            Long knownTotal) {
         int pageSize = PAGE_SIZES.contains(size) ? size : 10;
         int current = Math.max(page, 1);
         // 건수는 블로그부터 읽는 편이 빠르고, 닉네임 조건이 없으면 회원 표를 붙이지 않는다
         String countFrom = POSTS_AND_BLOGS + (USES_MEMBER.matcher(where).find() ? " JOIN members m ON m.id = p.author_id" : "");
-        Long total = jdbc.queryForObject("SELECT COUNT(*)" + countFrom + " WHERE " + where, params, Long.class);
+        Long total = knownTotal != null ? knownTotal
+                : jdbc.queryForObject("SELECT COUNT(*)" + countFrom + " WHERE " + where, params, Long.class);
         String from = postsAndBlogs + " JOIN members m ON m.id = p.author_id WHERE ";
         params.addValue("size", pageSize).addValue("offset", (long) (current - 1) * pageSize);
         List<Card> items = jdbc.query("""

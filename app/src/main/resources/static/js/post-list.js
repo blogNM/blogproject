@@ -9,8 +9,11 @@ export function postUrl(slug, id, key) {
   return `/blog/${encodeURIComponent(slug)}/posts/${id}` + (key ? '?key=' + encodeURIComponent(key) : '');
 }
 
-/** 블로그 화면 아래의 글 목록. 카테고리·태그·페이지·개수는 주소(?category=&tag=&page=&size=)에 남긴다. */
-export async function initPostList(blog, key) {
+/**
+ * 블로그 화면 아래의 글 목록. 카테고리·태그·페이지·개수는 주소(?category=&tag=&page=&size=)에 남긴다.
+ * categoriesReady: 블로그 화면이 메뉴용으로 이미 부른 카테고리 요청. 같은 요청을 두 번 보내지 않는다.
+ */
+export async function initPostList(blog, key, categoriesReady) {
   const params = new URLSearchParams(location.search);
   const state = {
     page: Math.max(1, Number(params.get('page')) || 1),
@@ -32,12 +35,8 @@ export async function initPostList(blog, key) {
     load();
   });
 
+  const categoriesLoad = (categoriesReady || api.get(base + '/categories?' + new URLSearchParams(keyParam))).catch(() => []);
   let categories = [];
-  try {
-    categories = await api.get(base + '/categories?' + new URLSearchParams(keyParam));
-  } catch {
-    categories = [];
-  }
 
   function syncUrl() {
     const q = new URLSearchParams(keyParam);
@@ -107,13 +106,17 @@ export async function initPostList(blog, key) {
 
   async function load() {
     syncUrl();
-    renderCategories();
     const q = new URLSearchParams({ ...keyParam, page: state.page, size: state.size });
     if (state.category) q.set('category', state.category);
     if (state.tag) q.set('tag', state.tag);
+    // 글 목록과 카테고리를 함께 받는다 (처음 한 번만 카테고리를 기다리고, 그 뒤로는 받아 둔 값을 쓴다)
+    const posts = api.get(base + '/posts?' + q);
+    posts.catch(() => {});
+    categories = await categoriesLoad;
+    renderCategories();
     let res;
     try {
-      res = await api.get(base + '/posts?' + q);
+      res = await posts;
     } catch (err) {
       $('post-list').replaceChildren(el('li', { class: 'error' }, err.message));
       return;

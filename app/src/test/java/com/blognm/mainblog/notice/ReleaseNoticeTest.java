@@ -12,6 +12,7 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 import com.blognm.mainblog.admin.AdminAccountService;
+import com.blognm.mainblog.post.MarkdownRenderer;
 import com.blognm.mainblog.support.IntegrationTest;
 import com.jayway.jsonpath.JsonPath;
 
@@ -57,5 +58,20 @@ class ReleaseNoticeTest extends IntegrationTest {
         assertThat((String) JsonPath.read(getAs("/api/notices/" + id).andReturn().getResponse().getContentAsString(),
                 "$.category")).isEqualTo("UPDATE");
         assertThat(html).contains("src=\"/img/releases/v1.0.0/link-card.png\"").doesNotContain("example.com");
+    }
+
+    @Test
+    @DisplayName("릴리스 노트 강조(인용·굵게·밑줄·형광펜·글자 크기)는 사이트 공지에서 지워지지 않는다 (D-109 노트 형식)")
+    void releaseNoteEmphasisSurvives() {
+        String html = new MarkdownRenderer().toSafeHtml("""
+                > 고친 것: <span class="hl-yellow">약 2MB</span>를 한 번만 받아요. <u>결과는 그대로</u>
+
+                > <span class="ts-large">새로고침이 약 <span class="hl-yellow">6배</span> 빨라졌어요.</span> **굵게**
+                """);
+        assertThat(html).contains("<blockquote>")
+                .contains("<span class=\"hl-yellow\">약 2MB</span>")
+                .contains("<u>결과는 그대로</u>")
+                .contains("<span class=\"ts-large\">새로고침이 약 <span class=\"hl-yellow\">6배</span> 빨라졌어요.</span>")
+                .contains("<strong>굵게</strong>");
     }
 }
