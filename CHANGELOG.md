@@ -5,6 +5,16 @@
 - **분류**: 기능(새로 생긴 것) · 화면(디자인·문구) · 수정(버그) · 설정(환경·빌드) · 문서
 - 한 줄에 무엇이 바뀌었는지 사람이 알아볼 수 있게 쓰고, 근거(요구사항 ID, D-번호)와 PR 번호를 붙입니다.
 
+## 2026-10-13
+
+### 구글 로그인 (v1.1.0)
+
+- **기능** 로그인 화면에 [구글로 로그인]. 같은 이메일로 가입한 회원은 구글 계정이 연결되어 바로 로그인되고, 처음 온 사람은 닉네임과 약관 동의만 받아 가입 (D-103, 사용자 요청)
+- **기능** 구글로 처음 온 사람의 가입 화면 `/social-signup.html`과 `GET /api/auth/social/config`·`GET /api/auth/social/pending`·`POST /api/auth/social/signup` (D-103)
+- **기능** 탈퇴하면 구글 계정 연결도 끊어 같은 구글 계정으로 새로 가입할 수 있음 (D-103, USR-05)
+- **설정** Spring Security OAuth2 Client 추가, DB V12 `social_accounts`, 환경변수·깃허브 시크릿 `GOOGLE_CLIENT_ID`·`GOOGLE_CLIENT_SECRET`(없으면 구글 버튼을 숨김). 배포 워크플로가 두 값을 서버로 넘김
+- **문서** D-103, spec 001 범위·Clarifications, 헌법 기술 제약 로그인 줄(2.0.1), CLAUDE.md, ERD·schema.sql, 도커 배포 안내 시크릿 표, 릴리스 노트 [v1.1.0](docs/releases/v1.1.0.md)
+
 ## 2026-10-12
 
 ### 테마 틀 한눈에 고르기 (v1.0.5)

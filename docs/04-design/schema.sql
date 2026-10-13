@@ -78,6 +78,18 @@ CREATE TABLE refresh_tokens (
   CONSTRAINT fk_refresh_tokens_admin FOREIGN KEY (admin_id) REFERENCES admins (id)
 ) COMMENT 'Refresh Token. 로그아웃·비밀번호 변경 때 폐기 (SEC-04)';
 
+CREATE TABLE social_accounts (
+  id BIGINT NOT NULL AUTO_INCREMENT COMMENT '번호',
+  member_id BIGINT NOT NULL COMMENT '회원 번호',
+  provider VARCHAR(20) NOT NULL COMMENT '로그인 회사 (google)',
+  provider_user_id VARCHAR(255) NOT NULL COMMENT '그 회사가 준 사용자 번호 (구글 sub)',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '연결한 시각',
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_social_accounts_provider_user (provider, provider_user_id),
+  UNIQUE KEY uk_social_accounts_member_provider (member_id, provider),
+  CONSTRAINT fk_social_accounts_member FOREIGN KEY (member_id) REFERENCES members (id)
+) COMMENT '회원의 바깥 로그인 계정 (D-103)';
+
 CREATE TABLE login_failures (
   email VARCHAR(255) NOT NULL COMMENT '소문자. 가입 안 된 이메일도 같게 셈',
   fail_count TINYINT NOT NULL DEFAULT 0 COMMENT '3번부터 Turnstile, 5번이면 잠금',

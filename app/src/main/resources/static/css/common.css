@@ -489,6 +489,9 @@ select { padding: 10px 14px; border: 1px solid var(--line); border-radius: 999px
   .feed-card img { width: 96px; height: 80px; }
 }
 .wide-button { display: block; width: 100%; }
+/* 구글 로그인 버튼 (D-103). 새 계정 만들기 버튼과 간격을 둔다 */
+a.button.google-button { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 10px; background: #fff; color: var(--ink); font-weight: 700; }
+a.button.google-button[hidden] { display: none; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .reply-form { margin-top: 8px; }
 .reply-form textarea { min-height: 64px; }

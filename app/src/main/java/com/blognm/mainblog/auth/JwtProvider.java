@@ -28,6 +28,8 @@ public class JwtProvider {
     private static final String MEMBER_TYPE = "member";
     /** 관리자 토큰은 회원 토큰과 종류가 달라 서로 대신 쓸 수 없다 (SEC-09). */
     private static final String ADMIN_TYPE = "admin";
+    /** 구글 로그인 뒤 닉네임·약관 동의를 받는 동안만 쓰는 토큰. 로그인 토큰으로는 쓸 수 없다 (D-103). */
+    private static final String SOCIAL_SIGNUP_TYPE = "social-signup";
 
     private final SecretKey key;
     private final AppProperties.Auth props;
@@ -65,6 +67,39 @@ public class JwtProvider {
                 .compact();
     }
 
+    public String createSocialSignupToken(SocialSignup signup, java.time.Duration ttl) {
+        Date now = Date.from(clock.instant());
+        return Jwts.builder()
+                .subject(signup.providerUserId())
+                .claim(TYPE_CLAIM, SOCIAL_SIGNUP_TYPE)
+                .claim("provider", signup.provider())
+                .claim("email", signup.email())
+                .claim("name", signup.name())
+                .issuedAt(now)
+                .expiration(Date.from(clock.instant().plus(ttl)))
+                .signWith(key)
+                .compact();
+    }
+
+    /** 서명·만료가 맞는 가입 대기 토큰이면 구글에서 받은 정보를 돌려준다. */
+    public Optional<SocialSignup> parseSocialSignupToken(String token) {
+        try {
+            Claims claims = Jwts.parser()
+                    .verifyWith(key)
+                    .clock(() -> Date.from(clock.instant()))
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
+            if (!SOCIAL_SIGNUP_TYPE.equals(claims.get(TYPE_CLAIM, String.class))) {
+                return Optional.empty();
+            }
+            return Optional.of(new SocialSignup(claims.get("provider", String.class), claims.getSubject(),
+                    claims.get("email", String.class), claims.get("name", String.class)));
+        } catch (JwtException | IllegalArgumentException e) {
+            return Optional.empty();
+        }
+    }
+
     /** 서명·만료가 맞는 관리자 토큰이면 관리자 번호와 발급 시각을 돌려준다. */
     public Optional<MemberToken> parseAdminToken(String token) {
         return parse(token, ADMIN_TYPE);
@@ -96,6 +131,10 @@ public class JwtProvider {
         } catch (JwtException | IllegalArgumentException e) {
             return Optional.empty();
         }
+    }
+
+    /** 구글 로그인으로 처음 온 사람의 정보. 가입을 마칠 때까지 서버에 두지 않고 서명한 쿠키에만 둔다 (SCL-01). */
+    public record SocialSignup(String provider, String providerUserId, String email, String name) {
     }
 
     /** memberId: 회원 토큰이면 회원 번호, 관리자 토큰이면 관리자 번호. */

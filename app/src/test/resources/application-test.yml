@@ -15,6 +15,11 @@ app:
     code-hash-secret: test-only-code-secret
     cookie-secure: true
   release-notice-token: test-release-token
+  # 구글 로그인 주소를 켜고 시험한다 (D-103). 구글에 실제로 요청하지는 않는다.
+  social:
+    google:
+      client-id: test-google-client-id
+      client-secret: test-google-client-secret
 
 upload:
   dir: ${java.io.tmpdir}/mainblog-test-uploads

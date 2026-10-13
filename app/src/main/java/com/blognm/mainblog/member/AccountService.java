@@ -16,6 +16,7 @@ import com.blognm.mainblog.auth.EmailFindTokenRepository;
 import com.blognm.mainblog.auth.LoginService;
 import com.blognm.mainblog.auth.RefreshToken;
 import com.blognm.mainblog.auth.RefreshTokenRepository;
+import com.blognm.mainblog.auth.SocialAccountRepository;
 import com.blognm.mainblog.blog.Blog;
 import com.blognm.mainblog.blog.BlogMembershipRepository;
 import com.blognm.mainblog.blog.BlogRepository;
@@ -37,13 +38,14 @@ public class AccountService {
     private final BlogMembershipRepository memberships;
     private final JoinRequestRepository joinRequests;
     private final LoginService loginService;
+    private final SocialAccountRepository socialAccounts;
     private final PasswordEncoder passwordEncoder;
     private final Clock clock;
 
     public AccountService(MemberRepository members, RefreshTokenRepository refreshTokens,
             EmailFindTokenRepository findTokens, BlogRepository blogs, BlogMembershipRepository memberships,
-            JoinRequestRepository joinRequests, LoginService loginService, PasswordEncoder passwordEncoder,
-            Clock clock) {
+            JoinRequestRepository joinRequests, LoginService loginService, SocialAccountRepository socialAccounts,
+            PasswordEncoder passwordEncoder, Clock clock) {
         this.members = members;
         this.refreshTokens = refreshTokens;
         this.findTokens = findTokens;
@@ -51,6 +53,7 @@ public class AccountService {
         this.memberships = memberships;
         this.joinRequests = joinRequests;
         this.loginService = loginService;
+        this.socialAccounts = socialAccounts;
         this.passwordEncoder = passwordEncoder;
         this.clock = clock;
     }
@@ -122,6 +125,8 @@ public class AccountService {
         joinRequests.deletePendingByMember(memberId);
         refreshTokens.deleteAllByMemberId(memberId);
         findTokens.deleteAllByMemberId(memberId);
+        // 구글 계정 연결도 끊어 같은 구글 계정으로 새로 가입할 수 있게 한다 (D-103)
+        socialAccounts.deleteAllByMemberId(memberId);
     }
 
     private Member active(long memberId) {

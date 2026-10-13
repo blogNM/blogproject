@@ -2,6 +2,7 @@ package com.blognm.mainblog.config;
 
 import java.nio.charset.StandardCharsets;
 
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -12,6 +13,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
@@ -28,6 +30,7 @@ import com.blognm.mainblog.auth.AccessTokenValidator;
 import com.blognm.mainblog.auth.AdminTokenCheck;
 import com.blognm.mainblog.auth.JwtAuthenticationFilter;
 import com.blognm.mainblog.auth.JwtProvider;
+import com.blognm.mainblog.auth.SocialLoginHandler;
 
 /**
  * 보안 헤더·CSRF·인증 (SEC-10, SEC-11, SEC-12, 헌법 III).
@@ -68,7 +71,8 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtProvider jwtProvider,
-            AccessTokenValidator tokenValidator, AdminTokenCheck adminCheck, AppProperties props)
+            AccessTokenValidator tokenValidator, AdminTokenCheck adminCheck, AppProperties props,
+            ObjectProvider<ClientRegistrationRepository> socialClients, SocialLoginHandler socialHandler)
             throws Exception {
         CookieCsrfTokenRepository csrfRepository = CookieCsrfTokenRepository.withHttpOnlyFalse();
         csrfRepository.setCookieCustomizer(c -> c.secure(props.auth().cookieSecure()).sameSite("Lax"));
@@ -124,6 +128,16 @@ public class SecurityConfig {
                         .accessDeniedHandler((req, res, ex) -> writeError(res, HttpStatus.FORBIDDEN,
                                 "FORBIDDEN", "요청을 처리할 수 없습니다. 페이지를 새로고침한 뒤 다시 시도해 주세요.")))
                 .addFilterBefore(new JwtAuthenticationFilter(jwtProvider, tokenValidator, adminCheck), UsernamePasswordAuthenticationFilter.class);
+        // 구글 로그인 (D-103). GOOGLE_CLIENT_ID가 있을 때만 /oauth2/authorization/google 주소를 연다.
+        // 로그인 화면은 우리 화면을 쓰고, 끝나면 SocialLoginHandler가 JWT 쿠키를 내려준다.
+        ClientRegistrationRepository clients = socialClients.getIfAvailable();
+        if (clients != null) {
+            http.oauth2Login(o -> o
+                    .clientRegistrationRepository(clients)
+                    .loginPage("/login.html")
+                    .successHandler(socialHandler)
+                    .failureHandler(socialHandler));
+        }
         return http.build();
     }
 
