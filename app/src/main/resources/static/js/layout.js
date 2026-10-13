@@ -87,7 +87,7 @@ function renderFooter(me) {
     footerColumn('둘러보기', [['/', '메인 피드'], ['/search.html', '통합 검색'], ['/blog-new.html', '블로그 만들기']]),
     footerColumn('내 활동', [['/my-blogs.html', '내 블로그'], ...(me ? [['/members/' + me.id, '내 활동']] : []),
       ['/me.html', '내 정보']]),
-    footerColumn('도움말', [['/find-email.html', '이메일 찾기'], ['/forgot-password.html', '비밀번호 찾기']]));
+    footerColumn('도움말', [['/guides', '사용 방법'], ['/find-email.html', '이메일 찾기'], ['/forgot-password.html', '비밀번호 찾기']]));
   const bottom = el('div', { class: 'footer-bottom' });
   bottom.append(el('span', {}, '© Creat_'), el('a', { href: '/terms.html' }, '이용약관'),
     el('a', { href: '/privacy.html', class: 'strong' }, '개인정보 처리방침'));

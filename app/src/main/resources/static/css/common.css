@@ -711,3 +711,63 @@ select.reason-filter { width: auto; margin: 4px 0 8px; }
 .post-blog .list-link { flex: none; font-size: 0.88rem; color: var(--muted); }
 .post-list-row { display: flex; justify-content: center; margin-top: 24px; }
 .post-list-row .button { min-width: 120px; text-align: center; }
+
+/* ----- 사용 방법 안내 (D-104): 옆으로 넘겨 보는 칸 ----- */
+.guide-head h1 { margin: 0 0 6px; }
+.guide-head p { margin: 0 0 20px; }
+.guide-tabs { margin-bottom: 14px; }
+.guide-tabs .tab { font-size: 0.86rem; padding: 7px 14px; }
+.guide-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.guide-arrow { width: 40px; height: 40px; padding: 0; font-size: 1.4rem; line-height: 1; display: inline-flex; align-items: center; justify-content: center; }
+.guide-dots { display: flex; gap: 6px; flex-wrap: wrap; }
+.guide-dot { width: 10px; height: 10px; padding: 0; border-radius: 999px; background: var(--line); border: 0; transition: width 0.2s, background 0.2s; }
+.guide-dot:hover:not(:disabled) { background: var(--rose); }
+.guide-dot.active { width: 26px; background: var(--purple); }
+.guide-count { margin-left: auto; font-size: 0.86rem; font-variant-numeric: tabular-nums; }
+.guide-track {
+  display: flex;
+  align-items: flex-start;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  padding: 6px 0 14px;
+  cursor: grab;
+}
+.guide-track::-webkit-scrollbar { display: none; }
+.guide-track.dragging { scroll-snap-type: none; cursor: grabbing; user-select: none; }
+.guide-track.dragging a, .guide-track.dragging img { pointer-events: none; }
+.guide-slide { flex: 0 0 100%; min-width: 0; padding: 0 6px; scroll-snap-align: start; scroll-snap-stop: always; }
+.guide-card { cursor: auto; }
+.guide-num { margin: 0 0 6px; font-size: 0.78rem; font-weight: 800; letter-spacing: 0.08em; color: var(--purple); }
+.guide-title { margin: 0; }
+.guide-content { margin-top: 18px; }
+.guide-content h2 { font-size: 1.15rem; margin: 28px 0 8px; }
+.guide-content img { display: block; margin: 12px 0; border: 1px solid var(--line); box-shadow: var(--shadow); }
+.guide-content img, .guide-content a { -webkit-user-drag: none; }
+.guide-link { margin: 24px 0 0; font-size: 0.9rem; }
+.guide-link a { color: var(--muted); }
+.guide-foot { display: flex; justify-content: space-between; gap: 12px; margin-top: 4px; }
+.guide-step { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; max-width: 48%; padding: 12px 18px; border-radius: var(--radius-sm); white-space: normal; text-align: left; }
+.guide-step.next { margin-left: auto; align-items: flex-end; text-align: right; }
+.guide-step-label { font-size: 0.78rem; color: var(--muted); font-weight: 600; }
+.guide-step-title { font-weight: 700; color: var(--ink); }
+@media (max-width: 720px) {
+  .guide-tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -20px 12px; padding: 0 20px; }
+  .guide-tabs::-webkit-scrollbar { display: none; }
+  .guide-tabs .tab { flex: none; }
+  .guide-slide { padding: 0 2px; }
+  .guide-step { padding: 10px 12px; }
+}
+
+/* 메인 첫 화면의 기능 칸: 누르면 그 사용 방법으로 간다 (D-104) */
+a.feature { display: block; text-decoration: none; position: relative; transition: transform 0.15s, box-shadow 0.15s; }
+a.feature .feature-more { display: inline-block; margin-top: 12px; font-size: 0.84rem; font-weight: 700; opacity: 0.95; }
+a.feature:hover, a.feature:focus-visible { transform: translateY(-3px); box-shadow: 0 2px 4px rgba(23, 22, 43, 0.06), 0 14px 34px rgba(57, 56, 91, 0.18); }
+a.feature:focus-visible { outline: 3px solid var(--peach); outline-offset: 3px; }
+a.feature:hover .feature-more span, a.feature:focus-visible .feature-more span { margin-left: 4px; }
+.feature-more span { display: inline-block; transition: margin 0.15s; }
+@media (prefers-reduced-motion: reduce) { a.feature, .guide-dot, .feature-more span { transition: none; } }
+
+/* 공지 본문 아래 "다른 사용 방법 넘겨 보기" */
+.guide-more { margin: 24px 0 0; }

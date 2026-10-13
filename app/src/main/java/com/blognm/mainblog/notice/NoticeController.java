@@ -1,5 +1,6 @@
 package com.blognm.mainblog.notice;
 
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -33,6 +34,19 @@ public class NoticeController {
     @GetMapping({"/notices", "/notices/{id}"})
     public String page() {
         return "forward:/notice.html";
+    }
+
+    /** 사용 방법 안내를 옆으로 넘겨 보는 화면 (D-104). */
+    @GetMapping("/guides")
+    public String guidePage() {
+        return "forward:/guide.html";
+    }
+
+    /** 사용 방법 안내 공지의 제목과 본문 (D-104). 비회원도 본다 (SecurityConfig의 GET /api/notices/*). */
+    @GetMapping("/api/notices/guides")
+    @ResponseBody
+    public List<NoticeService.Guide> guides() {
+        return notices.guides();
     }
 
     @GetMapping("/api/notices/all")
