@@ -784,6 +784,7 @@ a.feature:hover .feature-more span, a.feature:focus-visible .feature-more span {
 .art .art-blink { animation: art-blink 1.8s ease-in-out infinite; }
 .art .art-steam { animation: art-steam 3s ease-in-out infinite; }
 .art .art-flow { animation: art-flow 3.2s linear infinite; }
+.art .art-flow.slow { animation-duration: 9s; }
 .art .art-fly { animation: art-fly 4.2s ease-in-out infinite alternate; }
 .art .art-drop { animation: art-drop 3.6s cubic-bezier(.5, 0, .3, 1) infinite; }
 .art .art-sway { transform-origin: 50% 100%; animation: art-sway 4s ease-in-out infinite alternate; }
@@ -807,3 +808,6 @@ a.feature:hover .feature-more span, a.feature:focus-visible .feature-more span {
 @keyframes art-drip { 0% { opacity: 0; transform: translateY(-8px); } 30% { opacity: 0.8; } 100% { opacity: 0; transform: translateY(16px); } }
 @media (prefers-reduced-motion: reduce) { .art, .art * { animation: none !important; } }
 .notice-empty .empty-art { display: block; margin: 0 auto 8px; }
+.search-empty { text-align: center; padding: 32px 0 48px; color: var(--muted); }
+.search-empty img { display: block; margin: 0 auto 8px; }
+.search-empty p { margin: 0; font-weight: 700; }
