@@ -44,9 +44,12 @@ $('check-email').addEventListener('click', async () => {
   $('step1-error').textContent = '';
   try {
     const res = await api.get('/api/auth/signup/email-available?email=' + encodeURIComponent(email));
+    // 구글로 로그인하던 이메일이면 구글로 로그인하라고 알려 준다 (D-103)
     $('email-message').textContent = res.available
       ? '가입할 수 있는 이메일입니다.'
-      : '이미 가입된 이메일입니다. 로그인하거나 비밀번호 찾기를 이용해 주세요.';
+      : res.google
+        ? '구글 계정으로 가입된 이메일입니다. 로그인 화면에서 구글로 로그인해 주세요.'
+        : '이미 가입된 이메일입니다. 로그인하거나 비밀번호 찾기를 이용해 주세요.';
     state.emailChecked = res.available ? email : null;
   } catch (err) {
     $('email-message').textContent = '';

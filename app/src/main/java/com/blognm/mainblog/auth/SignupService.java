@@ -26,16 +26,19 @@ public class SignupService {
 
     private final EmailVerificationRepository verifications;
     private final MemberRepository members;
+    private final SocialAccountRepository socialAccounts;
     private final AuthMailService mail;
     private final PasswordEncoder passwordEncoder;
     private final RateLimiter rateLimiter;
     private final AppProperties props;
     private final Clock clock;
 
-    public SignupService(EmailVerificationRepository verifications, MemberRepository members, AuthMailService mail,
-            PasswordEncoder passwordEncoder, RateLimiter rateLimiter, AppProperties props, Clock clock) {
+    public SignupService(EmailVerificationRepository verifications, MemberRepository members,
+            SocialAccountRepository socialAccounts, AuthMailService mail, PasswordEncoder passwordEncoder,
+            RateLimiter rateLimiter, AppProperties props, Clock clock) {
         this.verifications = verifications;
         this.members = members;
+        this.socialAccounts = socialAccounts;
         this.mail = mail;
         this.passwordEncoder = passwordEncoder;
         this.rateLimiter = rateLimiter;
@@ -43,15 +46,27 @@ public class SignupService {
         this.clock = clock;
     }
 
-    /** 이메일 중복 확인. 가입 화면에서 바로 알려 준다 (D-99). 하나씩 넣어 보는 것을 막으려고 IP별로 센다. */
-    public boolean isEmailAvailable(String rawEmail, String clientIp) {
+    /**
+     * 이메일 중복 확인. 가입 화면에서 바로 알려 준다 (D-99). 하나씩 넣어 보는 것을 막으려고 IP별로 센다.
+     * 구글로 로그인하던 이메일이면 google=true로 알려 구글로 로그인하라고 안내한다 (D-103).
+     */
+    public EmailStatus checkEmail(String rawEmail, String clientIp) {
         String email = MemberRules.normalizeEmail(rawEmail);
         if (!rateLimiter.tryAcquire("email-check:" + clientIp, props.rateLimit().emailCheckPerMinute(),
                 Duration.ofMinutes(1))) {
             throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "TOO_MANY_REQUESTS",
                     "요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.");
         }
-        return !members.existsByEmail(email);
+        return members.findByEmail(email)
+                .map(m -> new EmailStatus(false, usesGoogle(m)))
+                .orElse(new EmailStatus(true, false));
+    }
+
+    public record EmailStatus(boolean available, boolean google) {
+    }
+
+    private boolean usesGoogle(Member member) {
+        return socialAccounts.existsByMemberIdAndProvider(member.getId(), SocialAccount.GOOGLE);
     }
 
     /** 인증번호 요청. 이미 가입된 이메일이면 메일을 보내지 않고 바로 알려 준다 (D-99). */
@@ -60,9 +75,9 @@ public class SignupService {
         String email = MemberRules.normalizeEmail(rawEmail);
         LocalDateTime now = LocalDateTime.now(clock);
         AppProperties.Signup cfg = props.signup();
-        if (members.existsByEmail(email)) {
-            throw emailTaken();
-        }
+        members.findByEmail(email).ifPresent(m -> {
+            throw emailTaken(usesGoogle(m));
+        });
 
         verifications.findFirstByEmailAndPurposeOrderByIdDesc(email, Purpose.SIGNUP).ifPresent(prev -> {
             if (prev.getSentAt().plus(cfg.resendInterval()).isAfter(now)) {
@@ -84,9 +99,10 @@ public class SignupService {
         mail.sendSignupCode(email, code, cfg.codeTtl().toMinutes());
     }
 
-    private static ApiException emailTaken() {
-        return new ApiException(HttpStatus.CONFLICT, "EMAIL_TAKEN",
-                "이미 가입된 이메일입니다. 로그인하거나 비밀번호 찾기를 이용해 주세요.");
+    private static ApiException emailTaken(boolean google) {
+        return new ApiException(HttpStatus.CONFLICT, "EMAIL_TAKEN", google
+                ? "구글 계정으로 가입된 이메일입니다. 로그인 화면에서 구글로 로그인해 주세요."
+                : "이미 가입된 이메일입니다. 로그인하거나 비밀번호 찾기를 이용해 주세요.");
     }
 
     /** 인증번호 확인. 10분 만료, 5번 틀리면 무효 (USR-02). */

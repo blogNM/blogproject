@@ -1,6 +1,7 @@
 package com.blognm.mainblog.auth;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -122,6 +123,15 @@ class SocialLoginTest extends IntegrationTest {
 
         // 다음에는 가입 화면 없이 바로 로그인
         expectLoggedInAs(googleReturns("g-2", "new@gmail.com", true, "Kim Google"), "구글회원");
+
+        // 같은 이메일로 일반 가입을 하려 하면 구글로 가입된 이메일이라고 알려 준다
+        mvc.perform(get("/api/auth/signup/email-available").param("email", "new@gmail.com"))
+                .andExpect(jsonPath("$.available").value(false))
+                .andExpect(jsonPath("$.google").value(true));
+        postJson("/api/auth/signup/code", "{\"email\":\"new@gmail.com\"}")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("EMAIL_TAKEN"))
+                .andExpect(jsonPath("$.message").value(startsWith("구글 계정으로 가입된 이메일입니다.")));
     }
 
     @Test
