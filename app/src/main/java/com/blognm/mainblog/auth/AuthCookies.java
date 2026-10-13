@@ -21,6 +21,9 @@ public class AuthCookies {
     public static final String REFRESH = "REFRESH_TOKEN";
     /** 관리자 로그인. 회원 쿠키와 따로 두고, 브라우저를 닫으면 사라진다 (SEC-09). */
     public static final String ADMIN = "ADMIN_TOKEN";
+    /** 구글 로그인 뒤 가입을 마칠 때까지 쓰는 쿠키 (D-103). 가입 주소에만 보낸다. */
+    public static final String SOCIAL_SIGNUP = "SOCIAL_SIGNUP";
+    static final String SOCIAL_PATH = "/api/auth/social";
     /** Refresh Token 쿠키는 토큰 갱신·로그아웃 주소에만 보낸다. */
     static final String REFRESH_PATH = "/api/auth";
 
@@ -52,6 +55,14 @@ public class AuthCookies {
 
     public void clearAdmin(HttpServletResponse response) {
         add(response, ADMIN, "", "/", Duration.ZERO);
+    }
+
+    public void writeSocialSignup(HttpServletResponse response, String token, Duration ttl) {
+        add(response, SOCIAL_SIGNUP, token, SOCIAL_PATH, ttl);
+    }
+
+    public void clearSocialSignup(HttpServletResponse response) {
+        add(response, SOCIAL_SIGNUP, "", SOCIAL_PATH, Duration.ZERO);
     }
 
     public static Optional<String> read(HttpServletRequest request, String name) {

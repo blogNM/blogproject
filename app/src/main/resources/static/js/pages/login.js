@@ -24,6 +24,17 @@ if (new URLSearchParams(location.search).has('joined')) {
   notice.hidden = false;
 }
 
+// 구글 로그인 (D-103). 서버에 구글 앱 값이 있을 때만 버튼을 보인다.
+const social = new URLSearchParams(location.search).get('social');
+if (social === 'failed') {
+  errorBox.textContent = '구글 로그인을 끝내지 못했어요. 다시 시도해 주세요.';
+} else if (social === 'unverified') {
+  errorBox.textContent = '이 구글 계정으로는 로그인할 수 없어요. 이메일이 확인된 구글 계정을 쓰거나 이메일로 로그인해 주세요.';
+}
+api.get('/api/auth/social/config')
+  .then((config) => { document.getElementById('google-login').hidden = !config.google; })
+  .catch(() => {});
+
 let turnstileToken = null;
 let widgetId = null;
 
