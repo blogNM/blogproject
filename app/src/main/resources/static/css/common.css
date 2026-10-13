@@ -771,3 +771,38 @@ a.feature:hover .feature-more span, a.feature:focus-visible .feature-more span {
 
 /* 공지 본문 아래 "다른 사용 방법 넘겨 보기" */
 .guide-more { margin: 24px 0 0; }
+
+/* ----- 첫 화면·로그인·가입 그림 움직임 (D-105) ----- */
+.art { animation: art-in 0.9s ease-out both; overflow: visible; }
+.art .art-float { animation: art-float 6s ease-in-out infinite; }
+.art .art-float.slow { animation-duration: 7.5s; animation-delay: -2s; }
+.art .art-bob { animation: art-float 4.8s ease-in-out -1.5s infinite; }
+.art .art-bounce { animation: art-bounce 1.8s cubic-bezier(.45, 0, .55, 1) infinite; }
+.art .art-pulse, .art .art-twinkle, .art .art-blink, .art .art-sway, .art .art-drop, .art .art-fly { transform-box: fill-box; transform-origin: center; }
+.art .art-pulse { animation: art-pulse 2.6s ease-in-out infinite; }
+.art .art-twinkle { animation: art-twinkle 2.8s ease-in-out infinite; }
+.art .art-blink { animation: art-blink 1.8s ease-in-out infinite; }
+.art .art-steam { animation: art-steam 3s ease-in-out infinite; }
+.art .art-flow { animation: art-flow 3.2s linear infinite; }
+.art .art-fly { animation: art-fly 4.2s ease-in-out infinite alternate; }
+.art .art-drop { animation: art-drop 3.6s cubic-bezier(.5, 0, .3, 1) infinite; }
+.art .art-sway { transform-origin: 50% 100%; animation: art-sway 4s ease-in-out infinite alternate; }
+.art .art-drip { animation: art-drip 2.4s ease-in infinite; }
+.art .d1 { animation-delay: -0.6s; }
+.art .d2 { animation-delay: -1.2s; }
+.art .d3 { animation-delay: -1.8s; }
+.art .d4 { animation-delay: -2.4s; }
+.art .d5 { animation-delay: -3s; }
+@keyframes art-in { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+@keyframes art-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+@keyframes art-bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-22px); } }
+@keyframes art-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+@keyframes art-twinkle { 0%, 100% { opacity: 0.25; transform: scale(0.6) rotate(0deg); } 50% { opacity: 1; transform: scale(1.1) rotate(45deg); } }
+@keyframes art-blink { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
+@keyframes art-steam { 0% { opacity: 0; transform: translateY(6px); } 40% { opacity: 0.55; } 100% { opacity: 0; transform: translateY(-14px); } }
+@keyframes art-flow { from { stroke-dashoffset: 100; } to { stroke-dashoffset: 0; } }
+@keyframes art-fly { from { transform: translate(-18px, 14px) rotate(-3deg); } to { transform: translate(12px, -10px) rotate(4deg); } }
+@keyframes art-drop { 0% { opacity: 0; transform: translateY(-40px); } 20% { opacity: 1; } 55%, 85% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(0); opacity: 0; } }
+@keyframes art-sway { from { transform: rotate(-4deg); } to { transform: rotate(4deg); } }
+@keyframes art-drip { 0% { opacity: 0; transform: translateY(-8px); } 30% { opacity: 0.8; } 100% { opacity: 0; transform: translateY(16px); } }
+@media (prefers-reduced-motion: reduce) { .art, .art * { animation: none !important; } }
