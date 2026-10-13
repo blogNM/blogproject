@@ -19,14 +19,14 @@ import com.blognm.mainblog.member.MemberRepository;
 import com.blognm.mainblog.member.MemberRules;
 
 /**
- * 구글 로그인 (D-103).
- * ① 연결된 구글 계정이면 그 회원으로 로그인 ② 구글이 확인한 이메일로 가입한 회원이면 연결하고 로그인
+ * 구글 로그인 (D-103)·네이버 로그인 (D-107). 두 회사 모두 같은 흐름이다.
+ * ① 연결된 계정이면 그 회원으로 로그인 ② 그 회사가 확인한 이메일로 가입한 회원이면 연결하고 로그인
  * ③ 처음 온 사람은 닉네임·약관 동의를 받아 가입시킨다. 로그인 뒤에는 이메일 로그인과 같은 토큰 쿠키를 쓴다.
  */
 @Service
 public class SocialLoginService {
 
-    /** 구글에서 돌아와 가입을 마칠 때까지 기다리는 시간. */
+    /** 구글·네이버에서 돌아와 가입을 마칠 때까지 기다리는 시간. */
     static final Duration SIGNUP_TTL = Duration.ofMinutes(10);
 
     private final SocialAccountRepository socialAccounts;
@@ -46,7 +46,7 @@ public class SocialLoginService {
         this.clock = clock;
     }
 
-    /** 구글이 돌려준 사용자 정보로 로그인하거나, 가입 화면으로 보낼 토큰을 만든다. */
+    /** 구글·네이버가 돌려준 사용자 정보로 로그인하거나, 가입 화면으로 보낼 토큰을 만든다. */
     @Transactional
     public Outcome login(String provider, String providerUserId, String rawEmail, boolean emailVerified,
             String name) {
@@ -69,7 +69,7 @@ public class SocialLoginService {
         Optional<Member> sameEmail = members.findByEmail(email).filter(Member::isActive);
         if (sameEmail.isPresent()) {
             Member m = sameEmail.get();
-            // 같은 이메일 회원이 이미 다른 구글 계정과 연결돼 있으면 덮어쓰지 않는다.
+            // 같은 이메일 회원이 이미 같은 회사의 다른 계정과 연결돼 있으면 덮어쓰지 않는다.
             if (socialAccounts.existsByMemberIdAndProvider(m.getId(), provider)) {
                 return Outcome.rejected();
             }
@@ -81,7 +81,7 @@ public class SocialLoginService {
         return Outcome.needsSignup(token);
     }
 
-    /** 가입 화면에 보여 줄 구글 계정 정보. */
+    /** 가입 화면에 보여 줄 구글·네이버 계정 정보. */
     public SocialSignup pending(String signupToken) {
         return parse(signupToken);
     }
@@ -106,7 +106,7 @@ public class SocialLoginService {
         }
         if (members.existsByEmail(s.email())) {
             throw new ApiException(HttpStatus.CONFLICT, "EMAIL_TAKEN",
-                    "이미 가입된 이메일입니다. 구글로 로그인을 다시 눌러 주세요.");
+                    "이미 가입된 이메일입니다. " + label(s.provider()) + "로 로그인을 다시 눌러 주세요.");
         }
         if (members.existsByNickname(nickname)) {
             throw new ApiException(HttpStatus.CONFLICT, "NICKNAME_TAKEN", "이미 사용 중인 닉네임입니다.");
@@ -118,7 +118,7 @@ public class SocialLoginService {
             socialAccounts.saveAndFlush(SocialAccount.link(member.getId(), s.provider(), s.providerUserId(), now));
         } catch (DataIntegrityViolationException e) {
             throw new ApiException(HttpStatus.CONFLICT, "SIGNUP_CONFLICT",
-                    "가입하지 못했습니다. 닉네임을 바꾸거나 구글로 로그인을 다시 눌러 주세요.");
+                    "가입하지 못했습니다. 닉네임을 바꾸거나 " + label(s.provider()) + "로 로그인을 다시 눌러 주세요.");
         }
         return loginService.reissue(member, false);
     }
@@ -132,7 +132,12 @@ public class SocialLoginService {
 
     private static ApiException expired() {
         return ApiException.badRequest("SOCIAL_SIGNUP_EXPIRED",
-                "가입 시간이 지났습니다. 로그인 화면에서 구글로 로그인을 다시 눌러 주세요.");
+                "가입 시간이 지났습니다. 로그인 화면에서 구글이나 네이버로 로그인을 다시 눌러 주세요.");
+    }
+
+    /** 화면 문구에 쓰는 회사 이름 (구글, 네이버). */
+    public static String label(String provider) {
+        return SocialAccount.NAVER.equals(provider) ? "네이버" : "구글";
     }
 
     private static String normalizedOrNull(String raw) {
@@ -143,7 +148,7 @@ public class SocialLoginService {
         }
     }
 
-    /** 구글 이름이 이름 규칙(한글·영문 20자)에 맞을 때만 저장한다. 이름은 선택이다. */
+    /** 구글·네이버 이름이 이름 규칙(한글·영문 20자)에 맞을 때만 저장한다. 이름은 선택이다. */
     private static String nameOrNull(String raw) {
         try {
             return MemberRules.normalizeName(raw);

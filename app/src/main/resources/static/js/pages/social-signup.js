@@ -1,13 +1,14 @@
 import { api } from '../api.js';
 
-// 구글 로그인으로 처음 온 사람의 가입 마무리 (D-103). 이메일은 구글이 확인했으므로 닉네임과 약관 동의만 받는다.
+// 구글(D-103)·네이버(D-107) 로그인으로 처음 온 사람의 가입 마무리. 이메일은 그 회사가 확인했으므로 닉네임과 약관 동의만 받는다.
 const $ = (id) => document.getElementById(id);
 const errorBox = $('error');
 const form = $('social-signup');
 
 try {
   const pending = await api.get('/api/auth/social/pending');
-  $('google-email').textContent = pending.email;
+  $('social-email').textContent = pending.email;
+  $('provider-name').textContent = pending.provider === 'naver' ? '네이버' : '구글';
 } catch (err) {
   errorBox.textContent = err.message;
   form.querySelector('button[type=submit]').disabled = true;

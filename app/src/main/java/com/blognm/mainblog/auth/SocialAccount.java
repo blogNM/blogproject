@@ -9,12 +9,16 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
-/** 회원에 연결한 바깥 로그인 계정 (D-103). 구글은 이메일이 아니라 바뀌지 않는 사용자 번호(sub)로 찾는다. */
+/**
+ * 회원에 연결한 바깥 로그인 계정 (D-103, D-107). 이메일이 아니라 바뀌지 않는 사용자 번호로 찾는다.
+ * 구글은 sub, 네이버는 response.id. 회원 한 명이 회사마다 하나씩 연결할 수 있다.
+ */
 @Entity
 @Table(name = "social_accounts")
 public class SocialAccount {
 
     public static final String GOOGLE = "google";
+    public static final String NAVER = "naver";
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -45,5 +49,9 @@ public class SocialAccount {
 
     public Long getMemberId() {
         return memberId;
+    }
+
+    public String getProvider() {
+        return provider;
     }
 }
