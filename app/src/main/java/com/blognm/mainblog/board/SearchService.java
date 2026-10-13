@@ -57,14 +57,15 @@ public class SearchService {
             remember(viewerId, query);
         }
         if (type == Type.BLOG) {
-            return new Result(query, type, sort, counts, null, blogs(phrase, tag, sort, page));
+            return new Result(query, type, sort, counts, null, blogs(phrase, tag, sort, page, counts.get(Type.BLOG)));
         }
         if (type == Type.TAG && tag == null) {
             return new Result(query, type, sort, counts, new PostCards.Page(List.of(), 1, 10, 0, 0), null);
         }
         MapSqlParameterSource params = new MapSqlParameterSource();
-        String where = PostCards.publicWhere(viewerId, params) + " AND " + postCondition(type, phrase, tag, query).where();
-        postCondition(type, phrase, tag, query).params().forEach(params::addValue);
+        Condition condition = postCondition(type, phrase, tag, query);
+        String where = PostCards.publicWhere(viewerId, params) + " AND " + condition.where();
+        condition.params().forEach(params::addValue);
         String order = switch (sort) {
             case LATEST -> "p.created_at DESC, p.id DESC";
             case POPULAR -> "p.like_count DESC, p.created_at DESC, p.id DESC";
@@ -72,7 +73,8 @@ public class SearchService {
                     ? "MATCH(p.title) AGAINST (:phrase IN BOOLEAN MODE) DESC, p.created_at DESC, p.id DESC"
                     : "p.created_at DESC, p.id DESC";
         };
-        return new Result(query, type, sort, counts, cards.page(where, order, params, page, size), null);
+        // 건수는 위에서 분류바 숫자로 센 값을 그대로 쓴다. 같은 조건의 COUNT를 두 번 돌리지 않는다 (D-109)
+        return new Result(query, type, sort, counts, cards.page(where, order, params, page, size, counts.get(type)), null);
     }
 
     // ----- 최근 검색어 (6.1): 본인만, 최대 10개 -----
@@ -154,7 +156,7 @@ public class SearchService {
         return n == null ? 0 : n;
     }
 
-    private BlogPage blogs(String phrase, String tag, Sort sort, int page) {
+    private BlogPage blogs(String phrase, String tag, Sort sort, int page, long total) {
         int size = 12;
         int current = Math.max(page, 1);
         String order = switch (sort) {
@@ -162,7 +164,6 @@ public class SearchService {
             case POPULAR -> "subscriber_count DESC, b.id DESC";
             case RELEVANCE -> "MATCH(b.name, b.description) AGAINST (:phrase IN BOOLEAN MODE) DESC, b.id DESC";
         };
-        long total = countBlogs(phrase, tag);
         List<BlogCard> items = jdbc.query("""
                 SELECT b.slug, b.name, b.description, b.theme_accent, m.nickname,
                        (SELECT i.stored_name FROM images i WHERE i.id = b.cover_image_id) AS cover,

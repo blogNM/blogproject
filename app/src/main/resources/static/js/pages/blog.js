@@ -195,12 +195,11 @@ function renderLook(blog) {
 }
 
 /** 메뉴: 홈과 카테고리 몇 개. 누르면 그 카테고리의 글 목록으로 간다. */
-async function renderMenu(blog) {
+async function renderMenu(blog, categoriesReady) {
   const menu = $('blog-menu');
   const base = `/blog/${encodeURIComponent(blog.slug)}`;
   const keyQ = key ? { key } : {};
-  const categories = await api.get(`/api/blogs/${encodeURIComponent(blog.slug)}/categories?` + new URLSearchParams(keyQ))
-    .catch(() => []);
+  const categories = await categoriesReady.catch(() => []);
   const items = [el('a', { href: base + (key ? '?key=' + encodeURIComponent(key) : '') }, '홈')];
   categories.slice(0, 5).forEach((c) => {
     items.push(el('a', { href: `${base}?${new URLSearchParams({ ...keyQ, category: c.id })}#all-posts` }, c.name));
@@ -319,5 +318,8 @@ function renderActions(blog) {
 
 const loaded = await load();
 if (loaded) {
-  await Promise.all([renderMenu(loaded), renderFront(loaded), initPostList(loaded, key)]);
+  // 카테고리는 메뉴와 글 목록이 함께 쓴다. 한 번만 부른다
+  const categories = api.get(`/api/blogs/${encodeURIComponent(loaded.slug)}/categories?` + new URLSearchParams(key ? { key } : {}));
+  categories.catch(() => {});
+  await Promise.all([renderMenu(loaded, categories), renderFront(loaded), initPostList(loaded, key, categories)]);
 }

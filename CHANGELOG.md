@@ -7,8 +7,21 @@
 
 ## 2026-10-13
 
+### 속도·검색 고침 (v1.4.1)
+
+- **수정** 새로고침할 때마다 글꼴(2MB)·js·css·그림을 다시 받던 문제. Spring Security 기본 헤더가 정적 파일에도 `no-store`를 붙이고 있었음. `/vendor` 30일·`/img` 7일 캐시, 화면·js·css는 `no-cache`(바뀌었는지만 묻고 304). 새로고침 완료 메인 1,183→206ms, 받는 양 2.1MB→10KB (D-109, 김채림 요청)
+- **설정** 응답 gzip 압축 켬(`server.compression`, `SERVER_COMPRESSION`), 캐시 기간 `STATIC_VENDOR_MAX_AGE`(30d)·`STATIC_IMAGE_MAX_AGE`(7d) (D-109)
+- **수정** 검색이 느리던 문제. MySQL이 공개 블로그 수를 잘못 어림잡아 태그 건수·목록에서 공개 글을 모두 훑었음. Flyway V14로 `blogs(visibility, is_hidden, status)`·`posts(status)` 히스토그램을 만들고, 분류바 건수를 목록 건수로 그대로 써서 같은 COUNT를 두 번 돌리지 않음. 검색 결과는 그대로(132개 응답 비교). 태그 검색 310→30ms, '서울' 71→32ms, 로그인 '서울' 138→43ms (D-109, 김채림 요청)
+- **수정** 블로그 홈이 카테고리를 두 번 받고 글 목록을 카테고리 뒤에 요청하던 것. 한 번 받아 메뉴·글 목록이 같이 쓰고 동시에 요청 (D-109)
+- **화면** 화면 HTML 21개에 `<link rel="modulepreload">`(api.js·layout.js·notifications.js)로 공통 js를 페이지 js와 함께 받음 (D-109)
+- **설정** 릴리스 노트 강조 형식: 사이트는 인용·굵게·`<u>`·`hl-*`·`ts-*` span을 그대로 쓰고, `release_notes.py`가 깃허브 글에서만 `hl-*`→`<mark>`, `ts-large/xlarge`→`<b>`, `ts-small`→`<sub>`, `tc-*`→글자만, `<u>`→`<ins>`로 바꿈 (D-109)
+- **문서** 릴리스 노트 [v1.4.1](docs/releases/v1.4.1.md)(무엇이 불편했나요·원인·어떻게 고쳤나요·얼마나 달라졌나요 형식, 속도 비교 그림·검색 화면 캡처 `/img/releases/v1.4.1/`), 릴리스 노트 안내에 새 노트 형식·강조 표·다시 돌리면 공지도 고쳐진다는 설명, D-109, spec 004 Clarifications, CLAUDE.md·docs/README.md 결정 번호·노트 목록
+- **설정** 테스트: 정적 파일 캐시 헤더(`SecurityHeadersTest`), 검색 목록 건수 = 분류바 건수(`BoardTest`), 릴리스 노트 강조가 공지에서 살아남음(`ReleaseNoticeTest`)
+
 ### 카카오 로그인 (v1.4.0)
 
+- **기능** 카카오·구글 로그인은 매번 계정 고르기 화면을 띄움(`prompt=select_account`). 로그아웃한 뒤 다른 카카오·구글 계정으로 들어갈 수 있음. 네이버는 계정 고르기 화면이 없어 그대로. `SelectAccountRequestResolver`, 테스트 3개(카카오·구글 있음, 네이버 없음) (D-108 후속, D-103, 사용자 요청)
+- **문서** 릴리스 노트 v1.4.0에 "다른 카카오·구글 계정으로 로그인하기"(새 노트 형식)와 안내 그림 `/img/releases/v1.4.0/kakao-select-account.png` 추가. D-108·D-103 후속, spec 001 Clarifications
 - **문서** 릴리스 노트 [v1.4.0](docs/releases/v1.4.0.md): 네이버·카카오 로그인 소개와 로그인 버튼 캡처 2장(`/img/releases/v1.4.0/`), 시크릿·Redirect URI 같은 운영 메모는 깃허브 릴리스에만 (사용자 요청)
 - **기능** 카카오 로그인. 로그인 화면 네이버 버튼 아래 [카카오로 로그인]. 같은 이메일 회원이면 연결해 로그인, 처음 온 사람은 닉네임·약관 동의만 받아 가입, 탈퇴하면 연결을 끊음. `KAKAO_CLIENT_ID`가 비어 있으면 버튼을 숨김 (D-108, 사용자 요청)
 - **기능** 카카오에는 이메일(`account_email`) 동의만 요청함. 켜지 않은 동의 항목을 요청하면 생기는 KOE205 오류를 피함. 카카오 id(숫자)는 글자로 저장 (D-108)

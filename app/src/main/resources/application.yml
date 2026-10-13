@@ -28,6 +28,13 @@ spring:
       mail.smtp.timeout: 5000
       mail.smtp.writetimeout: 5000
 
+  web:
+    resources:
+      cache:
+        # 화면·js·css: 브라우저가 가지고 있다가 쓸 때마다 바뀌었는지 묻는다(304). /vendor·/img는 StaticCacheConfig (D-109)
+        cachecontrol:
+          no-cache: true
+
   servlet:
     multipart:
       # 사진 한 장 3MB, 한 번에 10MB (6.3)
@@ -36,6 +43,16 @@ spring:
 
 server:
   forward-headers-strategy: ${FORWARD_HEADERS_STRATEGY:none}
+  # 화면·js·css·API 응답을 gzip으로 줄여 보낸다 (D-109). 글꼴(woff2)·사진은 이미 압축돼 있어 빼고, 1KB보다 작은 응답도 그대로 보낸다
+  compression:
+    enabled: ${SERVER_COMPRESSION:true}
+    mime-types: text/html,text/css,text/javascript,application/javascript,application/json,image/svg+xml,text/plain
+    min-response-size: 1KB
+
+# 정적 파일을 브라우저에 둘 기간 (D-109, StaticCacheConfig). 글꼴·에디터와 그림
+static-cache:
+  vendor-max-age: ${STATIC_VENDOR_MAX_AGE:30d}
+  image-max-age: ${STATIC_IMAGE_MAX_AGE:7d}
 
 app:
   time-zone: Asia/Seoul

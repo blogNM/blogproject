@@ -70,13 +70,15 @@ class SocialLoginTest extends IntegrationTest {
     }
 
     @Test
-    @DisplayName("구글 앱 값이 있으면 로그인 화면에 버튼을 보이고, 버튼 주소는 구글 로그인 화면으로 보낸다")
+    @DisplayName("구글 앱 값이 있으면 로그인 화면에 버튼을 보이고, 버튼 주소는 구글 계정 고르기 화면으로 보낸다")
     void googleButton() throws Exception {
         mvc.perform(get("/api/auth/social/config")).andExpect(jsonPath("$.google").value(true));
         MvcResult r = mvc.perform(get("/oauth2/authorization/google")).andExpect(status().is3xxRedirection())
                 .andReturn();
         assertThat(r.getResponse().getRedirectedUrl()).startsWith("https://accounts.google.com/o/oauth2/v2/auth")
-                .contains("client_id=test-google-client-id");
+                .contains("client_id=test-google-client-id")
+                .as("로그아웃한 뒤 다른 구글 계정을 고를 수 있게 매번 계정 고르기 화면을 띄운다")
+                .contains("prompt=select_account");
     }
 
     @Test
