@@ -1,5 +1,6 @@
 import { api } from '../api.js';
 import { requireLogin } from '../layout.js';
+import { createRichEditor } from '../rich-editor.js';
 import {
   IMAGE_EXTENSIONS, IMAGE_MAX_BYTES, POST_CONTENT_MAX, POST_TAGS_MAX, POST_TITLE_MAX, contentLength, parseTags,
 } from '../rules.js';
@@ -20,9 +21,6 @@ function setSlug(value) {
   blogHref = `/blog/${encodeURIComponent(slug)}`;
 }
 setSlug(slug);
-// 글자 색 7가지. 서버의 MarkdownRenderer.TEXT_COLORS와 같다.
-const TEXT_COLORS = [['red', '빨강'], ['orange', '주황'], ['green', '초록'], ['blue', '파랑'], ['purple', '보라'],
-  ['mauve', '자주'], ['gray', '회색']];
 // 1차 임시저장은 브라우저에만 (004 6.6)
 // 블로그를 고르는 글쓰기는 블로그를 바꿔도 쓰던 글이 남도록 한 자리에 저장한다.
 const DRAFT_KEY = chooseBlog ? 'post-draft:choose:new' : `post-draft:${slug}:${postId || 'new'}`;
@@ -154,51 +152,15 @@ if (blog) {
     });
   }
 
-  const editor = new window.toastui.Editor({
-    el: $('editor'),
+  // 보이는 그대로 쓰는 편집기 (D-106). 색·크기·형광펜이 쓰는 칸에 바로 보이고, HTML은 [HTML 보기]로 옆에 보인다.
+  const rich = createRichEditor({
+    host: $('editor'),
     height: '460px',
-    initialEditType: 'markdown',
-    previewStyle: window.innerWidth > 900 ? 'vertical' : 'tab',
-    hideModeSwitch: true,
-    language: 'ko-KR',
-    usageStatistics: false,
-    placeholder: '마크다운으로 쓰세요. 사진은 끌어다 놓거나 붙여 넣으면 올라갑니다.',
-    toolbarItems: [['heading', 'bold', 'italic', 'strike', colorButton()], ['hr', 'quote'], ['ul', 'ol'],
-      ['table', 'image', 'link'], ['code', 'codeblock']],
-    hooks: { addImageBlobHook: uploadImage },
+    placeholder: '여기에 글을 쓰세요. 위 버튼으로 꾸미고, 사진은 끌어다 놓거나 붙여 넣으면 올라갑니다.',
+    uploadImage,
+    withCode: true,
   });
-
-  // 글자 색 (사용자 요청 2026-10-08). 고른 글자를 <span class="tc-색">으로 감싼다.
-  // 서버는 정해 둔 색 class만 남기고 나머지는 지운다 (MarkdownRenderer.TEXT_COLORS). CSP 때문에 style 속성은 쓰지 않는다.
-  function colorButton() {
-    const body = document.createElement('div');
-    body.className = 'color-popup';
-    TEXT_COLORS.forEach(([code, name]) => {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'color-swatch tc-bg-' + code;
-      b.title = name;
-      b.setAttribute('aria-label', name);
-      b.addEventListener('click', () => paint(code));
-      body.append(b);
-    });
-    const clear = document.createElement('button');
-    clear.type = 'button';
-    clear.className = 'color-clear';
-    clear.textContent = '색 빼기';
-    clear.addEventListener('click', () => paint(null));
-    body.append(clear);
-    return { name: 'color', tooltip: '글자 색', text: 'A', className: 'toolbar-color', popup: { body, style: { width: 'auto' } } };
-  }
-
-  function paint(code) {
-    const selected = editor.getSelectedText();
-    const plain = selected.replace(/<span class="tc-[a-z]+">|<\/span>/g, '');
-    if (code) editor.replaceSelection(`<span class="tc-${code}">${plain || '글자'}</span>`);
-    else editor.replaceSelection(plain);
-    editor.eventEmitter.emit('closePopup');
-    editor.focus();
-  }
+  const { editor } = rich;
 
   /**
    * 번호 목록에서 Tab: 쓴 줄이면 다음 번호 줄을 만들고, 빈 번호 줄이면 번호를 지운다 (사용자 요청).
@@ -206,23 +168,21 @@ if (blog) {
    */
   function listTab(e) {
     if (e.key !== 'Tab' || e.shiftKey || e.altKey || e.ctrlKey || e.metaKey || e.isComposing) return;
-    const [start, end] = editor.getSelection();
-    if (start[0] !== end[0] || start[1] !== end[1]) return;
-    const line = start[0];
-    const text = editor.getMarkdown().split('\n')[line - 1] ?? '';
-    const m = /^(\s*)(\d+)([.)])(\s+)(.*)$/.exec(text) || /^(\s*)(\d+)([.)])()()$/.exec(text);
-    if (!m) return;
+    const view = editor.wwEditor.view;
+    const { state } = view;
+    const { $from, empty } = state.selection;
+    if (!empty) return;
+    let depth = $from.depth;
+    while (depth > 0 && $from.node(depth).type.name !== 'listItem') depth -= 1;
+    if (!depth || $from.node(depth - 1).type.name !== 'orderedList') return;
     e.preventDefault();
     e.stopPropagation();
-    const [, indent, num, mark, , body] = m;
-    const lineEnd = [line, text.length + 1];
-    if (!body.trim()) {
-      editor.replaceSelection(indent, [line, 1], lineEnd);
-      editor.setSelection([line, indent.length + 1]);
+    if ($from.parent.content.size === 0) {
+      editor.exec('outdent');
     } else {
-      const next = `${indent}${Number(num) + 1}${mark} `;
-      editor.replaceSelection('\n' + next, lineEnd, lineEnd);
-      editor.setSelection([line + 1, next.length + 1]);
+      // 줄 끝으로 가서 Enter와 똑같이 다음 번호 줄을 만든다
+      view.dispatch(state.tr.setSelection(state.selection.constructor.create(state.doc, $from.end())));
+      view.someProp('handleKeyDown', (f) => f(view, new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13 })));
     }
     editor.focus();
   }
@@ -232,7 +192,7 @@ if (blog) {
     $('category').value = values.categoryId ? String(values.categoryId) : '';
     $('tags').value = (values.tags || []).join(', ');
     $('notice').checked = !!values.notice;
-    editor.setMarkdown(values.content || '', false);
+    rich.setMarkdown(values.content || '');
   }
 
   function current() {
@@ -245,12 +205,15 @@ if (blog) {
     };
   }
 
+  // 편집기는 마크다운을 조금 다르게 적기도 한다(목록 기호 등). 같은 글인지는 편집기가 다시 적은 글로도 본다.
+  let original = '';
   if (post) {
     fill({ title: post.title, content: post.contentMarkdown, categoryId: post.categoryId, tags: post.tags, notice: post.notice });
+    original = editor.getMarkdown();
   }
   const draft = readDraft();
   if (draft && (draft.title || draft.content)
-      && (!post || draft.content !== post.contentMarkdown || draft.title !== post.title)
+      && (!post || (draft.content !== post.contentMarkdown && draft.content !== original) || draft.title !== post.title)
       && confirm(`${draft.savedAt}에 자동 저장된 글이 있습니다. 불러올까요?`)) {
     fill(draft);
     $('draft-message').textContent = '자동 저장된 글을 불러왔습니다.';
@@ -273,7 +236,7 @@ if (blog) {
     }, 1000);
   }
   editor.on('change', () => { updateLength(); scheduleDraft(); });
-  editor.getEditorElements().mdEditor.addEventListener('keydown', listTab, true);
+  editor.getEditorElements().wwEditor.addEventListener('keydown', listTab, true);
   ['title', 'tags', 'category', 'notice'].forEach((id) => $(id).addEventListener('input', scheduleDraft));
 
   async function uploadImage(blob, callback) {

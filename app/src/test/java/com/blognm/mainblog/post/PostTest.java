@@ -91,6 +91,27 @@ class PostTest extends IntegrationTest {
     }
 
     @Test
+    @DisplayName("보이는 그대로 편집기가 겹쳐 감싼 크기·형광펜·색 span은 그대로 남고, 표시는 글자 수에 넣지 않는다 (D-106)")
+    void nestedFormatSpans() throws Exception {
+        String nested = "<span class=\\\"ts-large\\\"><span class=\\\"hl-yellow\\\"><span class=\\\"tc-red\\\">크고 빨강</span></span></span>"
+                + " **<span class=\\\"tc-blue\\\">굵은 파랑</span>**";
+        long id = write(writer, "food", "겹친 서식", nested);
+        String html = JsonPath.read(getAs("/api/posts/" + id).andReturn().getResponse().getContentAsString(),
+                "$.contentHtml");
+        assertThat(html).contains(
+                "<span class=\"ts-large\"><span class=\"hl-yellow\"><span class=\"tc-red\">크고 빨강</span></span></span>",
+                "<strong><span class=\"tc-blue\">굵은 파랑</span></strong>");
+        assertThat(PostRules.contentLength(
+                "<span class=\"ts-xlarge\"><span class=\"hl-pink\">가나</span></span><span class=\"ts-small\">다</span>"))
+                .isEqualTo(3);
+        // 줄 하나 바꿈은 글 화면에서도 줄바꿈, 빈 줄은 문단 나눔 (D-106)
+        assertThat(new MarkdownRenderer().toSafeHtml("첫 줄\n둘째 줄\n\n새 문단"))
+                .isEqualTo("<p>첫 줄<br>\n둘째 줄</p>\n<p>새 문단</p>\n");
+        // 여러 class를 한 span에 넣으면 정해 둔 모양이 아니므로 글자만 남는다 (편집기는 하나씩 감싸서 저장한다)
+        assertThat(new MarkdownRenderer().toSafeHtml("<span class=\"tc-red ts-large\">둘</span>")).isEqualTo("<p>둘</p>\n");
+    }
+
+    @Test
     @DisplayName("제목 1~30자, 본문 1000자(사진 문법은 빼고 셈), 태그 10개. 태그는 #·공백 정리 후 소문자 하나로")
     void inputRules() throws Exception {
         postAs("/api/blogs/food/posts", """

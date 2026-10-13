@@ -49,7 +49,11 @@ public class MarkdownRenderer {
     public static final Set<String> HIGHLIGHTS = Set.of("hl-yellow", "hl-green", "hl-pink", "hl-blue");
 
     private final Parser parser = Parser.builder().extensions(EXTENSIONS).build();
-    private final HtmlRenderer renderer = HtmlRenderer.builder().extensions(EXTENSIONS).build();
+    /**
+     * 줄 하나 바꿈도 줄바꿈으로 보인다 (D-106). 글쓰기 편집기(Toast UI)는 Enter 한 번을 마크다운 줄 하나로 적고,
+     * 편집 칸과 미리보기에서도 줄을 바꿔 보여 주므로 글 화면도 그대로 보이게 한다.
+     */
+    private final HtmlRenderer renderer = HtmlRenderer.builder().extensions(EXTENSIONS).softbreak("<br>\n").build();
 
     public String toSafeHtml(String markdown) {
         String raw = renderer.render(parser.parse(markdown == null ? "" : markdown));
