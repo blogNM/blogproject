@@ -127,7 +127,8 @@ class SocialLoginTest extends IntegrationTest {
         // 같은 이메일로 일반 가입을 하려 하면 구글로 가입된 이메일이라고 알려 준다
         mvc.perform(get("/api/auth/signup/email-available").param("email", "new@gmail.com"))
                 .andExpect(jsonPath("$.available").value(false))
-                .andExpect(jsonPath("$.google").value(true));
+                .andExpect(jsonPath("$.google").value(true))
+                .andExpect(jsonPath("$.provider").value("google"));
         postJson("/api/auth/signup/code", "{\"email\":\"new@gmail.com\"}")
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("EMAIL_TAKEN"))
@@ -138,7 +139,7 @@ class SocialLoginTest extends IntegrationTest {
     @DisplayName("구글이 이메일을 확인하지 않은 계정은 받지 않는다")
     void unverifiedEmailRejected() throws Exception {
         MockHttpServletResponse back = googleReturns("g-3", "unverified@gmail.com", false, "확인안됨");
-        assertThat(back.getRedirectedUrl()).isEqualTo("/login.html?social=unverified");
+        assertThat(back.getRedirectedUrl()).isEqualTo("/login.html?social=unverified&provider=google");
         assertThat(back.getCookie(AuthCookies.ACCESS)).isNull();
         assertThat(back.getCookie(AuthCookies.SOCIAL_SIGNUP)).isNull();
     }

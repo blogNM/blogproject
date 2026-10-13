@@ -45,9 +45,14 @@ public class AuthController {
     }
 
     @GetMapping("/signup/email-available")
-    public Map<String, Boolean> emailAvailable(@RequestParam String email, HttpServletRequest request) {
+    public Map<String, Object> emailAvailable(@RequestParam String email, HttpServletRequest request) {
         SignupService.EmailStatus s = signupService.checkEmail(email, ClientIp.of(request));
-        return Map.of("available", s.available(), "google", s.google());
+        // google은 예전 화면용으로 남기고, provider(google|naver|null)를 함께 준다 (D-107)
+        Map<String, Object> body = new java.util.LinkedHashMap<>();
+        body.put("available", s.available());
+        body.put("google", s.google());
+        body.put("provider", s.provider());
+        return body;
     }
 
     @PostMapping("/signup/verify")

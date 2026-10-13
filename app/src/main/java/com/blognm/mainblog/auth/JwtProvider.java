@@ -81,7 +81,7 @@ public class JwtProvider {
                 .compact();
     }
 
-    /** 서명·만료가 맞는 가입 대기 토큰이면 구글에서 받은 정보를 돌려준다. */
+    /** 서명·만료가 맞는 가입 대기 토큰이면 구글·네이버에서 받은 정보를 돌려준다. */
     public Optional<SocialSignup> parseSocialSignupToken(String token) {
         try {
             Claims claims = Jwts.parser()
@@ -133,7 +133,7 @@ public class JwtProvider {
         }
     }
 
-    /** 구글 로그인으로 처음 온 사람의 정보. 가입을 마칠 때까지 서버에 두지 않고 서명한 쿠키에만 둔다 (SCL-01). */
+    /** 구글·네이버 로그인으로 처음 온 사람의 정보. 가입을 마칠 때까지 서버에 두지 않고 서명한 쿠키에만 둔다 (SCL-01). */
     public record SocialSignup(String provider, String providerUserId, String email, String name) {
     }
 

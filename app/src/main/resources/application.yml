@@ -63,6 +63,10 @@ app:
     google:
       client-id: ${GOOGLE_CLIENT_ID:}
       client-secret: ${GOOGLE_CLIENT_SECRET:}
+    # 네이버 로그인 (D-107). 네이버 개발자센터 → 내 애플리케이션의 Client ID·Secret. 비워 두면 네이버 버튼을 숨긴다.
+    naver:
+      client-id: ${NAVER_CLIENT_ID:}
+      client-secret: ${NAVER_CLIENT_SECRET:}
   signup:
     code-ttl: ${SIGNUP_CODE_TTL:10m}
     # 인증을 마친 뒤 가입을 끝낼 때까지 기다리는 시간

@@ -130,7 +130,7 @@ public class SecurityConfig {
                         .accessDeniedHandler((req, res, ex) -> writeError(res, HttpStatus.FORBIDDEN,
                                 "FORBIDDEN", "요청을 처리할 수 없습니다. 페이지를 새로고침한 뒤 다시 시도해 주세요.")))
                 .addFilterBefore(new JwtAuthenticationFilter(jwtProvider, tokenValidator, adminCheck), UsernamePasswordAuthenticationFilter.class);
-        // 구글 로그인 (D-103). GOOGLE_CLIENT_ID가 있을 때만 /oauth2/authorization/google 주소를 연다.
+        // 구글 로그인 (D-103)·네이버 로그인 (D-107). CLIENT_ID가 있는 회사만 /oauth2/authorization/{google|naver} 주소를 연다.
         // 로그인 화면은 우리 화면을 쓰고, 끝나면 SocialLoginHandler가 JWT 쿠키를 내려준다.
         ClientRegistrationRepository clients = socialClients.getIfAvailable();
         if (clients != null) {

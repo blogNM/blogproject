@@ -48,7 +48,8 @@ public class SignupService {
 
     /**
      * 이메일 중복 확인. 가입 화면에서 바로 알려 준다 (D-99). 하나씩 넣어 보는 것을 막으려고 IP별로 센다.
-     * 구글로 로그인하던 이메일이면 google=true로 알려 구글로 로그인하라고 안내한다 (D-103).
+     * 구글·네이버로 로그인하던 이메일이면 provider로 알려 그 회사로 로그인하라고 안내한다 (D-103, D-107).
+     * google은 예전 화면을 위해 남겨 둔 값이다 (provider가 google일 때 true).
      */
     public EmailStatus checkEmail(String rawEmail, String clientIp) {
         String email = MemberRules.normalizeEmail(rawEmail);
@@ -58,15 +59,29 @@ public class SignupService {
                     "요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.");
         }
         return members.findByEmail(email)
-                .map(m -> new EmailStatus(false, usesGoogle(m)))
-                .orElse(new EmailStatus(true, false));
+                .map(m -> EmailStatus.taken(socialProvider(m)))
+                .orElse(EmailStatus.free());
     }
 
-    public record EmailStatus(boolean available, boolean google) {
+    /** provider: 이 이메일 회원에 연결된 구글·네이버 (먼저 연결한 쪽), 없으면 null. */
+    public record EmailStatus(boolean available, String provider) {
+
+        static EmailStatus free() {
+            return new EmailStatus(true, null);
+        }
+
+        static EmailStatus taken(String provider) {
+            return new EmailStatus(false, provider);
+        }
+
+        public boolean google() {
+            return SocialAccount.GOOGLE.equals(provider);
+        }
     }
 
-    private boolean usesGoogle(Member member) {
-        return socialAccounts.existsByMemberIdAndProvider(member.getId(), SocialAccount.GOOGLE);
+    private String socialProvider(Member member) {
+        return socialAccounts.findByMemberIdOrderByIdAsc(member.getId()).stream()
+                .map(SocialAccount::getProvider).findFirst().orElse(null);
     }
 
     /** 인증번호 요청. 이미 가입된 이메일이면 메일을 보내지 않고 바로 알려 준다 (D-99). */
@@ -76,7 +91,7 @@ public class SignupService {
         LocalDateTime now = LocalDateTime.now(clock);
         AppProperties.Signup cfg = props.signup();
         members.findByEmail(email).ifPresent(m -> {
-            throw emailTaken(usesGoogle(m));
+            throw emailTaken(socialProvider(m));
         });
 
         verifications.findFirstByEmailAndPurposeOrderByIdDesc(email, Purpose.SIGNUP).ifPresent(prev -> {
@@ -99,10 +114,14 @@ public class SignupService {
         mail.sendSignupCode(email, code, cfg.codeTtl().toMinutes());
     }
 
-    private static ApiException emailTaken(boolean google) {
-        return new ApiException(HttpStatus.CONFLICT, "EMAIL_TAKEN", google
-                ? "구글 계정으로 가입된 이메일입니다. 로그인 화면에서 구글로 로그인해 주세요."
-                : "이미 가입된 이메일입니다. 로그인하거나 비밀번호 찾기를 이용해 주세요.");
+    private static ApiException emailTaken(String provider) {
+        if (provider != null) {
+            String label = SocialLoginService.label(provider);
+            return new ApiException(HttpStatus.CONFLICT, "EMAIL_TAKEN",
+                    label + " 계정으로 가입된 이메일입니다. 로그인 화면에서 " + label + "로 로그인해 주세요.");
+        }
+        return new ApiException(HttpStatus.CONFLICT, "EMAIL_TAKEN",
+                "이미 가입된 이메일입니다. 로그인하거나 비밀번호 찾기를 이용해 주세요.");
     }
 
     /** 인증번호 확인. 10분 만료, 5번 틀리면 무효 (USR-02). */
