@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 170" role="img" aria-label="텅 빈 상자 안을 비추는 손전등 불빛">
+<title>텅 빈 상자 안을 비추는 손전등 불빛</title>
+<!-- 검색 결과가 없을 때 멈춘 그림 (D-105) -->
+<defs>
+  <linearGradient id="peach" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F2D3C0"/><stop offset="1" stop-color="#DFB79F"/></linearGradient>
+  <linearGradient id="violet" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8A5BE0"/><stop offset="1" stop-color="#5720C3"/></linearGradient>
+  <linearGradient id="beam" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFF4C7" stop-opacity=".9"/><stop offset="1" stop-color="#FFF4C7" stop-opacity="0"/></linearGradient>
+</defs>
+<ellipse cx="100" cy="156" rx="62" ry="7" fill="#39385B" opacity=".08"/>
+<!-- 열린 빈 상자 -->
+<path d="M52,92 L100,112 L148,92 L100,74 Z" fill="#B98A6F"/>
+<path d="M52,92 L100,112 L100,152 L52,132 Z" fill="url(#peach)"/>
+<path d="M148,92 L100,112 L100,152 L148,132 Z" fill="#D4A88E"/>
+<path d="M52,92 L30,76 L78,58 L100,74 Z" fill="#F5DCCB"></path>
+<path d="M148,92 L170,76 L122,58 L100,74 Z" fill="#E9C9B2"></path>
+<!-- 위에서 이리저리 비추는 손전등 -->
+<g>
+  
+  <path d="M92,34 L64,100 L136,100 L108,34 Z" fill="url(#beam)"></path>
+  <rect x="90" y="6" width="20" height="26" rx="5" fill="url(#violet)"/>
+  <rect x="88" y="28" width="24" height="8" rx="3" fill="#3F1690"/>
+  <circle cx="100" cy="16" r="3" fill="#fff" opacity=".7"/>
+</g>
+<g fill="#C39496">
+  <path d="M170,40 Q171.4,46.6 178,48 Q171.4,49.4 170,56 Q168.6,49.4 162,48 Q168.6,46.6 170,40 Z" fill="#DFB79F"></path>
+  <path d="M30,30 Q31,34.8 36,36 Q31,37.2 30,42 Q29,37.2 24,36 Q29,34.8 30,30 Z" fill="#8A5BE0"></path>
+</g>
+</svg>
