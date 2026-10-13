@@ -98,14 +98,14 @@ class NaverLoginTest extends IntegrationTest {
     @DisplayName("NAVER_CLIENT_ID가 비어 있으면 네이버 버튼을 숨긴다 (구글만 있을 때)")
     void naverButtonHiddenWithoutClientId() {
         ClientRegistrationRepository googleOnly = new SocialLoginConfig()
-                .clientRegistrationRepository("google-id", "google-secret", "", "");
+                .clientRegistrationRepository("google-id", "google-secret", "", "", "", "");
         assertThat(((InMemoryClientRegistrationRepository) googleOnly).iterator()).toIterable().hasSize(1);
         SocialAuthController controller = new SocialAuthController(null, null,
                 new StaticListableBeanFactory(Map.of("clients", googleOnly)).getBeanProvider(ClientRegistrationRepository.class));
         assertThat(controller.config()).containsEntry("google", true).containsEntry("naver", false);
 
         ClientRegistrationRepository naverOnly = new SocialLoginConfig()
-                .clientRegistrationRepository("", "", "naver-id", "naver-secret");
+                .clientRegistrationRepository("", "", "naver-id", "naver-secret", "", "");
         controller = new SocialAuthController(null, null,
                 new StaticListableBeanFactory(Map.of("clients", naverOnly)).getBeanProvider(ClientRegistrationRepository.class));
         assertThat(controller.config()).containsEntry("google", false).containsEntry("naver", true);

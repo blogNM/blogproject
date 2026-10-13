@@ -67,6 +67,10 @@ app:
     naver:
       client-id: ${NAVER_CLIENT_ID:}
       client-secret: ${NAVER_CLIENT_SECRET:}
+    # 카카오 로그인 (D-108). 카카오 개발자 콘솔 → 앱 → REST API 키와 그 키의 카카오 로그인 Client Secret. 비워 두면 카카오 버튼을 숨긴다.
+    kakao:
+      client-id: ${KAKAO_CLIENT_ID:}
+      client-secret: ${KAKAO_CLIENT_SECRET:}
   signup:
     code-ttl: ${SIGNUP_CODE_TTL:10m}
     # 인증을 마친 뒤 가입을 끝낼 때까지 기다리는 시간

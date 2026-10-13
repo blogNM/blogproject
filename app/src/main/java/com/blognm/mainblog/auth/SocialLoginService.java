@@ -19,14 +19,14 @@ import com.blognm.mainblog.member.MemberRepository;
 import com.blognm.mainblog.member.MemberRules;
 
 /**
- * 구글 로그인 (D-103)·네이버 로그인 (D-107). 두 회사 모두 같은 흐름이다.
+ * 구글 로그인 (D-103)·네이버 로그인 (D-107)·카카오 로그인 (D-108). 세 회사 모두 같은 흐름이다.
  * ① 연결된 계정이면 그 회원으로 로그인 ② 그 회사가 확인한 이메일로 가입한 회원이면 연결하고 로그인
  * ③ 처음 온 사람은 닉네임·약관 동의를 받아 가입시킨다. 로그인 뒤에는 이메일 로그인과 같은 토큰 쿠키를 쓴다.
  */
 @Service
 public class SocialLoginService {
 
-    /** 구글·네이버에서 돌아와 가입을 마칠 때까지 기다리는 시간. */
+    /** 구글·네이버·카카오에서 돌아와 가입을 마칠 때까지 기다리는 시간. */
     static final Duration SIGNUP_TTL = Duration.ofMinutes(10);
 
     private final SocialAccountRepository socialAccounts;
@@ -46,7 +46,7 @@ public class SocialLoginService {
         this.clock = clock;
     }
 
-    /** 구글·네이버가 돌려준 사용자 정보로 로그인하거나, 가입 화면으로 보낼 토큰을 만든다. */
+    /** 구글·네이버·카카오가 돌려준 사용자 정보로 로그인하거나, 가입 화면으로 보낼 토큰을 만든다. */
     @Transactional
     public Outcome login(String provider, String providerUserId, String rawEmail, boolean emailVerified,
             String name) {
@@ -81,7 +81,7 @@ public class SocialLoginService {
         return Outcome.needsSignup(token);
     }
 
-    /** 가입 화면에 보여 줄 구글·네이버 계정 정보. */
+    /** 가입 화면에 보여 줄 구글·네이버·카카오 계정 정보. */
     public SocialSignup pending(String signupToken) {
         return parse(signupToken);
     }
@@ -132,12 +132,15 @@ public class SocialLoginService {
 
     private static ApiException expired() {
         return ApiException.badRequest("SOCIAL_SIGNUP_EXPIRED",
-                "가입 시간이 지났습니다. 로그인 화면에서 구글이나 네이버로 로그인을 다시 눌러 주세요.");
+                "가입 시간이 지났습니다. 로그인 화면에서 구글·네이버·카카오로 로그인을 다시 눌러 주세요.");
     }
 
-    /** 화면 문구에 쓰는 회사 이름 (구글, 네이버). */
+    /** 화면 문구에 쓰는 회사 이름 (구글, 네이버, 카카오). */
     public static String label(String provider) {
-        return SocialAccount.NAVER.equals(provider) ? "네이버" : "구글";
+        if (SocialAccount.NAVER.equals(provider)) {
+            return "네이버";
+        }
+        return SocialAccount.KAKAO.equals(provider) ? "카카오" : "구글";
     }
 
     private static String normalizedOrNull(String raw) {

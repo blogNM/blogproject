@@ -8,7 +8,7 @@ const form = $('social-signup');
 try {
   const pending = await api.get('/api/auth/social/pending');
   $('social-email').textContent = pending.email;
-  $('provider-name').textContent = pending.provider === 'naver' ? '네이버' : '구글';
+  $('provider-name').textContent = { naver: '네이버', kakao: '카카오' }[pending.provider] || '구글';
 } catch (err) {
   errorBox.textContent = err.message;
   form.querySelector('button[type=submit]').disabled = true;

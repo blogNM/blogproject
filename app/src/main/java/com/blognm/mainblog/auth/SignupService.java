@@ -48,7 +48,7 @@ public class SignupService {
 
     /**
      * 이메일 중복 확인. 가입 화면에서 바로 알려 준다 (D-99). 하나씩 넣어 보는 것을 막으려고 IP별로 센다.
-     * 구글·네이버로 로그인하던 이메일이면 provider로 알려 그 회사로 로그인하라고 안내한다 (D-103, D-107).
+     * 구글·네이버·카카오로 로그인하던 이메일이면 provider로 알려 그 회사로 로그인하라고 안내한다 (D-103, D-107, D-108).
      * google은 예전 화면을 위해 남겨 둔 값이다 (provider가 google일 때 true).
      */
     public EmailStatus checkEmail(String rawEmail, String clientIp) {
@@ -63,7 +63,7 @@ public class SignupService {
                 .orElse(EmailStatus.free());
     }
 
-    /** provider: 이 이메일 회원에 연결된 구글·네이버 (먼저 연결한 쪽), 없으면 null. */
+    /** provider: 이 이메일 회원에 연결된 구글·네이버·카카오 (먼저 연결한 쪽), 없으면 null. */
     public record EmailStatus(boolean available, String provider) {
 
         static EmailStatus free() {

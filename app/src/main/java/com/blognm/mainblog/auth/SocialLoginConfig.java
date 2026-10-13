@@ -15,11 +15,12 @@ import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
 
 /**
- * 구글(D-103)·네이버(D-107) 로그인 앱 등록. CLIENT_ID가 비어 있는 회사는 만들지 않고, 로그인 화면의 버튼도 숨긴다.
+ * 구글(D-103)·네이버(D-107)·카카오(D-108) 로그인 앱 등록. CLIENT_ID가 비어 있는 회사는 만들지 않고, 로그인 화면의 버튼도 숨긴다.
  * 값이 없어도 서버가 뜨도록 스프링 기본 설정(spring.security.oauth2.client.*) 대신 여기서 직접 만든다.
  */
 @Configuration
-@ConditionalOnExpression("!'${app.social.google.client-id:}'.isBlank() or !'${app.social.naver.client-id:}'.isBlank()")
+@ConditionalOnExpression("!'${app.social.google.client-id:}'.isBlank() or !'${app.social.naver.client-id:}'.isBlank()"
+        + " or !'${app.social.kakao.client-id:}'.isBlank()")
 public class SocialLoginConfig {
 
     @Bean
@@ -27,7 +28,9 @@ public class SocialLoginConfig {
             @Value("${app.social.google.client-id:}") String googleId,
             @Value("${app.social.google.client-secret:}") String googleSecret,
             @Value("${app.social.naver.client-id:}") String naverId,
-            @Value("${app.social.naver.client-secret:}") String naverSecret) {
+            @Value("${app.social.naver.client-secret:}") String naverSecret,
+            @Value("${app.social.kakao.client-id:}") String kakaoId,
+            @Value("${app.social.kakao.client-secret:}") String kakaoSecret) {
         List<ClientRegistration> registrations = new ArrayList<>();
         if (!googleId.isBlank()) {
             registrations.add(CommonOAuth2Provider.GOOGLE.getBuilder(SocialAccount.GOOGLE)
@@ -38,6 +41,9 @@ public class SocialLoginConfig {
         }
         if (!naverId.isBlank()) {
             registrations.add(naver(naverId.trim(), naverSecret.trim()));
+        }
+        if (!kakaoId.isBlank()) {
+            registrations.add(kakao(kakaoId.trim(), kakaoSecret.trim()));
         }
         return new InMemoryClientRegistrationRepository(registrations);
     }
@@ -59,6 +65,27 @@ public class SocialLoginConfig {
                 .tokenUri("https://nid.naver.com/oauth2.0/token")
                 .userInfoUri("https://openapi.naver.com/v1/nid/me")
                 .userNameAttributeName("response")
+                .build();
+    }
+
+    /**
+     * 카카오 로그인 (D-108). 스프링에 기본 등록이 없어 주소를 직접 적는다.
+     * scope는 account_email 하나만 요청한다. 카카오 콘솔에서 켜지 않은 동의 항목을 요청하면 KOE205 오류가 난다.
+     * 사용자 정보는 {id: 숫자, kakao_account:{email, is_email_valid, is_email_verified, ...}} 모양이라 이름 칸을 id로 둔다.
+     */
+    static ClientRegistration kakao(String clientId, String clientSecret) {
+        return ClientRegistration.withRegistrationId(SocialAccount.KAKAO)
+                .clientId(clientId)
+                .clientSecret(clientSecret)
+                .clientName("Kakao")
+                .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_POST)
+                .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+                .redirectUri("{baseUrl}/login/oauth2/code/{registrationId}")
+                .scope("account_email")
+                .authorizationUri("https://kauth.kakao.com/oauth/authorize")
+                .tokenUri("https://kauth.kakao.com/oauth/token")
+                .userInfoUri("https://kapi.kakao.com/v2/user/me")
+                .userNameAttributeName("id")
                 .build();
     }
 }
