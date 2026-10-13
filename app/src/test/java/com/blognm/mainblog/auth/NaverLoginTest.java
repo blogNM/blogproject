@@ -91,7 +91,9 @@ class NaverLoginTest extends IntegrationTest {
                 .contains("response_type=code")
                 .contains("client_id=test-naver-client-id")
                 .contains("state=")
-                .contains("redirect_uri=http://localhost/login/oauth2/code/naver");
+                .contains("redirect_uri=http://localhost/login/oauth2/code/naver")
+                .as("네이버는 계정 고르기 화면이 없어 prompt를 붙이지 않는다")
+                .doesNotContain("prompt=");
     }
 
     @Test

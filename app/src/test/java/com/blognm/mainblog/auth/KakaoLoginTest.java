@@ -87,7 +87,7 @@ class KakaoLoginTest extends IntegrationTest {
     }
 
     @Test
-    @DisplayName("카카오 앱 값이 있으면 버튼을 보이고, 버튼 주소는 이메일 동의만 요청하며 카카오 로그인 화면으로 보낸다")
+    @DisplayName("카카오 앱 값이 있으면 버튼을 보이고, 버튼 주소는 이메일 동의만 요청하며 카카오 계정 고르기 화면으로 보낸다")
     void kakaoButton() throws Exception {
         mvc.perform(get("/api/auth/social/config"))
                 .andExpect(jsonPath("$.google").value(true))
@@ -100,7 +100,9 @@ class KakaoLoginTest extends IntegrationTest {
                 .contains("client_id=test-kakao-client-id")
                 .contains("scope=account_email&")
                 .contains("state=")
-                .contains("redirect_uri=http://localhost/login/oauth2/code/kakao");
+                .contains("redirect_uri=http://localhost/login/oauth2/code/kakao")
+                .as("로그아웃한 뒤 다른 카카오 계정을 고를 수 있게 매번 계정 고르기 화면을 띄운다")
+                .contains("prompt=select_account");
     }
 
     @Test

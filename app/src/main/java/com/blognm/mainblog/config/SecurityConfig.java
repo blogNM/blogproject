@@ -30,6 +30,7 @@ import com.blognm.mainblog.auth.AccessTokenValidator;
 import com.blognm.mainblog.auth.AdminTokenCheck;
 import com.blognm.mainblog.auth.JwtAuthenticationFilter;
 import com.blognm.mainblog.auth.JwtProvider;
+import com.blognm.mainblog.auth.SelectAccountRequestResolver;
 import com.blognm.mainblog.auth.SocialLoginHandler;
 
 /**
@@ -137,6 +138,8 @@ public class SecurityConfig {
             http.oauth2Login(o -> o
                     .clientRegistrationRepository(clients)
                     .loginPage("/login.html")
+                    // 카카오·구글은 매번 계정 고르기 화면을 띄운다 (D-108)
+                    .authorizationEndpoint(a -> a.authorizationRequestResolver(new SelectAccountRequestResolver(clients)))
                     .successHandler(socialHandler)
                     .failureHandler(socialHandler));
         }
