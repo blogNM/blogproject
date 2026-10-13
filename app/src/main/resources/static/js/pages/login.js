@@ -1,6 +1,9 @@
 import { api } from '../api.js';
 import { initLayout } from '../layout.js';
 
+// 미로 공은 SVG 애니메이션이라 CSS로 멈출 수 없어, 동작 줄이기를 켜면 여기서 멈춘다 (D-105)
+if (matchMedia('(prefers-reduced-motion: reduce)').matches) document.querySelectorAll('svg.art').forEach((svg) => svg.pauseAnimations());
+
 // 로그인 뒤 돌아갈 화면. 다른 사이트로 보내지 않도록 이 사이트 안의 주소만 받는다.
 const nextParam = new URLSearchParams(location.search).get('next');
 const next = nextParam && nextParam.startsWith('/') && !nextParam.startsWith('//') && !nextParam.startsWith('/\\')
