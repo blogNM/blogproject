@@ -52,7 +52,7 @@ api.get('/api/auth/social/config')
   })
   .catch(() => {});
 
-// 같은 이메일로 3번, 같은 IP에서 계정을 바꿔 가며 5번 틀리면 사람 확인 상자가 나온다 (SEC-13, D-79, D-114)
+// 같은 이메일로 3번, 같은 IP에서 계정을 바꿔 가며 5번 틀리면 사람 확인 상자가 나온다 (SEC-13, D-79, D-115)
 const captcha = createCaptcha(captchaBox);
 
 form.addEventListener('submit', async (e) => {

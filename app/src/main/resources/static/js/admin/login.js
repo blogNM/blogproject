@@ -7,7 +7,7 @@ addPasswordToggles();
 
 const form = document.getElementById('login-form');
 const errorBox = document.getElementById('error');
-// 아이디마다 3번, 같은 IP에서 5번 틀리면 사람 확인 상자가 나온다 (SEC-13, D-114)
+// 아이디마다 3번, 같은 IP에서 5번 틀리면 사람 확인 상자가 나온다 (SEC-13, D-115)
 const captcha = createCaptcha(document.getElementById('captcha'));
 
 form.addEventListener('submit', async (e) => {

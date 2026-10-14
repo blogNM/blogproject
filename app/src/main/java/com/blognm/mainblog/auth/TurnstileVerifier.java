@@ -29,7 +29,7 @@ public class TurnstileVerifier {
         factory.setReadTimeout(3000);
         this.restClient = RestClient.builder().requestFactory(factory).build();
         if (usingTestKeys()) {
-            log.warn("Turnstile 테스트 키를 씁니다. 사람 확인이 늘 통과합니다. 실제 사이트는 TURNSTILE_SITE_KEY·TURNSTILE_SECRET_KEY를 넣어 주세요 (D-114).");
+            log.warn("Turnstile 테스트 키를 씁니다. 사람 확인이 늘 통과합니다. 실제 사이트는 TURNSTILE_SITE_KEY·TURNSTILE_SECRET_KEY를 넣어 주세요 (D-115).");
         }
     }
 

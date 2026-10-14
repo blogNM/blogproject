@@ -1,4 +1,4 @@
-// Cloudflare Turnstile 사람 확인 상자 (SEC-13, D-79, D-114). 회원 로그인과 관리자 로그인이 함께 쓴다.
+// Cloudflare Turnstile 사람 확인 상자 (SEC-13, D-79, D-115). 회원 로그인과 관리자 로그인이 함께 쓴다.
 // 서버가 captchaRequired와 사이트 키를 보내면 상자를 띄우고, 받은 토큰을 다음 로그인 요청에 실어 보낸다.
 
 const SCRIPT_URL = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';

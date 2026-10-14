@@ -7,14 +7,14 @@
 
 ## 2026-10-14
 
-### 로봇 확인 보완 (v1.7.1, D-114)
+### 로봇 확인 보완 (v1.8.1, D-115)
 
-- **수정** 같은 IP에서 이메일을 바꿔 가며 1시간 안에 5번 틀리면 로그인에 사람 확인(Turnstile)을 띄움. 이전에는 이메일마다만 세서 이메일을 바꾸면 상자가 나오지 않았음. IP로는 잠그지 않고, 로그인에 성공해도 IP 수는 지우지 않음 (D-114, SEC-13, 김채림 요청)
-- **수정** 관리자 로그인에도 아이디마다 3번 틀리면 사람 확인, 5번이면 5분 잠금. 이전에는 둘 다 없었음 (D-114, SEC-03, ADM-01)
-- **기능** `LoginGuard`: 회원·관리자 로그인 실패를 `login_failures` 한 표(이메일 · `admin:아이디` · `ip:주소`)에 셈. IP 수는 `INSERT … ON DUPLICATE KEY UPDATE` 한 문장으로 올림. Flyway V17은 표 설명만 고침. 서버 메모리에 두지 않음 (D-114, SCL-01)
-- **화면** 사람 확인 상자 코드를 `js/turnstile.js`로 모아 회원·관리자 로그인이 같이 씀. 상자를 못 불러오면 "로봇 확인 상자를 불러오지 못했어요…" 안내, 상자가 보이게 스크롤, 시간이 지나면 다시 확인 안내 (D-114)
-- **설정** `LOGIN_CAPTCHA_AFTER_IP`(5), `LOGIN_IP_WINDOW`(1h). Turnstile 테스트 키로 뜨면 시작할 때 서버 로그에 경고. 실제 키는 GitHub secrets `TURNSTILE_SITE_KEY`·`TURNSTILE_SECRET_KEY` (D-114)
-- **문서** D-114, spec 001·005 Clarifications, CLAUDE.md·docs/README·specs/README 결정 번호와 목록, [도커-배포.md](docs/05-guides/도커-배포.md#로봇-확인-실제-키-넣기-d-114)에 Cloudflare 키 만들고 넣는 법, 로컬-실행.md, 릴리스 노트 [v1.7.1](docs/releases/v1.7.1.md)과 전후 캡처 `/img/releases/v1.7.1/`
+- **수정** 같은 IP에서 이메일을 바꿔 가며 1시간 안에 5번 틀리면 로그인에 사람 확인(Turnstile)을 띄움. 이전에는 이메일마다만 세서 이메일을 바꾸면 상자가 나오지 않았음. IP로는 잠그지 않고, 로그인에 성공해도 IP 수는 지우지 않음 (D-115, SEC-13, 김채림 요청)
+- **수정** 관리자 로그인에도 아이디마다 3번 틀리면 사람 확인, 5번이면 5분 잠금. 이전에는 둘 다 없었음 (D-115, SEC-03, ADM-01)
+- **기능** `LoginGuard`: 회원·관리자 로그인 실패를 `login_failures` 한 표(이메일 · `admin:아이디` · `ip:주소`)에 셈. IP 수는 `INSERT … ON DUPLICATE KEY UPDATE` 한 문장으로 올림. Flyway V17은 표 설명만 고침. 서버 메모리에 두지 않음 (D-115, SCL-01)
+- **화면** 사람 확인 상자 코드를 `js/turnstile.js`로 모아 회원·관리자 로그인이 같이 씀. 상자를 못 불러오면 "로봇 확인 상자를 불러오지 못했어요…" 안내, 상자가 보이게 스크롤, 시간이 지나면 다시 확인 안내 (D-115)
+- **설정** `LOGIN_CAPTCHA_AFTER_IP`(5), `LOGIN_IP_WINDOW`(1h). Turnstile 테스트 키로 뜨면 시작할 때 서버 로그에 경고. 실제 키는 GitHub secrets `TURNSTILE_SITE_KEY`·`TURNSTILE_SECRET_KEY` (D-115)
+- **문서** D-115, spec 001·005 Clarifications, CLAUDE.md·docs/README·specs/README 결정 번호와 목록, [도커-배포.md](docs/05-guides/도커-배포.md#로봇-확인-실제-키-넣기-d-114)에 Cloudflare 키 만들고 넣는 법, 로컬-실행.md, 릴리스 노트 [v1.8.1](docs/releases/v1.8.1.md)과 전후 캡처 `/img/releases/v1.8.1/`
 - **설정** 테스트: `LoginTest`에 같은 IP 이메일 바꿔 5번 사람 확인·1시간 뒤 풀림, 관리자 3번 사람 확인·5번 잠금, 잠금 풀린 뒤 IP 사람 확인 유지
 
 ### 실제 사이트 테스트 회원 (D-113)

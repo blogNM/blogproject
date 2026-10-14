@@ -78,7 +78,7 @@ public class AdminAccountService implements AdminTokenCheck, ApplicationRunner {
 
     /**
      * 로그인. 틀리면 어느 쪽이 틀렸는지 알리지 않고, IP마다 1분에 정해 둔 횟수까지만 받는다.
-     * 회원 로그인처럼 아이디마다 3번 틀리면 사람 확인, 5번이면 5분 잠금 (SEC-03, SEC-13, D-114).
+     * 회원 로그인처럼 아이디마다 3번 틀리면 사람 확인, 5번이면 5분 잠금 (SEC-03, SEC-13, D-115).
      */
     @Transactional(noRollbackFor = ApiException.class)
     public Login login(String rawId, String password, String turnstileToken, String clientIp) {

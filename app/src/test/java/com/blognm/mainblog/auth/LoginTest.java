@@ -167,7 +167,7 @@ class LoginTest extends IntegrationTest {
     }
 
     @Test
-    @DisplayName("같은 IP에서 이메일을 바꿔 가며 5번 틀려도 사람 확인을 요구하고, 1시간 지나면 풀린다 (SEC-13, D-114)")
+    @DisplayName("같은 IP에서 이메일을 바꿔 가며 5번 틀려도 사람 확인을 요구하고, 1시간 지나면 풀린다 (SEC-13, D-115)")
     void captchaAfterIpFailuresAcrossEmails() throws Exception {
         for (int i = 0; i < 4; i++) {
             assertThat(loginAs("other" + i + "@example.com", "Wrong123!", null).getResponse().getContentAsString())
@@ -191,7 +191,7 @@ class LoginTest extends IntegrationTest {
     }
 
     @Test
-    @DisplayName("관리자 로그인도 3번 틀리면 사람 확인, 5번이면 5분 잠금 (SEC-03, SEC-13, D-114)")
+    @DisplayName("관리자 로그인도 3번 틀리면 사람 확인, 5번이면 5분 잠금 (SEC-03, SEC-13, D-115)")
     void adminCaptchaAndLock() throws Exception {
         adminAccounts.run(null);
         for (int i = 0; i < 2; i++) {
@@ -228,7 +228,7 @@ class LoginTest extends IntegrationTest {
         assertThat(login(PASSWORD, false, "good-token").getResponse().getStatus()).isEqualTo(423);
 
         clock.advance(Duration.ofMinutes(5).plusSeconds(1));
-        // 계정 잠금은 풀렸지만 같은 IP에서 5번 틀린 것은 1시간 동안 남아 사람 확인은 계속 묻는다 (D-114)
+        // 계정 잠금은 풀렸지만 같은 IP에서 5번 틀린 것은 1시간 동안 남아 사람 확인은 계속 묻는다 (D-115)
         assertThat(login(PASSWORD, false, null).getResponse().getContentAsString()).contains("CAPTCHA_REQUIRED");
         assertThat(login(PASSWORD, false, "good-token").getResponse().getStatus()).isEqualTo(200);
     }

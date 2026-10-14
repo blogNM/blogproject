@@ -12,7 +12,7 @@ import com.blognm.mainblog.common.DetailedApiException;
 import com.blognm.mainblog.config.AppProperties;
 
 /**
- * 로그인 실패를 DB에 세서 사람 확인(Turnstile)과 잠금을 정한다 (SEC-03, SEC-13, D-79, D-114).
+ * 로그인 실패를 DB에 세서 사람 확인(Turnstile)과 잠금을 정한다 (SEC-03, SEC-13, D-79, D-115).
  * 회원 로그인과 관리자 로그인이 함께 쓰고, 서버 두 대가 같은 수를 보도록 서버 메모리에는 두지 않는다 (SCL-01).
  *
  * <p>login_failures 한 표에 세 가지를 센다. 회원은 이메일 그대로, 관리자는 "admin:아이디", IP는 "ip:주소".
