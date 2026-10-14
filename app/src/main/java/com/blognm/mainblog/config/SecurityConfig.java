@@ -28,8 +28,10 @@ import org.springframework.security.web.util.matcher.RequestMatcher;
 
 import com.blognm.mainblog.auth.AccessTokenValidator;
 import com.blognm.mainblog.auth.AdminTokenCheck;
+import com.blognm.mainblog.auth.CookieOAuth2AuthorizationRequestRepository;
 import com.blognm.mainblog.auth.JwtAuthenticationFilter;
 import com.blognm.mainblog.auth.JwtProvider;
+import com.blognm.mainblog.auth.NoStoreAuthorizedClientRepository;
 import com.blognm.mainblog.auth.SelectAccountRequestResolver;
 import com.blognm.mainblog.auth.SocialLoginHandler;
 
@@ -75,7 +77,8 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtProvider jwtProvider,
             AccessTokenValidator tokenValidator, AdminTokenCheck adminCheck, AppProperties props,
-            ObjectProvider<ClientRegistrationRepository> socialClients, SocialLoginHandler socialHandler)
+            ObjectProvider<ClientRegistrationRepository> socialClients, SocialLoginHandler socialHandler,
+            CookieOAuth2AuthorizationRequestRepository socialRequests)
             throws Exception {
         CookieCsrfTokenRepository csrfRepository = CookieCsrfTokenRepository.withHttpOnlyFalse();
         csrfRepository.setCookieCustomizer(c -> c.secure(props.auth().cookieSecure()).sameSite("Lax"));
@@ -106,6 +109,8 @@ public class SecurityConfig {
                         .requestMatchers("/admin/login.html", "/api/admin/auth/login").permitAll()
                         .requestMatchers("/admin", "/admin/**", "/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/auth/**", "/api/csrf").permitAll()
+                        // 배포 스크립트가 새 서버가 준비됐는지 묻는 주소 (D-111)
+                        .requestMatchers(HttpMethod.GET, "/api/health").permitAll()
                         // 릴리스 공지: 로그인 대신 서버에만 있는 토큰으로 확인한다 (D-97)
                         .requestMatchers(HttpMethod.POST, "/api/release-notices").permitAll()
                         // 블로그 목록·검색·블로그 정보는 비회원도 본다. 비공개 여부는 서비스가 다시 확인한다.
@@ -139,7 +144,10 @@ public class SecurityConfig {
                     .clientRegistrationRepository(clients)
                     .loginPage("/login.html")
                     // 카카오·구글은 매번 계정 고르기 화면을 띄운다 (D-108)
-                    .authorizationEndpoint(a -> a.authorizationRequestResolver(new SelectAccountRequestResolver(clients)))
+                    // 서버가 두 대라 로그인 요청 값(state 등)은 세션이 아니라 암호화한 쿠키에 둔다 (D-111)
+                    .authorizationEndpoint(a -> a.authorizationRequestResolver(new SelectAccountRequestResolver(clients))
+                            .authorizationRequestRepository(socialRequests))
+                    .authorizedClientRepository(new NoStoreAuthorizedClientRepository())
                     .successHandler(socialHandler)
                     .failureHandler(socialHandler));
         }

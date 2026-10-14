@@ -18,7 +18,8 @@ import org.springframework.stereotype.Component;
 
 /**
  * 구글(D-103)·네이버(D-107)·카카오(D-108)에서 돌아온 뒤 처리. 스프링 시큐리티 세션 로그인은 쓰지 않고, 이메일 로그인과 같은 JWT 쿠키를 내려준다.
- * 바깥 로그인 화면에 다녀오는 동안 잠깐 쓴 세션은 여기서 지운다 (SCL-01).
+ * 바깥 로그인 화면에 다녀오는 동안 기억할 값은 세션이 아니라 암호화한 쿠키에 둔다 (CookieOAuth2AuthorizationRequestRepository, D-111).
+ * 혹시 세션이 생겼으면 여기서 지운다 (SCL-01).
  * 실패하면 로그인 화면에 social=(failed|unverified|no-email)과 provider=(google|naver|kakao)를 붙여 돌려보낸다.
  */
 @Component
