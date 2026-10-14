@@ -6,10 +6,14 @@ import { blogUrl } from '../blog-card.js';
 import { feedCard, renderPager } from '../feed-card.js';
 import { el, initLayout, renderNotFound, toast } from '../layout.js';
 import { openReport } from '../report.js';
+import { takeFrom, withFrom } from '../visit.js';
 
 const me = await initLayout();
 const $ = (id) => document.getElementById(id);
 const memberId = Number(location.pathname.split('/')[2]);
+// 블로그 통계 (D-112): 댓글 쓴 사람을 눌러 온 프로필이면, 여기서 들어가는 블로그에 "댓글 보고"로 남긴다.
+// 그 밖에는 "회원 프로필·활동"으로 남긴다. 표시는 주소창에서 지운다.
+const via = takeFrom().from === 'comment' ? 'comment' : 'profile';
 
 /** key: 주소의 ?tab= 값. setting: 공개 설정 이름 (팔로워는 늘 공개라 없음). */
 const TABS = [
@@ -43,7 +47,7 @@ function avatar(node, imageUrl, nickname) {
 /** 블로그 한 줄: 머리 사진(없으면 강조 색 동그라미), 이름, 아래 줄 글. */
 function blogChip(b, sub) {
   const li = el('li', { class: 'blog-chip' });
-  const a = el('a', { href: blogUrl(b.slug) });
+  const a = el('a', { href: withFrom(blogUrl(b.slug), via) });
   const dot = el('span', { class: 'chip-cover' });
   if (b.coverUrl) dot.append(el('img', { src: b.coverUrl, alt: '' }));
   else if (/^#[0-9A-Fa-f]{6}$/.test(b.accent || '')) dot.style.setProperty('background', b.accent);
@@ -194,7 +198,7 @@ async function loadList() {
   let list;
   if (tab.api === 'posts' || tab.api === 'likes') {
     list = el('ul', { class: 'feed' });
-    list.append(...res.items.map(feedCard));
+    list.append(...res.items.map((p) => feedCard(p, { from: via })));
   } else if (tab.api === 'comments') {
     list = el('ul', { class: 'my-comments' });
     list.append(...res.items.map(commentItem));
@@ -226,7 +230,7 @@ async function loadList() {
 /** 쓴 댓글 한 줄: 댓글 내용, 어느 블로그의 어느 글에 달았는지, 날짜. 누르면 그 댓글 자리로 (D-94). */
 function commentItem(c) {
   const li = el('li', { class: 'my-comment' });
-  const a = el('a', { href: `/blog/${encodeURIComponent(c.blogSlug)}/posts/${c.postId}#comment-${c.id}` });
+  const a = el('a', { href: withFrom(`/blog/${encodeURIComponent(c.blogSlug)}/posts/${c.postId}#comment-${c.id}`, via) });
   const where = el('span', { class: 'mc-where' });
   where.append(el('span', { class: 'mc-kind' }, c.reply ? '답글' : '댓글'), el('strong', {}, c.postTitle),
     el('span', { class: 'muted' }, ' · ' + c.blogName));

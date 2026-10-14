@@ -5,6 +5,7 @@ import { el, initLayout, renderNotFound, toast } from '../layout.js';
 import { initPostList, postUrl } from '../post-list.js';
 import { openReport } from '../report.js';
 import { FONTS, THEMES, applyBlogLook, isAccent } from '../theme.js';
+import { recordVisit } from '../visit.js';
 
 const me = await initLayout();
 
@@ -275,6 +276,8 @@ function renderActions(blog) {
     if (blog.myRole === 'OWNER' || blog.myRole === 'SUB_OWNER') {
       // 부블로그장은 받은 권한이 있을 때 관리 화면에서 그 부분만 보인다.
       actions.append(el('a', { class: 'button', href: `/blog/${encodeURIComponent(blog.slug)}/manage` }, '블로그 관리'));
+      // 블로그 통계 (D-112): 방문자·조회수·들어온 경로는 관리 화면 맨 위에 있다
+      actions.append(el('a', { class: 'button', href: `/blog/${encodeURIComponent(blog.slug)}/manage#stats` }, '통계'));
     }
     if (blog.myRole !== 'OWNER') {
       actions.append(button('블로그 나가기', async () => {
@@ -317,6 +320,8 @@ function renderActions(blog) {
 }
 
 const loaded = await load();
+// 블로그 통계: 블로그 홈을 연 것과 들어온 경로를 남긴다 (D-112). 테마 미리보기는 세지 않는다
+if (loaded && !new URLSearchParams(location.search).has('preview')) recordVisit(loaded.slug, { key });
 if (loaded) {
   // 카테고리는 메뉴와 글 목록이 함께 쓴다. 한 번만 부른다
   const categories = api.get(`/api/blogs/${encodeURIComponent(loaded.slug)}/categories?` + new URLSearchParams(key ? { key } : {}));

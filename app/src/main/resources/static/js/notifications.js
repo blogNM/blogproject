@@ -3,6 +3,7 @@
 // 문구는 서버가 만들고, 화면은 textContent로만 넣는다 (SEC-06).
 import { api } from './api.js';
 import { el, motionImage, toast } from './layout.js';
+import { withFrom } from './visit.js';
 
 const POLL_MS = 30 * 1000;
 const TABS = [['ALL', '전체'], ['COMMENT', '댓글'], ['LIKE', '좋아요'], ['FOLLOW', '팔로우·구독'], ['BLOG', '블로그'], ['ADMIN', '운영']];
@@ -133,18 +134,20 @@ function buildPanel() {
 
   function item(n) {
     const li = el('li', { class: n.read ? 'notice-item' : 'notice-item unread' });
-    const body = n.link ? el('a', { href: n.link }) : el('div');
+    // 블로그·글로 가는 알림은 블로그 통계에 "알림"으로 남긴다 (D-112)
+    const link = n.link && n.link.startsWith('/blog/') ? withFrom(n.link, 'notification') : n.link;
+    const body = link ? el('a', { href: link }) : el('div');
     body.append(el('p', { class: 'notice-text' }, n.message), el('span', { class: 'muted' }, n.createdAt));
     body.addEventListener('click', async (e) => {
       if (n.read) return;
-      if (n.link) e.preventDefault();
+      if (link) e.preventDefault();
       try {
         await api.post(`/api/notifications/${n.id}/read`);
       } catch {
         // 읽음 표시가 실패해도 이동은 한다.
       }
-      if (n.link) {
-        location.href = n.link;
+      if (link) {
+        location.href = link;
       } else {
         n.read = true;
         li.classList.remove('unread');

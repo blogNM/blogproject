@@ -288,6 +288,7 @@ public class BlogLifecycleService {
             jdbc.update("DELETE FROM blog_tags WHERE blog_id = ?", id);
             jdbc.update("DELETE FROM subscriptions WHERE blog_id = ?", id);
             jdbc.update("DELETE FROM join_requests WHERE blog_id = ?", id);
+            jdbc.update("DELETE FROM blog_visits WHERE blog_id = ?", id);
             // 주소 규칙(영문 소문자 시작)에 맞지 않는 값이라 다시 만들 수 없고, 원래 주소는 풀린다
             jdbc.update("UPDATE blogs SET slug = CONCAT('_closed-', id), share_token = NULL, purged_at = ? WHERE id = ?",
                     now, id);
