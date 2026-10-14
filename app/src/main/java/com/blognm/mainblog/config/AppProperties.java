@@ -40,7 +40,12 @@ public record AppProperties(
     public record EmailFind(Duration tokenTtl, int perWindow, Duration window) {
     }
 
-    public record Login(int captchaAfterFailures, int lockAfterFailures, Duration lockDuration) {
+    /**
+     * 로그인 실패 (SEC-03, SEC-13). 계정(회원 이메일·관리자 아이디)마다 captchaAfterFailures번 틀리면 사람 확인,
+     * lockAfterFailures번이면 잠금. 같은 IP에서 ipWindow 안에 계정을 바꿔 가며 captchaAfterIpFailures번 틀려도 사람 확인 (D-114).
+     */
+    public record Login(int captchaAfterFailures, int lockAfterFailures, Duration lockDuration,
+            int captchaAfterIpFailures, Duration ipWindow) {
     }
 
     public record RateLimit(int loginPerMinute, int mailPerHour, int emailCheckPerMinute) {

@@ -28,6 +28,18 @@ public class TurnstileVerifier {
         factory.setConnectTimeout(3000);
         factory.setReadTimeout(3000);
         this.restClient = RestClient.builder().requestFactory(factory).build();
+        if (usingTestKeys()) {
+            log.warn("Turnstile 테스트 키를 씁니다. 사람 확인이 늘 통과합니다. 실제 사이트는 TURNSTILE_SITE_KEY·TURNSTILE_SECRET_KEY를 넣어 주세요 (D-114).");
+        }
+    }
+
+    /** Cloudflare가 공개한 테스트 키(1x·2x·3x로 시작하고 0이 이어짐)인지. 실제 키는 0x로 시작한다. */
+    public boolean usingTestKeys() {
+        return isTestKey(props.siteKey()) || isTestKey(props.secretKey());
+    }
+
+    private static boolean isTestKey(String key) {
+        return key == null || key.isBlank() || key.matches("[1-3]x0{10,}[A-Z]{2}");
     }
 
     public String siteKey() {

@@ -225,6 +225,8 @@ button.dark:hover:not(:disabled), a.button.dark:hover { background: #2b2948; }
 .info { color: var(--info); font-size: 0.9rem; margin: 6px 0; }
 .notice { background: #FBF3EC; border: 1px solid #F0DCCB; border-radius: var(--radius-sm); padding: 10px 14px; font-size: 0.9rem; }
 .captcha { margin-top: 16px; }
+.captcha-message { color: var(--muted); font-size: 0.85rem; margin: 6px 0 0; }
+.captcha-message:empty { display: none; }
 .links { text-align: center; margin-top: 16px; font-size: 0.9rem; }
 
 /* ----- 2단계: 계정·블로그 화면 ----- */
