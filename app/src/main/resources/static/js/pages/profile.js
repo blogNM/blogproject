@@ -7,6 +7,7 @@ import { feedCard, renderPager } from '../feed-card.js';
 import { el, initLayout, renderNotFound, toast } from '../layout.js';
 import { openReport } from '../report.js';
 import { takeFrom, withFrom } from '../visit.js';
+import { testBadge, withTestBadge } from '../test-badge.js';
 
 const me = await initLayout();
 const $ = (id) => document.getElementById(id);
@@ -62,6 +63,8 @@ if (profile) {
   document.title = (profile.me ? '내 활동' : profile.nickname) + ' - Creat_';
   avatar($('avatar'), profile.imageUrl, profile.nickname);
   $('nickname').textContent = profile.nickname;
+  // 테스트 회원이면 닉네임 옆에 "테스트" 표시 (D-113)
+  if (profile.test) $('nickname').append(testBadge());
   $('bio').textContent = profile.bio || (profile.me ? '아직 소개가 없어요. 내 정보에서 쓸 수 있어요.' : '');
   $('follower-count').textContent = String(profile.followers);
   $('following-count').textContent = String(profile.following);
@@ -213,7 +216,7 @@ async function loadList() {
       const face = el('span', { class: 'avatar' });
       avatar(face, m.imageUrl, m.nickname);
       const text = el('span', { class: 'chip-text' });
-      text.append(el('strong', {}, m.nickname), el('span', { class: 'muted' }, m.bio || ''));
+      text.append(withTestBadge(el('strong', {}, m.nickname), m.test), el('span', { class: 'muted' }, m.bio || ''));
       a.append(face, text);
       li.append(a);
       return li;

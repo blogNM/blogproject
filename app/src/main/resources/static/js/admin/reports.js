@@ -89,6 +89,7 @@ function reportItem(r, reload) {
 
   const meta = el('p', { class: 'adm-meta' });
   meta.append(document.createTextNode('신고된 사람: '), el('span', { class: 'strong' }, r.authorNickname || '-'));
+  if (r.authorTest) meta.append(badge('테스트', 'adm-test'));
   if (r.blogSlug) {
     meta.append(document.createTextNode(' · 블로그: '), blogLink(r.blogSlug, r.blogName || r.blogSlug));
   }

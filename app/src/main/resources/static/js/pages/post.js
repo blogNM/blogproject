@@ -4,6 +4,7 @@ import { el, initLayout, renderNotFound, toast } from '../layout.js';
 import { openReport } from '../report.js';
 import { applyBlogLook } from '../theme.js';
 import { recordVisit } from '../visit.js';
+import { withTestBadge } from '../test-badge.js';
 
 const me = await initLayout();
 
@@ -55,7 +56,8 @@ if (post && post.blogSlug !== slug) {
   $('title').textContent = post.title;
   const author = post.authorId ? el('a', { href: memberHref(post.authorId), class: 'author-link' }, post.authorName)
     : document.createTextNode(post.authorName);
-  $('meta').replaceChildren(author,
+  // 테스트 회원이 쓴 글은 작성자 이름 옆에 "테스트" 표시 (D-113)
+  $('meta').replaceChildren(withTestBadge(author, post.authorTest),
     document.createTextNode(` · ${post.createdAt}` + (post.updatedAt ? ` (수정 ${post.updatedAt})` : '')));
   $('content').innerHTML = post.contentHtml;
   $('tags').replaceChildren(...post.tags.map((t) => {
@@ -219,8 +221,8 @@ function commentItem(c, rootId) {
   const li = el('li', { class: c.deleted ? 'comment deleted' : 'comment', id: 'comment-' + c.id });
   if (!c.deleted) {
     const head = el('div', { class: 'comment-head' });
-    head.append(c.authorId ? el('a', { class: 'comment-author', href: memberHref(c.authorId, 'comment') }, c.authorName)
-      : el('span', { class: 'comment-author' }, c.authorName), el('span', { class: 'muted' }, c.createdAt));
+    head.append(withTestBadge(c.authorId ? el('a', { class: 'comment-author', href: memberHref(c.authorId, 'comment') }, c.authorName)
+      : el('span', { class: 'comment-author' }, c.authorName), c.authorTest), el('span', { class: 'muted' }, c.createdAt));
     if (c.edited) head.append(el('span', { class: 'muted' }, '수정됨'));
     li.append(head);
   }

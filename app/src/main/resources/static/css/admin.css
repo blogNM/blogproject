@@ -151,6 +151,8 @@ button.adm-go:hover:not(:disabled) { background: var(--adm-purple-dark); }
 }
 .adm-badge.adm-grey { background: var(--adm-soft); color: var(--adm-muted); }
 .adm-badge.adm-warn { background: var(--adm-warn-bg); color: var(--adm-warn); }
+/* 테스트 회원·테스트 블로그 (D-113). 사이트 화면의 .test-badge와 같은 색 */
+.adm-badge.adm-test { background: #FFF6E5; color: #8A5A00; border: 1px solid #E3C79A; margin-left: 4px; }
 .adm-badge.adm-bad { background: #FBE5EA; color: var(--adm-error); }
 .adm-badge.adm-ok { background: var(--adm-ok-bg); color: var(--adm-ok); }
 .adm-badges { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }

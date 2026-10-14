@@ -160,7 +160,14 @@ public class PostService {
                 post.getCreatedAt().format(DATE_TIME),
                 post.getUpdatedAt().isAfter(post.getCreatedAt()) ? post.getUpdatedAt().format(DATE_TIME) : null,
                 new Counts(post.getViewCount(), post.getLikeCount(), post.getCommentCount()), author, author || me.filter(BlogMembership::canManagePosts).isPresent(),
-                me.filter(BlogMembership::canManagePosts).isPresent(), false, viewerId != null, authorLink(post));
+                me.filter(BlogMembership::canManagePosts).isPresent(), false, viewerId != null, authorLink(post),
+                authorTest(post));
+    }
+
+    /** 작성자 이름 옆 "테스트" 표시 (D-113). 이름이 보이는 작성자만. */
+    private boolean authorTest(Post post) {
+        return !post.isAuthorLeft()
+                && members.findById(post.getAuthorId()).filter(Member::isActive).map(Member::isTest).orElse(false);
     }
 
     /** 프로필로 갈 작성자 번호. 블로그를 나간 작성자(탈퇴한 계정)나 탈퇴한 회원이면 null. */
@@ -305,12 +312,12 @@ public class PostService {
     public record PostView(long id, String blogSlug, String blogName, String title, String contentHtml,
             String contentMarkdown, String authorName, Long categoryId, String categoryName, List<String> tags,
             boolean notice, String createdAt, String updatedAt, Counts counts, boolean canEdit, boolean canDelete,
-            boolean canManagePosts, boolean liked, boolean loggedIn, Long authorId) {
+            boolean canManagePosts, boolean liked, boolean loggedIn, Long authorId, boolean authorTest) {
 
         PostView withLiked(boolean value) {
             return new PostView(id, blogSlug, blogName, title, contentHtml, contentMarkdown, authorName, categoryId,
                     categoryName, tags, notice, createdAt, updatedAt, counts, canEdit, canDelete, canManagePosts, value,
-                    loggedIn, authorId);
+                    loggedIn, authorId, authorTest);
         }
     }
 

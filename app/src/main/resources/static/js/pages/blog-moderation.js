@@ -4,6 +4,7 @@ import { api } from '../api.js';
 import { roleName } from '../blog-card.js';
 import { el } from '../layout.js';
 import { renderPager } from '../pager.js';
+import { testBadge, withTestBadge } from '../test-badge.js';
 import { SANCTION_REASONS, sanctionReasonSelect } from '../sanction-reasons.js';
 
 const $ = (id) => document.getElementById(id);
@@ -130,7 +131,7 @@ export function setupModeration({ blog, base, me, reloadBlog }) {
   function memberItem(m) {
     const li = el('li', { class: 'member-card' });
     const head = el('div', { class: 'member-head' });
-    head.append(el('span', { class: 'strong' }, m.nickname), el('span', { class: 'badge' + (m.role === 'MEMBER' ? ' muted-badge' : '') }, roleName(m.role)),
+    head.append(withTestBadge(el('span', { class: 'strong' }, m.nickname), m.test), el('span', { class: 'badge' + (m.role === 'MEMBER' ? ' muted-badge' : '') }, roleName(m.role)),
       el('span', { class: 'muted' }, m.joinedAt + ' 참여'));
     if (m.suspendedUntil) head.append(el('span', { class: 'badge warn' }, `정지 중 · ${m.suspendedUntil}까지`));
     if (m.kickSuggested) head.append(el('span', { class: 'badge danger-badge' }, '정지 3번 · 강퇴 고려'));
@@ -194,7 +195,10 @@ export function setupModeration({ blog, base, me, reloadBlog }) {
     } else {
       target.append(el('span', { class: 'muted' }, r.targetGone ? '이미 지워졌거나 숨겨진 대상이에요.' : (r.summary || '')));
     }
-    if (r.authorNickname) target.append(el('span', { class: 'muted' }, ' · 작성자 ' + r.authorNickname));
+    if (r.authorNickname) {
+      target.append(el('span', { class: 'muted' }, ' · 작성자 ' + r.authorNickname));
+      if (r.authorTest) target.append(testBadge());
+    }
     li.append(target);
     if (r.detail) li.append(el('p', { class: 'report-detail' }, r.detail));
     if (r.status === 'DONE') {

@@ -56,7 +56,10 @@ function renderHeader(me) {
   if (me) {
     nav.append(el('a', { href: '/my-blogs.html' }, '내 블로그'));
     nav.append(el('a', { href: '/members/' + me.id }, '내 활동'));
-    nav.append(el('a', { href: '/me.html', class: 'nickname' }, me.nickname + '님'));
+    const nick = el('a', { href: '/me.html', class: 'nickname' }, me.nickname + '님');
+    // 테스트 회원으로 들어왔으면 닉네임 옆에 "테스트" 표시 (D-113). 표시 모듈이 이 파일을 쓰므로 여기서 직접 만든다
+    if (me.test) nick.append(el('span', { class: 'test-badge', title: '기능을 확인하려고 만든 테스트 계정이에요' }, '테스트'));
+    nav.append(nick);
     const logout = el('button', { type: 'button', class: 'link-button' }, '로그아웃');
     logout.addEventListener('click', async () => {
       try {

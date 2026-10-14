@@ -6,6 +6,7 @@ import { initPostList, postUrl } from '../post-list.js';
 import { openReport } from '../report.js';
 import { FONTS, THEMES, applyBlogLook, isAccent } from '../theme.js';
 import { recordVisit } from '../visit.js';
+import { testBadge, withTestBadge } from '../test-badge.js';
 
 const me = await initLayout();
 
@@ -53,12 +54,14 @@ async function load() {
   }
   document.title = blog.name + ' - Creat_';
   $('blog-name').textContent = blog.name;
+  // 테스트 회원이 만든 블로그는 이름 옆과 블로그장 이름 옆에 "테스트" 표시 (D-113)
+  if (blog.ownerTest) $('blog-name').append(testBadge());
   $('blog-address').textContent = '/blog/' + blog.slug;
   $('blog-description').textContent = blog.description || '';
   $('blog-tags').replaceChildren(...blog.tags.map((t) => el('li', {}, '#' + t)));
   // 블로그장 닉네임을 누르면 프로필로 간다 (SOC-03).
   $('blog-meta').replaceChildren(document.createTextNode('블로그장 '),
-    el('a', { href: '/members/' + blog.ownerId, class: 'author-link' }, blog.ownerNickname),
+    withTestBadge(el('a', { href: '/members/' + blog.ownerId, class: 'author-link' }, blog.ownerNickname), blog.ownerTest),
     document.createTextNode(` · 멤버 ${blog.memberCount}명 · 구독 ${blog.subscribers}명 · `
       + `${VISIBILITY[blog.visibility]} · ${JOIN_POLICY[blog.joinPolicy]} · ${blog.createdAt} 개설`));
   if (blog.status === 'CLOSING') {

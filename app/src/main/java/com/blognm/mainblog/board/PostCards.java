@@ -85,7 +85,7 @@ public class PostCards {
         params.addValue("size", pageSize).addValue("offset", (long) (current - 1) * pageSize);
         List<Card> items = jdbc.query("""
                 SELECT p.id, p.title, p.content_md, p.created_at, p.view_count, p.like_count, p.comment_count,
-                       p.author_left, p.author_id, b.slug, b.name AS blog_name, b.theme_accent, m.nickname, m.status AS member_status,
+                       p.author_left, p.author_id, b.slug, b.name AS blog_name, b.theme_accent, m.nickname, m.status AS member_status, m.is_test,
                        (SELECT i.stored_name FROM images i WHERE i.post_id = p.id ORDER BY i.sort_order, i.id LIMIT 1) AS first_image
                 """ + from + where + " ORDER BY " + orderBy + " LIMIT :size OFFSET :offset", params,
                 (rs, i) -> new Card(rs.getLong("id"), rs.getString("slug"), rs.getString("blog_name"),
@@ -98,7 +98,8 @@ public class PostCards {
                         rs.getString("first_image") == null ? null : "/uploads/" + rs.getString("first_image"),
                         new ArrayList<>(),
                         rs.getBoolean("author_left") || !"ACTIVE".equals(rs.getString("member_status")) ? null
-                                : rs.getLong("author_id")));
+                                : rs.getLong("author_id"),
+                        shownTest(rs.getBoolean("author_left"), rs.getString("member_status"), rs.getBoolean("is_test"))));
         attachTags(items);
         long count = total == null ? 0 : total;
         return new Page(items, current, pageSize, (int) ((count + pageSize - 1) / pageSize), count);
@@ -118,10 +119,15 @@ public class PostCards {
                 });
     }
 
-    /** 화면은 모든 값을 textContent로 넣는다. 요약(excerpt)도 HTML을 걷어 낸 글자다. */
+    /** 작성자 이름 옆 "테스트" 표시 (D-113). 탈퇴한 회원·블로그를 나간 작성자는 이름이 안 보이므로 표시도 없다. */
+    public static boolean shownTest(boolean authorLeft, String memberStatus, boolean test) {
+        return test && !authorLeft && "ACTIVE".equals(memberStatus);
+    }
+
+    /** 화면은 모든 값을 textContent로 넣는다. 요약(excerpt)도 HTML을 걷어 낸 글자다. authorTest: 테스트 회원 (D-113). */
     public record Card(long id, String blogSlug, String blogName, String accent, String title, String excerpt,
             String authorName, String createdAt, long views, long likes, long comments, String imageUrl,
-            List<String> tags, Long authorId) {
+            List<String> tags, Long authorId, boolean authorTest) {
     }
 
     public record Page(List<Card> items, int page, int size, int totalPages, long total) {

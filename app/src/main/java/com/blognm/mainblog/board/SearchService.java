@@ -165,7 +165,7 @@ public class SearchService {
             case RELEVANCE -> "MATCH(b.name, b.description) AGAINST (:phrase IN BOOLEAN MODE) DESC, b.id DESC";
         };
         List<BlogCard> items = jdbc.query("""
-                SELECT b.slug, b.name, b.description, b.theme_accent, m.nickname,
+                SELECT b.slug, b.name, b.description, b.theme_accent, m.nickname, m.is_test,
                        (SELECT i.stored_name FROM images i WHERE i.id = b.cover_image_id) AS cover,
                        (SELECT COUNT(*) FROM subscriptions s WHERE s.blog_id = b.id) AS subscriber_count,
                        (SELECT COUNT(*) FROM blog_memberships x WHERE x.blog_id = b.id AND x.status = 'ACTIVE') AS member_count
@@ -175,7 +175,7 @@ public class SearchService {
                 (rs, i) -> new BlogCard(rs.getString("slug"), rs.getString("name"), rs.getString("description"),
                         rs.getString("theme_accent"), rs.getString("nickname"),
                         rs.getString("cover") == null ? null : "/uploads/" + rs.getString("cover"),
-                        rs.getLong("subscriber_count"), rs.getLong("member_count")));
+                        rs.getLong("subscriber_count"), rs.getLong("member_count"), rs.getBoolean("is_test")));
         return new BlogPage(items, current, (int) ((total + size - 1) / size), total);
     }
 
@@ -187,7 +187,7 @@ public class SearchService {
     }
 
     public record BlogCard(String slug, String name, String description, String accent, String ownerNickname,
-            String coverUrl, long subscriberCount, long memberCount) {
+            String coverUrl, long subscriberCount, long memberCount, boolean ownerTest) {
     }
 
     public record BlogPage(List<BlogCard> items, int page, int totalPages, long total) {

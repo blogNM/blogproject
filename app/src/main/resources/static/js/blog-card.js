@@ -1,6 +1,7 @@
 // 블로그 목록 카드. 사용자 입력(이름·소개·태그·닉네임)은 모두 textContent로 넣는다 (SEC-06).
 import { el } from './layout.js';
 import { withFrom } from './visit.js';
+import { testBadge } from './test-badge.js';
 
 const ROLE = { OWNER: '블로그장', SUB_OWNER: '부블로그장', MEMBER: '멤버' };
 export const VISIBILITY = { PUBLIC: '공개', LINK_ONLY: '일부 공개', PRIVATE: '비공개' };
@@ -39,8 +40,12 @@ export function blogCard(b, { from, q } = {}) {
     b.tags.forEach((t) => tags.append(el('li', {}, '#' + t)));
     body.append(tags);
   }
-  body.append(el('p', { class: 'muted' },
-    `블로그장 ${b.ownerNickname} · 멤버 ${b.memberCount}명 · 구독 ${b.subscriberCount}명 · ${b.createdAt} 개설`));
+  // 블로그장이 테스트 회원이면 블로그장 이름 옆에 "테스트" 표시 (D-113)
+  const owner = el('p', { class: 'muted' }, `블로그장 ${b.ownerNickname}`);
+  if (b.ownerTest) owner.append(testBadge());
+  owner.append(document.createTextNode(` · 멤버 ${b.memberCount}명 · 구독 ${b.subscriberCount}명`
+    + (b.createdAt ? ` · ${b.createdAt} 개설` : '')));
+  body.append(owner);
   return li;
 }
 

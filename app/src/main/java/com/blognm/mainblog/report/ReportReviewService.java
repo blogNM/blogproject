@@ -138,10 +138,16 @@ public class ReportReviewService {
                             rs.getString("result") == null ? null : RESULT_LABEL.get(rs.getString("result")),
                             rs.getString("sanction_reason"), SanctionReason.labelOf(rs.getString("sanction_reason")),
                             processed == null ? null : processed.format(DATE_TIME), slug, rs.getString("blog_name"),
-                            rs.getInt("same_target"));
+                            rs.getInt("same_target"), authorId != null && isTest(authorId));
                 });
         long count = total == null ? 0 : total;
         return new Page(items, current, (int) ((count + PAGE_SIZE - 1) / PAGE_SIZE), count, counts);
+    }
+
+    /** 신고된 사람 이름 옆 "테스트" 표시 (D-113). */
+    private boolean isTest(long memberId) {
+        return jdbc.queryForList("SELECT is_test FROM members WHERE id = :id AND status = 'ACTIVE'",
+                Map.of("id", memberId), Boolean.class).stream().findFirst().orElse(false);
     }
 
     private String nickname(long memberId) {
@@ -247,7 +253,7 @@ public class ReportReviewService {
             Long authorId, String authorNickname, boolean byOwner, String reason, String reasonLabel, String detail,
             String createdAt, String status, String result, String resultLabel, String sanctionReason,
             String sanctionReasonLabel, String processedAt, String blogSlug,
-            String blogName, int sameTargetPending) {
+            String blogName, int sameTargetPending, boolean authorTest) {
     }
 
     public record Page(List<Item> items, int page, int totalPages, long total, Map<String, Integer> reasonCounts) {

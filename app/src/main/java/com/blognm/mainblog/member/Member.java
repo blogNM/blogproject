@@ -54,6 +54,10 @@ public class Member {
     @Column(name = "credentials_changed_at")
     private LocalDateTime credentialsChangedAt;
 
+    /** 테스트 회원 (D-113). 테스트 데이터 넣기로만 켜지고, 가입·정보 수정으로는 바뀌지 않는다. */
+    @Column(name = "is_test", insertable = false, updatable = false)
+    private boolean test;
+
     protected Member() {
     }
 
@@ -75,6 +79,10 @@ public class Member {
 
     public boolean isActive() {
         return status == Status.ACTIVE;
+    }
+
+    public boolean isTest() {
+        return test;
     }
 
     public void changeNickname(String nickname) {

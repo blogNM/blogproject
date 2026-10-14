@@ -71,7 +71,7 @@ public class SanctionService {
         long blogId = blogId(slug);
         LocalDateTime now = LocalDateTime.now(clock);
         return jdbc.query("""
-                SELECT m.id, m.nickname, m.name, m.email, m.phone, bm.role, bm.joined_at, bm.suspended_until,
+                SELECT m.id, m.nickname, m.is_test, m.name, m.email, m.phone, bm.role, bm.joined_at, bm.suspended_until,
                        bm.perm_edit_info, bm.perm_manage_members, bm.perm_manage_posts,
                        (SELECT COUNT(*) FROM member_sanctions s WHERE s.blog_id = bm.blog_id AND s.member_id = m.id
                           AND s.type = 'WARNING' AND s.created_at >= ?) AS warnings,
@@ -89,7 +89,7 @@ public class SanctionService {
                             new Permissions(rs.getBoolean("perm_edit_info"), rs.getBoolean("perm_manage_members"),
                                     rs.getBoolean("perm_manage_posts")),
                             suspended ? untilText(until) : null, rs.getInt("warnings"), rs.getInt("suspensions"),
-                            rs.getInt("suspensions") >= 3);
+                            rs.getInt("suspensions") >= 3, rs.getBoolean("is_test"));
                 }, now.minusYears(1), now.minusYears(1), blogId);
     }
 
@@ -410,7 +410,7 @@ public class SanctionService {
     /** suspendedUntil: 정지 중일 때만. kickSuggested: 최근 1년 정지 3번이면 블로그장 화면에 표시 (D-46). */
     public record MemberRow(long id, String nickname, String name, String email, String phone, String role,
             String joinedAt, Permissions permissions, String suspendedUntil, int warnings, int suspensions,
-            boolean kickSuggested) {
+            boolean kickSuggested, boolean test) {
     }
 
     public record Result(String action, int suspensions, boolean kickSuggested) {

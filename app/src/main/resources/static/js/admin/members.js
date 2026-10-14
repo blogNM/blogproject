@@ -2,12 +2,15 @@
 import { api } from '../api.js';
 import { renderPager } from '../pager.js';
 import {
-  MEMBERSHIP_STATUS, MEMBER_STATUS, ROLE, badge, blogLink, button, el, errorLine, label, query, searchForm, showError,
+  MEMBERSHIP_STATUS, MEMBER_STATUS, ROLE, badge, blogLink, button, el, errorLine, filter, label, query, searchForm, showError,
   table, td,
 } from './common.js';
 
 let q = '';
 let page = 1;
+// 전체 / 실제 회원 / 테스트 회원 (D-113)
+let kind = 'all';
+const KINDS = [['all', '전체', 'all'], ['real', '실제 회원', 'real'], ['test', '테스트 회원', 'test']];
 let selectedId = null;
 
 function info(pairs) {
@@ -49,6 +52,7 @@ async function showDetail(box, id) {
   const head = el('div', { class: 'adm-section-head' });
   const title = el('h2', {}, m.nickname);
   head.append(title, badge(label(MEMBER_STATUS, m.status), m.status === 'ACTIVE' ? 'adm-ok' : 'adm-grey'));
+  if (m.test) head.append(badge('테스트', 'adm-test'));
 
   const revealRow = el('div', { class: 'adm-actions' });
   revealRow.append(reveal);
@@ -83,7 +87,7 @@ export async function mount(panel) {
   async function load() {
     let data;
     try {
-      data = await api.get('/api/admin/members' + query({ q, page }));
+      data = await api.get('/api/admin/members' + query({ q, kind, page }));
     } catch (err) {
       listBox.replaceChildren(errorLine(err));
       return;
@@ -92,6 +96,7 @@ export async function mount(panel) {
       const tr = el('tr', { class: m.id === selectedId ? 'adm-clickable adm-selected' : 'adm-clickable', tabindex: '0' });
       const name = el('span', {}, m.nickname);
       const nameCell = td(name);
+      if (m.test) nameCell.append(badge('테스트', 'adm-test'));
       nameCell.append(el('span', { class: 'adm-sub' }, m.email));
       tr.append(td('#' + m.id, 'adm-nowrap'), nameCell,
         td(badge(label(MEMBER_STATUS, m.status), m.status === 'ACTIVE' ? 'adm-ok' : 'adm-grey')),
@@ -113,10 +118,13 @@ export async function mount(panel) {
       return tr;
     });
     const toolbar = el('div', { class: 'adm-toolbar' });
-    toolbar.append(searchForm('닉네임·이메일 찾기', q, (v) => { q = v; page = 1; load(); }));
+    toolbar.append(searchForm('닉네임·이메일 찾기', q, (v) => { q = v; page = 1; load(); }),
+      filter(KINDS.map(([value, name, key]) => [value, `${name} ${data.counts[key]}`]), kind,
+        (v) => { kind = v; page = 1; load(); }));
     const pager = el('nav', { class: 'pager' });
     renderPager(pager, data.page, data.totalPages, (p) => { page = p; load(); });
-    listBox.replaceChildren(toolbar, el('p', { class: 'adm-total' }, `모두 ${data.total}명`),
+    const shown = KINDS.find(([value]) => value === kind)[1];
+    listBox.replaceChildren(toolbar, el('p', { class: 'adm-total' }, kind === 'all' ? `모두 ${data.total}명` : `${shown} ${data.total}명`),
       table(['번호', '닉네임·이메일', '상태', ['블로그', 'adm-num'], ['글', 'adm-num'], '가입'], rows, '찾는 회원이 없습니다.'),
       pager);
   }

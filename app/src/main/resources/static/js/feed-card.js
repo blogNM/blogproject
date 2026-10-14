@@ -2,6 +2,7 @@
 import { el } from './layout.js';
 import { blogUrl } from './blog-card.js';
 import { withFrom } from './visit.js';
+import { withTestBadge } from './test-badge.js';
 
 export function postHref(slug, id) {
   return blogUrl(slug) + '/posts/' + id;
@@ -22,7 +23,7 @@ export function feedCard(p, { from, q } = {}) {
   // 작성자를 누르면 프로필로 간다. 탈퇴한 회원·블로그를 나간 작성자는 글자만.
   const author = p.authorId ? el('a', { href: '/members/' + p.authorId, class: 'author-link' }, p.authorName)
     : el('span', {}, p.authorName);
-  meta.append(author, el('span', {}, p.createdAt),
+  meta.append(withTestBadge(author, p.authorTest), el('span', {}, p.createdAt),
     el('span', {}, '♥ ' + p.likes), el('span', {}, '댓글 ' + p.comments), el('span', {}, '조회 ' + p.views));
   body.append(meta);
   li.append(body);
