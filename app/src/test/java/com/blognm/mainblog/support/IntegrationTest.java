@@ -74,6 +74,7 @@ public abstract class IntegrationTest {
         jdbc.update("DELETE FROM comments");
         jdbc.update("DELETE FROM post_likes");
         jdbc.update("DELETE FROM post_views");
+        jdbc.update("DELETE FROM blog_visits");
         jdbc.update("DELETE FROM recent_searches");
         jdbc.update("DELETE FROM follows");
         jdbc.update("DELETE FROM blocks");

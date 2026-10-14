@@ -15,7 +15,7 @@ function fill(list, items, emptyText, emptyLink) {
     list.replaceChildren(li);
     return;
   }
-  list.replaceChildren(...items.map(blogCard));
+  list.replaceChildren(...items.map((b) => blogCard(b)));
 }
 
 // 내가 만든 블로그와 참여한 블로그를 나눠 보여준다 (BLG-06)

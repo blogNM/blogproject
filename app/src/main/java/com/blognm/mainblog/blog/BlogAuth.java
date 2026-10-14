@@ -54,6 +54,12 @@ public class BlogAuth {
                 || (r.role() == BlogMembership.Role.SUB_OWNER && r.managePosts())).isPresent();
     }
 
+    /** 블로그 통계 보기 (D-112). 블로그 관리 화면에 들어오는 사람(블로그장·부블로그장)은 모두 본다. */
+    public boolean canViewStats(String slug) {
+        return current(slug).filter(r -> r.role() == BlogMembership.Role.OWNER
+                || r.role() == BlogMembership.Role.SUB_OWNER).isPresent();
+    }
+
     private Optional<RoleRow> current(String slug) {
         Long memberId = currentMemberId();
         if (memberId == null || slug == null) {

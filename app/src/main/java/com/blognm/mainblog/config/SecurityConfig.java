@@ -118,6 +118,8 @@ public class SecurityConfig {
                         // 글 목록·카테고리·글 상세도 공개 범위 안에서 비회원이 읽는다 (004).
                         .requestMatchers(HttpMethod.GET, "/api/blogs/*/posts", "/api/blogs/*/categories",
                                 "/api/posts/*", "/api/posts/*/comments").permitAll()
+                        // 블로그 통계용 방문 기록 (D-112). 로그인하지 않은 방문자도 보낸다
+                        .requestMatchers(HttpMethod.POST, "/api/blogs/*/visits").permitAll()
                         // 메인 피드·공지·통합 검색 (004 4단계). 팔로우·구독 탭은 서비스가 로그인을 확인한다.
                         .requestMatchers(HttpMethod.GET, "/api/feed", "/api/notices", "/api/notices/*", "/api/search").permitAll()
                         // 프로필·팔로워·내 활동 목록 (5단계). 비공개로 둔 목록은 서비스가 막는다 (D-91).
