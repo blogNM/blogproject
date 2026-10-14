@@ -5,6 +5,7 @@ import { openReport } from '../report.js';
 import { applyBlogLook } from '../theme.js';
 import { recordVisit } from '../visit.js';
 import { withTestBadge } from '../test-badge.js';
+import { highlightCode } from '../code-highlight.js';
 
 const me = await initLayout();
 
@@ -60,6 +61,7 @@ if (post && post.blogSlug !== slug) {
   $('meta').replaceChildren(withTestBadge(author, post.authorTest),
     document.createTextNode(` · ${post.createdAt}` + (post.updatedAt ? ` (수정 ${post.updatedAt})` : '')));
   $('content').innerHTML = post.contentHtml;
+  highlightCode($('content'));
   $('tags').replaceChildren(...post.tags.map((t) => {
     const li = el('li');
     li.append(el('a', { href: `${blogHref}${key ? '&' : '?'}tag=${encodeURIComponent(t)}` }, '#' + t));
