@@ -17,6 +17,13 @@ function statusBadge(s) {
   return badge(label(CONTENT_STATUS, s), s === 'NORMAL' ? 'adm-ok' : s === 'HIDDEN' ? 'adm-warn' : 'adm-grey');
 }
 
+/** 작성자 칸. 테스트 회원이면 "테스트" 표시 (D-113) */
+function author(item) {
+  const cell = td(item.author, 'adm-nowrap');
+  if (item.authorTest) cell.append(badge('테스트', 'adm-test'));
+  return cell;
+}
+
 /** 글·댓글 목록 하나. kind: posts | comments */
 function section(kind) {
   const isPost = kind === 'posts';
@@ -49,7 +56,7 @@ function section(kind) {
     if (isPost) {
       const main = td(item.status === 'DELETED' ? el('span', {}, item.title) : link(item.link, item.title), 'adm-wrap');
       main.append(el('span', { class: 'adm-sub' }, item.blogName || item.blogSlug || ''));
-      tr.append(td('#' + item.id, 'adm-nowrap'), main, td(item.author, 'adm-nowrap'), td(status),
+      tr.append(td('#' + item.id, 'adm-nowrap'), main, author(item), td(status),
         td(item.createdAt, 'adm-nowrap'), td(actionsFor(item)));
     } else {
       const main = td(item.content, 'adm-wrap');
@@ -57,7 +64,7 @@ function section(kind) {
       where.append(link(item.link, item.postTitle || '글 보기'));
       if (item.blogSlug) where.append(document.createTextNode(' · '), blogLink(item.blogSlug));
       main.append(where);
-      tr.append(td('#' + item.id, 'adm-nowrap'), main, td(item.author, 'adm-nowrap'), td(status),
+      tr.append(td('#' + item.id, 'adm-nowrap'), main, author(item), td(status),
         td(item.createdAt, 'adm-nowrap'), td(actionsFor(item)));
     }
     return tr;

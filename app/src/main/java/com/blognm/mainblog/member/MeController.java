@@ -37,7 +37,7 @@ public class MeController {
         Member member = members.findById(principal.memberId())
                 .filter(Member::isActive)
                 .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "LOGIN_REQUIRED", "다시 로그인해 주세요."));
-        return new MeResponse(member.getId(), member.getNickname());
+        return new MeResponse(member.getId(), member.getNickname(), member.isTest());
     }
 
     // ----- 내 정보 (USR-07) -----
@@ -74,7 +74,8 @@ public class MeController {
         return Map.of("withdrawn", true);
     }
 
-    public record MeResponse(long id, String nickname) {
+    /** test: 테스트 회원이면 화면 위 닉네임 옆에 "테스트" 표시 (D-113). */
+    public record MeResponse(long id, String nickname, boolean test) {
     }
 
     public record ProfileBody(String nickname, String phone) {

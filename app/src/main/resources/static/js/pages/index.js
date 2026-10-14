@@ -4,6 +4,7 @@ import { feedCard, renderPager } from '../feed-card.js';
 import { el, initLayout } from '../layout.js';
 import { categoryBadge } from '../notice-category.js';
 import { withFrom } from '../visit.js';
+import { testBadge } from '../test-badge.js';
 
 // 첫 화면 그림: 들어오거나 새로 고칠 때마다 블록 쌓기(a)와 종이비행기(b) 중 하나 (D-105)
 const arts = document.querySelectorAll('.landing-art[data-art]');
@@ -92,6 +93,7 @@ async function loadBlogs() {
     $('new-blogs').replaceChildren(...res.items.slice(0, 5).map((b) => {
       const li = el('li');
       li.append(el('a', { href: withFrom(blogUrl(b.slug), 'new') }, b.name), el('span', { class: 'muted' }, ' · ' + b.ownerNickname));
+      if (b.ownerTest) li.append(testBadge());
       return li;
     }));
   }

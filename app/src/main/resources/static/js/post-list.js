@@ -2,6 +2,7 @@
 import { api } from './api.js';
 import { el } from './layout.js';
 import { renderPager } from './pager.js';
+import { testBadge } from './test-badge.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -95,8 +96,10 @@ export async function initPostList(blog, key, categoriesReady) {
       });
       li.append(tags);
     }
-    li.append(el('p', { class: 'muted' },
-      `${p.authorName} · ${p.createdAt} · 조회 ${p.views} · 좋아요 ${p.likes} · 댓글 ${p.comments}`));
+    const meta = el('p', { class: 'muted' }, p.authorName);
+    if (p.authorTest) meta.append(testBadge());
+    meta.append(document.createTextNode(` · ${p.createdAt} · 조회 ${p.views} · 좋아요 ${p.likes} · 댓글 ${p.comments}`));
+    li.append(meta);
     return li;
   }
 

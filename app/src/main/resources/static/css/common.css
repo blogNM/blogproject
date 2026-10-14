@@ -281,6 +281,11 @@ button.danger-outline { color: var(--error); border-color: var(--error); }
 .badge { display: inline-block; padding: 2px 10px; border-radius: 999px; background: var(--highlight); color: var(--primary-dark); font-size: 0.78rem; font-weight: 700; }
 .badge.muted-badge { background: var(--soft); color: var(--muted); }
 .badge.warn { background: #FBEDE3; color: #A0522D; }
+/* 테스트 회원·테스트 블로그 표시 (D-113). 닉네임 바로 옆에 작게 붙는다 */
+.test-badge { display: inline-block; margin-left: 4px; padding: 0 6px; border-radius: 999px; border: 1px solid #E3C79A;
+  background: #FFF6E5; color: #8A5A00; font-size: 0.7rem; font-weight: 700; line-height: 1.5; vertical-align: middle;
+  white-space: nowrap; letter-spacing: 0; }
+.with-test-badge { display: inline-flex; align-items: center; gap: 0; flex-wrap: nowrap; }
 .tags { list-style: none; padding: 0; margin: 0; display: flex; gap: 6px; flex-wrap: wrap; font-size: 0.85rem; color: var(--violet); }
 
 /* 쪽 번호: 다섯 쪽씩, 둥근 흰 화살표와 테두리 없는 숫자 */

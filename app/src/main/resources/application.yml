@@ -202,3 +202,13 @@ admin:
   session-ttl: ${ADMIN_SESSION_TTL:2h}
   # IP마다 1분에 받는 관리자 로그인 시도 수
   login-per-minute: ${ADMIN_LOGIN_PER_MINUTE:10}
+
+# 실제 사이트에 테스트 회원과 그 활동을 넣고 지운다 (D-113). 평소에는 비어 있어 아무 일도 하지 않는다.
+# .github/workflows/test-data.yml이 운영 중인 이미지로 컨테이너를 하나 더 띄워(웹 서버 없이) 이 값을 준다.
+test-data:
+  # load: 넣기(두 번 돌려도 더 생기지 않음), remove: 테스트 데이터만 모두 지우기
+  action: ${TEST_DATA_ACTION:}
+  # 테스트 회원 8명의 비밀번호. 저장소에 두지 않고 GitHub 시크릿 TEST_MEMBER_PASSWORD로만 받는다
+  password: ${TEST_MEMBER_PASSWORD:}
+  # 글에 넣은 영상·사이트 링크의 미리보기 카드를 바깥 사이트에서 받을지 (D-92)
+  link-previews: ${TEST_DATA_LINK_PREVIEWS:true}

@@ -72,7 +72,7 @@ public class BlogQueryService {
         List<BlogSummary> items = jdbc.query("""
                 SELECT b.id, b.slug, b.name, b.description, b.join_policy, b.status, b.created_at, b.theme_accent,
                        (SELECT i.stored_name FROM images i WHERE i.id = b.cover_image_id) AS cover,
-                       m.nickname AS owner_nickname,
+                       m.nickname AS owner_nickname, m.is_test AS owner_test,
                        (SELECT COUNT(*) FROM blog_memberships x WHERE x.blog_id = b.id AND x.status = 'ACTIVE') AS member_count,
                        (SELECT COUNT(*) FROM subscriptions s WHERE s.blog_id = b.id) AS subscriber_count
                 FROM blogs b JOIN members m ON m.id = b.owner_id
@@ -84,7 +84,7 @@ public class BlogQueryService {
                 rs.getString("join_policy"), rs.getString("status"), null,
                 rs.getString("owner_nickname"), rs.getLong("member_count"), rs.getLong("subscriber_count"),
                 rs.getObject("created_at", LocalDateTime.class).format(DATE), coverUrl(rs.getString("cover")),
-                rs.getString("theme_accent"), new ArrayList<>()));
+                rs.getString("theme_accent"), new ArrayList<>(), rs.getBoolean("owner_test")));
         attachTags(items);
         int totalPages = (int) ((total + size - 1) / size);
         return new Page(items, current, totalPages, total);
@@ -95,7 +95,7 @@ public class BlogQueryService {
         List<BlogSummary> all = jdbc.query("""
                 SELECT b.id, b.slug, b.name, b.description, b.join_policy, b.status, b.created_at, bm.role, b.theme_accent,
                        (SELECT i.stored_name FROM images i WHERE i.id = b.cover_image_id) AS cover,
-                       m.nickname AS owner_nickname,
+                       m.nickname AS owner_nickname, m.is_test AS owner_test,
                        (SELECT COUNT(*) FROM blog_memberships x WHERE x.blog_id = b.id AND x.status = 'ACTIVE') AS member_count,
                        (SELECT COUNT(*) FROM subscriptions s WHERE s.blog_id = b.id) AS subscriber_count
                 FROM blog_memberships bm
@@ -108,7 +108,7 @@ public class BlogQueryService {
                 rs.getString("join_policy"), rs.getString("status"), rs.getString("role"),
                 rs.getString("owner_nickname"), rs.getLong("member_count"), rs.getLong("subscriber_count"),
                 rs.getObject("created_at", LocalDateTime.class).format(DATE), coverUrl(rs.getString("cover")),
-                rs.getString("theme_accent"), new ArrayList<>()));
+                rs.getString("theme_accent"), new ArrayList<>(), rs.getBoolean("owner_test")));
         attachTags(all);
         List<PendingBlog> pending = jdbc.query("""
                 SELECT b.slug, b.name, r.requested_at
@@ -142,9 +142,10 @@ public class BlogQueryService {
                 });
     }
 
+    /** ownerTest: 블로그장이 테스트 회원이면 블로그장 이름 옆과 카드에 "테스트" 표시 (D-113). */
     public record BlogSummary(long id, String slug, String name, String description, String joinPolicy,
             String status, String myRole, String ownerNickname, long memberCount, long subscriberCount,
-            String createdAt, String coverUrl, String accent, List<String> tags) {
+            String createdAt, String coverUrl, String accent, List<String> tags, boolean ownerTest) {
     }
 
     public record Page(List<BlogSummary> items, int page, int totalPages, long total) {

@@ -4,6 +4,7 @@
 import { api } from './api.js';
 import { el, motionImage, toast } from './layout.js';
 import { withFrom } from './visit.js';
+import { testBadge } from './test-badge.js';
 
 const POLL_MS = 30 * 1000;
 const TABS = [['ALL', '전체'], ['COMMENT', '댓글'], ['LIKE', '좋아요'], ['FOLLOW', '팔로우·구독'], ['BLOG', '블로그'], ['ADMIN', '운영']];
@@ -137,7 +138,10 @@ function buildPanel() {
     // 블로그·글로 가는 알림은 블로그 통계에 "알림"으로 남긴다 (D-112)
     const link = n.link && n.link.startsWith('/blog/') ? withFrom(n.link, 'notification') : n.link;
     const body = link ? el('a', { href: link }) : el('div');
-    body.append(el('p', { class: 'notice-text' }, n.message), el('span', { class: 'muted' }, n.createdAt));
+    const text = el('p', { class: 'notice-text' }, n.message);
+    // 테스트 회원이 한 일이면 "테스트" 표시 (D-113)
+    if (n.actorTest) text.append(testBadge());
+    body.append(text, el('span', { class: 'muted' }, n.createdAt));
     body.addEventListener('click', async (e) => {
       if (n.read) return;
       if (link) e.preventDefault();

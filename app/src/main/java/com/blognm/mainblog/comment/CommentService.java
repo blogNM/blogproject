@@ -60,7 +60,7 @@ public class CommentService {
         PostService.Readable post = posts.readable(postId, key, viewerId);
         List<Row> rows = jdbc.query("""
                 SELECT c.id, c.post_id, c.parent_id, c.author_id, c.content, c.is_edited, c.status, c.created_at,
-                       m.nickname, m.status AS member_status, r.nickname AS reply_to
+                       m.nickname, m.status AS member_status, m.is_test, r.nickname AS reply_to
                 FROM comments c
                 JOIN members m ON m.id = c.author_id
                 LEFT JOIN members r ON r.id = c.reply_to_member_id
@@ -173,7 +173,7 @@ public class CommentService {
     private Optional<Row> find(long id) {
         return jdbc.query("""
                 SELECT c.id, c.post_id, c.parent_id, c.author_id, c.content, c.is_edited, c.status, c.created_at,
-                       m.nickname, m.status AS member_status, NULL AS reply_to
+                       m.nickname, m.status AS member_status, m.is_test, NULL AS reply_to
                 FROM comments c JOIN members m ON m.id = c.author_id WHERE c.id = ?
                 """, CommentService::row, id).stream().findFirst();
     }
@@ -183,17 +183,19 @@ public class CommentService {
                 rs.getBoolean("is_edited"), "NORMAL".equals(rs.getString("status")),
                 rs.getObject("created_at", LocalDateTime.class),
                 "ACTIVE".equals(rs.getString("member_status")) ? rs.getString("nickname") : "탈퇴한 회원",
-                rs.getString("reply_to"), "ACTIVE".equals(rs.getString("member_status")));
+                rs.getString("reply_to"), "ACTIVE".equals(rs.getString("member_status")),
+                "ACTIVE".equals(rs.getString("member_status")) && rs.getBoolean("is_test"));
     }
 
     private static CommentView view(Row r, Long viewerId, PostService.Readable post, List<CommentView> replies) {
         boolean mine = viewerId != null && r.authorId() == viewerId;
         if (!r.normal()) {
             return new CommentView(r.id(), null, null, null, "삭제된 댓글입니다.", r.createdAt().format(DATE_TIME), false,
-                    true, false, false, replies);
+                    true, false, false, replies, false);
         }
         return new CommentView(r.id(), r.authorActive() ? r.authorId() : null, r.authorName(), r.replyTo(), r.content(),
-                r.createdAt().format(DATE_TIME), r.edited(), false, mine, mine || post.canManagePosts(), replies);
+                r.createdAt().format(DATE_TIME), r.edited(), false, mine, mine || post.canManagePosts(), replies,
+                r.authorTest());
     }
 
     private static ApiException notFound() {
@@ -201,19 +203,24 @@ public class CommentService {
     }
 
     private record Row(long id, long postId, Long parentId, long authorId, String content, boolean edited,
-            boolean normal, LocalDateTime createdAt, String authorName, String replyTo, boolean authorActive) {
+            boolean normal, LocalDateTime createdAt, String authorName, String replyTo, boolean authorActive,
+            boolean authorTest) {
 
         /** 차단해서 숨긴 댓글은 지운 댓글처럼 보인다. 답글이 없으면 목록에서 빠진다. */
         Row asDeleted() {
-            return new Row(id, postId, parentId, authorId, null, false, false, createdAt, null, null, false);
+            return new Row(id, postId, parentId, authorId, null, false, false, createdAt, null, null, false, false);
         }
     }
 
     public record WriteRequest(String content, Long parentId) {
     }
 
-    /** 화면은 모든 값을 textContent로 넣는다 (헌법 III). authorId는 프로필 링크용, 탈퇴한 회원이면 null. */
+    /**
+     * 화면은 모든 값을 textContent로 넣는다 (헌법 III). authorId는 프로필 링크용, 탈퇴한 회원이면 null.
+     * authorTest: 작성자 이름 옆 "테스트" 표시 (D-113).
+     */
     public record CommentView(long id, Long authorId, String authorName, String replyTo, String content, String createdAt,
-            boolean edited, boolean deleted, boolean mine, boolean canDelete, List<CommentView> replies) {
+            boolean edited, boolean deleted, boolean mine, boolean canDelete, List<CommentView> replies,
+            boolean authorTest) {
     }
 }

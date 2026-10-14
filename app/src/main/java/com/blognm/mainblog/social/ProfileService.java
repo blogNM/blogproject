@@ -61,7 +61,7 @@ public class ProfileService {
                 count("SELECT COUNT(*) FROM follows f JOIN members x ON x.id = f.followee_id "
                         + "WHERE f.follower_id = :id AND x.status = 'ACTIVE'", memberId),
                 blogs(memberId, viewerId, true), blogs(memberId, viewerId, false),
-                self ? new Visibility(true, true, true, true, true) : visibility, self ? visibility : null);
+                self ? new Visibility(true, true, true, true, true) : visibility, self ? visibility : null, m.test());
     }
 
     /** 내가 쓴 글·좋아요 한 글. 보는 사람이 볼 수 있는 글만. */
@@ -122,11 +122,11 @@ public class ProfileService {
         long total = count("SELECT COUNT(*)" + from, memberId);
         int current = Math.max(page, 1);
         List<MemberCard> items = jdbc.query("""
-                SELECT x.id, x.nickname, x.bio, (SELECT i.stored_name FROM images i WHERE i.id = x.profile_image_id) AS image
+                SELECT x.id, x.nickname, x.bio, x.is_test, (SELECT i.stored_name FROM images i WHERE i.id = x.profile_image_id) AS image
                 """ + from + " ORDER BY f.created_at DESC LIMIT :size OFFSET :offset",
                 Map.of("id", memberId, "size", LIST_SIZE, "offset", (current - 1) * LIST_SIZE),
                 (rs, i) -> new MemberCard(rs.getLong("id"), rs.getString("nickname"), rs.getString("bio"),
-                        image(rs.getString("image"))));
+                        image(rs.getString("image")), rs.getBoolean("is_test")));
         return new MemberPage(items, current, pages(total), total);
     }
 
@@ -180,11 +180,11 @@ public class ProfileService {
     @Transactional(readOnly = true)
     public List<MemberCard> blocked(long memberId) {
         return jdbc.query("""
-                SELECT x.id, x.nickname, x.bio, (SELECT i.stored_name FROM images i WHERE i.id = x.profile_image_id) AS image
+                SELECT x.id, x.nickname, x.bio, x.is_test, (SELECT i.stored_name FROM images i WHERE i.id = x.profile_image_id) AS image
                 FROM blocks k JOIN members x ON x.id = k.blocked_id
                 WHERE k.blocker_id = :id AND x.status = 'ACTIVE' ORDER BY k.created_at DESC
                 """, Map.of("id", memberId), (rs, i) -> new MemberCard(rs.getLong("id"), rs.getString("nickname"),
-                rs.getString("bio"), image(rs.getString("image"))));
+                rs.getString("bio"), image(rs.getString("image")), rs.getBoolean("is_test")));
     }
 
     // ----- 내부 -----
@@ -254,13 +254,14 @@ public class ProfileService {
 
     private Row member(long memberId) {
         return jdbc.query("""
-                SELECT m.id, m.nickname, m.bio, m.created_at, m.show_posts, m.show_comments, m.show_likes, m.show_following,
+                SELECT m.id, m.nickname, m.bio, m.created_at, m.is_test, m.show_posts, m.show_comments, m.show_likes, m.show_following,
                        m.show_subscriptions, (SELECT i.stored_name FROM images i WHERE i.id = m.profile_image_id) AS image
                 FROM members m WHERE m.id = :id AND m.status = 'ACTIVE'
                 """, Map.of("id", memberId), (rs, i) -> new Row(rs.getLong("id"), rs.getString("nickname"),
                 rs.getString("bio"), image(rs.getString("image")),
                 rs.getObject("created_at", LocalDateTime.class).format(DATE), rs.getBoolean("show_posts"),
-                rs.getBoolean("show_comments"), rs.getBoolean("show_likes"), rs.getBoolean("show_following"), rs.getBoolean("show_subscriptions")))
+                rs.getBoolean("show_comments"), rs.getBoolean("show_likes"), rs.getBoolean("show_following"), rs.getBoolean("show_subscriptions"),
+                rs.getBoolean("is_test")))
                 .stream().findFirst()
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "MEMBER_NOT_FOUND", "회원을 찾을 수 없습니다."));
     }
@@ -283,13 +284,13 @@ public class ProfileService {
     }
 
     private record Row(long id, String nickname, String bio, String imageUrl, String joinedAt, boolean showPosts,
-            boolean showComments, boolean showLikes, boolean showFollowing, boolean showSubscriptions) {
+            boolean showComments, boolean showLikes, boolean showFollowing, boolean showSubscriptions, boolean test) {
     }
 
     /** visible: 보는 사람이 열 수 있는 목록. mySettings: 본인에게만, 다른 사람에게 보여주기 체크 값. */
     public record Profile(long id, String nickname, String bio, String imageUrl, String joinedAt, boolean me,
             boolean followedByMe, boolean blockedByMe, long followers, long following, List<BlogCard> ownedBlogs,
-            List<BlogCard> joinedBlogs, Visibility visible, Visibility mySettings) {
+            List<BlogCard> joinedBlogs, Visibility visible, Visibility mySettings, boolean test) {
     }
 
     /** comments를 빼고 보내면 그 설정은 그대로 둔다 (D-94 전에 만든 화면·스크립트). */
@@ -303,7 +304,8 @@ public class ProfileService {
     public record CommentPage(List<CommentCard> items, int page, int totalPages, long total) {
     }
 
-    public record MemberCard(long id, String nickname, String bio, String imageUrl) {
+    /** test: 테스트 회원이면 닉네임 옆에 "테스트" 표시 (D-113). */
+    public record MemberCard(long id, String nickname, String bio, String imageUrl, boolean test) {
     }
 
     public record MemberPage(List<MemberCard> items, int page, int totalPages, long total) {

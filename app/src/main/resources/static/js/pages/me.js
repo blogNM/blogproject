@@ -1,6 +1,7 @@
 import { api } from '../api.js';
 import { el, requireLogin } from '../layout.js';
 import { PASSWORD_MESSAGE, PASSWORD_RULE } from '../rules.js';
+import { testBadge, withTestBadge } from '../test-badge.js';
 
 const me = await requireLogin();
 
@@ -111,7 +112,7 @@ async function loadBlocked() {
       await api.post(`/api/members/${m.id}/block`);
       loadBlocked();
     });
-    li.append(el('a', { href: '/members/' + m.id }, m.nickname), unblock);
+    li.append(withTestBadge(el('a', { href: '/members/' + m.id }, m.nickname), m.test), unblock);
     return li;
   }));
 }
@@ -129,7 +130,10 @@ $('profile-form').addEventListener('submit', async (e) => {
     show('profile-message', '저장했습니다.', true);
     await loadProfile();
     const nick = document.querySelector('.site-nav .nickname');
-    if (nick) nick.textContent = $('nickname').value + '님';
+    if (nick) {
+      nick.textContent = $('nickname').value + '님';
+      if (me && me.test) nick.append(testBadge());
+    }
   } catch (err) {
     show('profile-message', err.message, false);
   }
