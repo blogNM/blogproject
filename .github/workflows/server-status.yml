@@ -48,4 +48,8 @@ jobs:
             echo "-- ${APP_DOMAIN}.conf 내용"; cat ~/nginx/${APP_DOMAIN}.conf 2>&1
             echo "-- 접속 기록 (마지막 10줄)"; tail -n 10 ~/nginx/logs/${APP_DOMAIN}.access.log 2>/dev/null || echo "없음"
             echo "-- 오류 기록 (마지막 10줄)"; tail -n 10 ~/nginx/logs/${APP_DOMAIN}.error.log 2>/dev/null || echo "없음"
-            echo "== 마지막 로그"; docker logs --tail 40 creat-blog 2>&1 | cut -c1-300
+            echo "== 우리 Nginx → 앱 (D-111)"; for i in 1 2 3 4; do curl -sS -m 5 -D - -o /dev/null "http://localhost:${APP_PORT}/api/health" 2>&1 | grep -iE '^HTTP/|^x-upstream' | tr -d '\r' | tr '\n' ' '; echo; done
+            # 서버 두 대 (D-111): 우리 Nginx(creat-blog-lb)와 앱 두 대(creat-blog-a·b). 옮기기 전이면 한 대짜리 creat-blog
+            for c in creat-blog-lb creat-blog-a creat-blog-b creat-blog; do
+              if docker container inspect "$c" >/dev/null 2>&1; then echo "== 마지막 로그: $c"; docker logs --tail 20 "$c" 2>&1 | cut -c1-300; fi
+            done

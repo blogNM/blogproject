@@ -7,6 +7,16 @@
 
 ## 2026-10-14
 
+### 서버 두 대 자동 롤링 무중단 배포 (D-111)
+
+- **설정** `deploy.sh`를 서버 두 대 구조로 바꿈: 학교 Nginx는 지금처럼 8340만 보고(강사 reload 필요 없음), 8340에 우리 Nginx `creat-blog-lb`(nginx:alpine), 그 뒤에 앱 `creat-blog-a`(8341, 새벽 정리 작업)·`creat-blog-b`(8342). 배포 때 b → 10초 → a 순서로 한 대씩 바꾸고, 안 뜨면 바로 전 컨테이너로 되돌림. 처음 한 번은 `lbtest`를 지우고 8349에서 우리 Nginx를 시험한 뒤 `creat-blog`(8340)를 우리 Nginx로 바꿈(실패하면 `creat-blog` 다시 켬). 학교 Nginx 설정 파일은 계속 없을 때만 만듦 (D-111, 교수 과제, 김채림 요청)
+- **설정** 우리 Nginx 설정을 `deploy.sh`가 `~/creat-blog/lb/default.conf`에 만듦: upstream `zone`·`max_fails=1 fail_timeout=5s`, `proxy_next_upstream error timeout http_502 http_503`(이미 보낸 POST는 다시 보내지 않아 글이 두 번 저장되지 않음), `proxy_connect_timeout 2s`, Host·X-Forwarded-Proto·X-Forwarded-For·X-Real-IP 전달, `client_max_body_size 20m`, `X-Upstream` 헤더. 바뀌면 `nginx -t` 뒤 reload. 예시 [`nginx-lb.conf.example`](app/deploy/nginx-lb.conf.example) (D-111)
+- **기능** `GET /api/health`(로그인 없이, DB까지 확인, 안 되면 503)와 모든 응답의 `X-Instance` 헤더. 새벽 정리 작업 스위치 `APP_JOBS_ENABLED`(app-a만 켬, ShedLock은 그대로). graceful shutdown 20초, `docker stop -t 30` (D-111)
+- **수정** 소셜 로그인 요청 값(state·PKCE·nonce)을 세션 대신 AES-GCM으로 잠근 HttpOnly 쿠키 `OAUTH2_REQUEST`에 둠(3분, 서버도 시각 확인, `/login/oauth2/code`에만, 크기 제한, 한 번 쓰면 지움). 버튼을 누른 앱과 돌아온 요청을 받은 앱이 달라도 구글·네이버·카카오 로그인이 됨. 회사 접근 토큰은 서버 메모리에 쌓지 않음 (D-111, SCL-01)
+- **설정** 배포 워크플로 변수 `APP_PORT_A`·`APP_PORT_B`(없으면 8341·8342), 서버에서 실행 시간 15분. 서버 상태 확인 워크플로가 우리 Nginx·앱 두 대의 로그와 `X-Upstream`을 보여 줌 (D-111)
+- **문서** D-111(최종 구조·SCL-01 점검·시험 결과), spec 001 Clarifications, CLAUDE.md 결정 번호, [포트·Nginx·롤링 배포 정리](docs/05-guides/포트-nginx-롤링배포.md) 7장부터 새 구조로, [도커-배포](docs/05-guides/도커-배포.md) 서버 명령, docs/README 목록
+- **설정** 테스트: `CookieAuthorizationRequestTest`(다른 앱에서 되살리기, 구글·네이버·카카오, PKCE, 고친 쿠키·다른 키·3분 지남·너무 큼 거절, 세션 안 생김), `HealthTest`, `JobsSwitchTest`
+
 ### 서버 두 대·롤링 무중단 배포 확인 (v1.6.0)
 
 - **설정** 서버에 app2(`creat-blog-2`, 8341)를 app1(8340)과 같은 이미지·DB·사진 폴더로 띄우고, 검증용 Nginx(8342)로 분산·한 대 장애·롤링 재시작 중 전부 200 확인. 학교 Nginx 설정에 upstream `creat_java21_net` 넣음(reload 전) (김채림 요청)

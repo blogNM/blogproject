@@ -41,8 +41,15 @@ spring:
       max-file-size: ${UPLOAD_MAX_FILE_SIZE:3MB}
       max-request-size: ${UPLOAD_MAX_REQUEST_SIZE:10MB}
 
+  # 컨테이너를 멈출 때(docker stop) 받던 요청(글 저장·사진 올리기)은 끝까지 처리하고 내려간다 (D-111).
+  # deploy.sh가 SHUTDOWN_TIMEOUT=20s를 넘기고 docker stop은 30초 기다린다 (이 값보다 길어야 처리 중인 요청이 잘리지 않음)
+  lifecycle:
+    timeout-per-shutdown-phase: ${SHUTDOWN_TIMEOUT:20s}
+
 server:
   forward-headers-strategy: ${FORWARD_HEADERS_STRATEGY:none}
+  # 새 연결은 받지 않고(우리 Nginx가 다른 한 대로 보냄), 처리 중인 요청을 마친 뒤 내려간다 (D-111)
+  shutdown: graceful
   # 화면·js·css·API 응답을 gzip으로 줄여 보낸다 (D-109). 글꼴(woff2)·사진은 이미 압축돼 있어 빼고, 1KB보다 작은 응답도 그대로 보낸다
   compression:
     enabled: ${SERVER_COMPRESSION:true}
@@ -56,6 +63,11 @@ static-cache:
 
 app:
   time-zone: Asia/Seoul
+  # 서버 두 대 중 어느 것인지 (app-a, app-b). 응답 헤더 X-Instance와 /api/health에 보인다 (D-111)
+  instance-id: ${INSTANCE_ID:}
+  jobs:
+    # 새벽 정리 작업(@Scheduled)을 이 서버에서 돌릴지. 두 대 중 app-a만 true (D-111). ShedLock이 있어 둘 다 켜져도 한 번만 돈다
+    enabled: ${APP_JOBS_ENABLED:true}
   base-url: ${APP_BASE_URL:http://localhost:8080}
   # 깃허브 릴리스를 공지로 올릴 때 확인하는 값 (D-97). 서버의 secrets.env에서 만든다. 비어 있으면 그 주소를 닫는다.
   release-notice-token: ${RELEASE_NOTICE_TOKEN:}

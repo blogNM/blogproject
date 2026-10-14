@@ -13,7 +13,10 @@
 #         KAKAO_CLIENT_ID, KAKAO_CLIENT_SECRET (카카오 로그인, D-108. 없으면 카카오 버튼을 숨김.
 #         KAKAO_REST_API_KEY·KAKAO_ID, KAKAO_SECRET 이름으로 넣어도 읽음)
 # 변수 (같은 화면의 Variables 탭)
-#   APP_PORT: 도커 컨테이너를 열 서버 포트. 없으면 8340 (학교 서버에서 받은 8340~8349의 첫 번호)
+#   APP_PORT: 학교 Nginx가 보내는 포트. 없으면 8340 (학교 서버에서 받은 8340~8349의 첫 번호).
+#             여기에는 우리 Nginx(creat-blog-lb)가 듣고, 앱 두 대로 나눈다 (서버 두 대·롤링 무중단 배포, D-111)
+#   APP_PORT_A, APP_PORT_B: 앱 두 대(creat-blog-a·creat-blog-b)의 포트. 없으면 APP_PORT+1 (8341), APP_PORT+2 (8342).
+#             새벽 정리 작업은 a만 돌린다. 처음 한 번은 빈 포트 APP_PORT+9 (8349)에서 우리 Nginx를 시험한다
 #   APP_DOMAIN: 학교 Nginx가 받을 도메인. 없으면 creat.java21.net. 배포 때 ~/nginx/<도메인>.conf 를 만든다
 #   APP_BASE_URL (사이트 주소. 없으면 http://APP_DOMAIN, Nginx 설정에 인증서가 있으면 https://APP_DOMAIN)
 name: 배포
@@ -77,6 +80,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       APP_PORT: ${{ vars.APP_PORT || secrets.APP_PORT || '8340' }}
+      # 비어 있으면 deploy.sh가 APP_PORT+1, APP_PORT+2로 정한다 (D-111)
+      APP_PORT_A: ${{ vars.APP_PORT_A || '' }}
+      APP_PORT_B: ${{ vars.APP_PORT_B || '' }}
     steps:
       - uses: actions/checkout@v4
       - name: 포트 번호 확인
@@ -84,6 +90,11 @@ jobs:
           case "$APP_PORT" in
             ''|*[!0-9]*) echo "::error::APP_PORT 변수를 숫자로 넣어 주세요 (Settings → Secrets and variables → Actions → Variables)"; exit 1 ;;
           esac
+          for v in APP_PORT_A APP_PORT_B; do
+            case "${!v}" in
+              *[!0-9]*) echo "::error::$v 변수는 비우거나 숫자로 넣어 주세요"; exit 1 ;;
+            esac
+          done
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -140,6 +151,7 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           username: ${{ secrets.SSH_ID }}
           password: ${{ secrets.SSH_PASSWORD }}
-          command_timeout: 10m
-          envs: APP_PORT,APP_DOMAIN,DB_ADDRESS,DB_PORT,DB_NAME,DB_USERNAME,DB_PASSWORD,RESET_DB,APP_BASE_URL,MAIL_USERNAME,MAIL_PASSWORD,ADMIN_INITIAL_LOGIN_ID,ADMIN_INITIAL_PASSWORD,TURNSTILE_SITE_KEY,TURNSTILE_SECRET_KEY,GOOGLE_CLIENT_ID,GOOGLE_CLIENT_SECRET,NAVER_CLIENT_ID,NAVER_CLIENT_SECRET,KAKAO_CLIENT_ID,KAKAO_CLIENT_SECRET
+          # 앱 두 대를 한 대씩 바꾸고 기다리므로 한 대일 때보다 오래 걸린다 (보통 2분 안쪽)
+          command_timeout: 15m
+          envs: APP_PORT,APP_PORT_A,APP_PORT_B,APP_DOMAIN,DB_ADDRESS,DB_PORT,DB_NAME,DB_USERNAME,DB_PASSWORD,RESET_DB,APP_BASE_URL,MAIL_USERNAME,MAIL_PASSWORD,ADMIN_INITIAL_LOGIN_ID,ADMIN_INITIAL_PASSWORD,TURNSTILE_SITE_KEY,TURNSTILE_SECRET_KEY,GOOGLE_CLIENT_ID,GOOGLE_CLIENT_SECRET,NAVER_CLIENT_ID,NAVER_CLIENT_SECRET,KAKAO_CLIENT_ID,KAKAO_CLIENT_SECRET
           script: bash creat-blog/incoming/deploy.sh creat-blog/incoming/creat-blog.tar.gz
