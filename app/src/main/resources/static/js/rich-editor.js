@@ -96,10 +96,12 @@ function make(tag, attrs = {}, text) {
 // ----- HTML 구조 보기: 줄을 나누고 들여 써서 읽기 쉽게 -----
 const BLOCKS = new Set(['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'blockquote', 'pre', 'table', 'thead',
   'tbody', 'tr', 'th', 'td', 'hr', 'div']);
-const VOIDS = new Set(['br', 'hr', 'img']);
+const VOIDS = new Set(['br', 'hr', 'img', 'input']);
+
+const BOOLEAN_ATTRS = new Set(['checked', 'disabled']);
 
 function openTag(node) {
-  const attrs = [...node.attributes].map((a) => ` ${a.name}="${a.value}"`).join('');
+  const attrs = [...node.attributes].map((a) => (BOOLEAN_ATTRS.has(a.name) ? ` ${a.name}` : ` ${a.name}="${a.value}"`)).join('');
   return `<${node.localName}${attrs}>`;
 }
 
@@ -111,6 +113,11 @@ const KEEP_ATTRS = { a: ['href'], img: ['src', 'alt'], span: ['class'], ol: ['st
  */
 function toStoredShape(doc) {
   const root = doc.body;
+  // 체크박스 목록 줄은 글 화면처럼 맨 앞에 누를 수 없는 checkbox를 둔다 (D-110)
+  const tasks = [...root.querySelectorAll('li[data-task="true"], li.task-list-item')].map((li) => {
+    const checked = li.getAttribute('data-task-checked') === 'true' || li.classList.contains('checked');
+    return [li, checked];
+  });
   root.querySelectorAll('*').forEach((node) => {
     const keep = KEEP_ATTRS[node.localName] || [];
     [...node.attributes].forEach((a) => { if (!keep.includes(a.name)) node.removeAttribute(a.name); });
@@ -153,6 +160,14 @@ function toStoredShape(doc) {
     if (box.localName === 'li' && box.children.length === 1 && box.firstElementChild.localName === 'p') {
       box.firstElementChild.replaceWith(...box.firstElementChild.childNodes);
     }
+  });
+  tasks.forEach(([li, checked]) => {
+    const input = doc.createElement('input');
+    input.setAttribute('type', 'checkbox');
+    if (checked) input.setAttribute('checked', '');
+    input.setAttribute('disabled', '');
+    li.setAttribute('class', 'task-list-item');
+    li.prepend(input, ' ');
   });
 }
 
@@ -257,9 +272,10 @@ export function createRichEditor({ host, height, placeholder, uploadImage, withC
   const highlightItem = popupItem('highlight', '형광펜', '형', 'toolbar-highlight',
     HIGHLIGHTS.map(([c, n]) => ['hl-' + c, '형광펜 ' + n, 'color-swatch hl-' + c, '가']), '형광펜 빼기', 'hl-');
 
-  // 좁은 화면에서는 뒤쪽 도구가 [⋯] 안으로 들어가므로 자주 쓰는 꾸미기를 앞에 둔다
-  const toolbarItems = [['bold', 'italic', 'strike', colorItem, highlightItem, sizeItem], ['heading', 'hr', 'quote'],
-    ['ul', 'ol'], withCode ? ['table', 'image', 'link'] : ['image', 'link']];
+  // 목록: 글머리 기호(ul)·번호(ol)·체크박스(task, D-110). 체크박스는 "- [ ] 할 일"·"- [x] 한 일"로 저장한다
+  // 좁은 화면에서는 뒤쪽 도구가 [⋯] 안으로 들어가므로 자주 쓰는 꾸미기와 목록을 앞에 둔다
+  const toolbarItems = [['bold', 'italic', 'strike', colorItem, highlightItem, sizeItem], ['ul', 'ol', 'task'],
+    ['heading', 'hr', 'quote'], withCode ? ['table', 'image', 'link'] : ['image', 'link']];
   if (withCode) toolbarItems.push(['code', 'codeblock']);
 
   /** 편집기 안의 span 표시를 정리한다: 정해 둔 class만, 종류마다 하나씩, 다른 속성(style 등)은 없이. */
@@ -311,6 +327,10 @@ export function createRichEditor({ host, height, placeholder, uploadImage, withC
     },
     // 편집 칸의 span(class 여러 개)을 저장할 때는 class 하나씩 겹쳐 감싼다. 서버가 그 모양만 남긴다 (D-102).
     customMarkdownRenderer: {
+      // 글머리 목록 표시는 "- "로 쓴다 (Toast UI 기본은 "* "). 체크박스 목록도 "- [ ] "가 된다 (D-110)
+      bulletList(nodeInfo, context) {
+        return { ...context.origin(), delim: '-' };
+      },
       html(nodeInfo, context) {
         const mark = nodeInfo.node;
         if (!mark || !mark.type || mark.type.name !== 'span') return context.origin();

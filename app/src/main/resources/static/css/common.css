@@ -343,6 +343,13 @@ select { padding: 10px 14px; border: 1px solid var(--line); border-radius: 999px
 .post-content code { background: var(--soft); padding: 1px 5px; border-radius: 6px; font-size: 0.9em; }
 .post-content pre code { background: none; padding: 0; color: inherit; }
 .post-content blockquote { margin: 14px 0; padding: 6px 18px; border-left: 4px solid var(--rose); color: var(--muted); background: #FBF7F5; border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+.post-content ul, .post-content ol { padding-left: 1.5em; }
+.post-content li + li { margin-top: 2px; }
+/* 체크박스 목록 (D-110). 서버가 줄 맨 앞 checkbox(누를 수 없음)와 class를 붙여 준다 */
+.post-content li.task-list-item { list-style: none; position: relative; margin-left: -1.5em; padding-left: 1.7em; }
+.post-content li.task-list-item > input[type="checkbox"] { appearance: none; -webkit-appearance: none; position: absolute; left: 0; top: calc(0.925em - 9px); box-sizing: border-box; width: 18px; height: 18px; margin: 0; border: 1.5px solid #A9A3BB; border-radius: 4px; background: #fff center / 80% no-repeat; cursor: default; }
+.post-content li.task-list-item > p:first-of-type { margin-top: 0; }
+.post-content li.task-list-item > input[type="checkbox"]:checked { border-color: var(--purple); background-color: var(--purple); background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.2l2.4 2.4 4.6-5' fill='none' stroke='%23fff' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); }
 .post-content table { border-collapse: collapse; }
 .post-content th, .post-content td { border: 1px solid var(--line); padding: 6px 10px; }
 .post-content a { color: var(--purple); }
@@ -662,7 +669,8 @@ em, i, .toastui-editor-md-emph, .toastui-editor-contents em {
 /* 글자 크기와 형광펜 강조 (D-102). 서버가 정해 둔 class만 남긴다 (MarkdownRenderer) */
 .ts-small { font-size: 0.85em; }
 .ts-large { font-size: 1.25em; }
-.ts-xlarge { font-size: 1.6em; font-weight: 700; }
+.ts-xlarge { font-size: 1.6em; }
+/* 크기는 크기만 바꾼다. 굵게는 [B]로 따로 고른다 (D-110) */
 .hl-yellow { background: #FFF1A8; }
 .hl-green { background: #CDEFD9; }
 .hl-pink { background: #FBD3E0; }
@@ -707,6 +715,12 @@ em, i, .toastui-editor-md-emph, .toastui-editor-contents em {
 .rich-html-code { flex: 1; min-height: 0; margin: 0; padding: 10px 12px; overflow: auto; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.8rem; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--text); background: none; }
 .rich-html-tag { color: #7C0CB4; }
 .rich-editor .toastui-editor-contents { font-size: 15px; }
+/* HTML 칸을 열어 편집 칸이 좁아져도 목록 도구(글머리·번호·체크박스)가 [⋯] 밖에 보이게 버튼 사이를 줄인다 (D-110) */
+.rich-editor.with-html .toastui-editor-toolbar-icons { margin-left: 1px; margin-right: 1px; }
+.rich-editor.with-html .toastui-editor-toolbar-divider { margin-left: 4px; margin-right: 4px; }
+/* 쓰는 칸의 체크박스 목록도 글 화면과 같은 모양 (D-110). 네모를 누르면 체크·해제 */
+.rich-editor .toastui-editor-contents .task-list-item::before { box-sizing: border-box; width: 17px; height: 17px; top: 4px; border: 1.5px solid #B9B4C7; border-radius: 4px; background: #fff; }
+.rich-editor .toastui-editor-contents .task-list-item.checked::before { border-color: var(--purple); background: var(--purple) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.2l2.4 2.4 4.6-5' fill='none' stroke='%23fff' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 80% no-repeat; }
 @media (max-width: 900px) {
   .rich-editor.with-html .rich-editor-body { grid-template-columns: minmax(0, 1fr); }
   .rich-html { max-height: 320px; }

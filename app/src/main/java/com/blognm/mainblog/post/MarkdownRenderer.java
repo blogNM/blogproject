@@ -7,10 +7,12 @@ import org.commonmark.Extension;
 import org.commonmark.ext.autolink.AutolinkExtension;
 import org.commonmark.ext.gfm.strikethrough.StrikethroughExtension;
 import org.commonmark.ext.gfm.tables.TablesExtension;
+import org.commonmark.ext.task.list.items.TaskListItemsExtension;
 import org.commonmark.parser.Parser;
 import org.commonmark.renderer.html.HtmlRenderer;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 import org.jsoup.safety.Cleaner;
 import org.jsoup.safety.Safelist;
 import org.springframework.stereotype.Component;
@@ -23,7 +25,7 @@ import org.springframework.stereotype.Component;
 public class MarkdownRenderer {
 
     private static final List<Extension> EXTENSIONS = List.of(TablesExtension.create(),
-            StrikethroughExtension.create(), AutolinkExtension.create());
+            StrikethroughExtension.create(), AutolinkExtension.create(), TaskListItemsExtension.create());
 
     /**
      * 링크는 http·https·mailto. 이미지는 이 사이트에 올린 사진(/uploads/...), 릴리스 캡처(/img/releases/..., D-97),
@@ -35,6 +37,7 @@ public class MarkdownRenderer {
             .removeProtocols("img", "src", "http", "https")
             .addProtocols("img", "src", "https")
             .addAttributes("a", "rel")
+            .addAttributes("input", "type", "checked")
             .preserveRelativeLinks(true);
 
     /**
@@ -67,6 +70,7 @@ public class MarkdownRenderer {
                 span.unwrap();
             }
         });
+        clean.select("input").forEach(MarkdownRenderer::keepOnlyTaskCheckbox);
         clean.select("img[src]").forEach(img -> {
             if (!isAllowedImage(img.attr("src"))) {
                 img.remove();
@@ -83,6 +87,28 @@ public class MarkdownRenderer {
             return text;
         }
         return text.substring(0, text.offsetByCodePoints(0, maxLength)) + "…";
+    }
+
+    /**
+     * 체크박스 목록(- [ ] 할 일, - [x] 한 일)만 남긴다 (D-110). 목록 줄 맨 앞의 checkbox 하나만,
+     * 속성은 checked와 disabled(항상 붙임)뿐이라 보는 사람은 누를 수 없다. 다른 input은 모두 지운다.
+     */
+    private static void keepOnlyTaskCheckbox(Element input) {
+        Element li = input.parent();
+        boolean taskBox = "checkbox".equalsIgnoreCase(input.attr("type")) && li != null && "li".equals(li.tagName())
+                && li.firstElementChild() == input && input.siblingIndex() == 0;
+        if (!taskBox) {
+            input.remove();
+            return;
+        }
+        boolean checked = input.hasAttr("checked");
+        input.clearAttributes();
+        input.attr("type", "checkbox");
+        if (checked) {
+            input.attr("checked", true);
+        }
+        input.attr("disabled", true);
+        li.addClass("task-list-item");
     }
 
     private static boolean isAllowedImage(String src) {

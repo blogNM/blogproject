@@ -112,6 +112,41 @@ class PostTest extends IntegrationTest {
     }
 
     @Test
+    @DisplayName("체크박스 목록은 누를 수 없는 checkbox로 보이고, 다른 input은 지워지고, 표시는 글자 수에 넣지 않는다 (D-110)")
+    void taskList() throws Exception {
+        MarkdownRenderer renderer = new MarkdownRenderer();
+        String md = "- 글머리\n- [ ] 할 일\n- [x] 한 일\n1. 번호";
+        assertThat(renderer.toSafeHtml(md)).isEqualTo("<ul>\n<li>글머리</li>\n"
+                + "<li class=\"task-list-item\"><input type=\"checkbox\" disabled> 할 일</li>\n"
+                + "<li class=\"task-list-item\"><input type=\"checkbox\" checked disabled> 한 일</li>\n</ul>\n"
+                + "<ol>\n<li>번호</li>\n</ol>\n");
+        // 직접 쓴 input은 checkbox가 아니거나 목록 줄 맨 앞이 아니면 지우고, 다른 속성은 남기지 않는다
+        String injected = renderer.toSafeHtml("<input type=\"text\" value=\"x\"> <input type=\"password\">\n\n"
+                + "<ul><li><input type=\"checkbox\" name=\"a\" onclick=\"alert(1)\" id=\"x\">직접</li>"
+                + "<li>뒤 <input type=\"checkbox\"></li></ul>\n\n<input type=\"checkbox\" checked>");
+        assertThat(injected).doesNotContain("text", "password", "onclick", "name=", "id=", "value=")
+                .contains("<li class=\"task-list-item\"><input type=\"checkbox\" disabled>직접</li><li>뒤 </li>");
+        assertThat(injected.split("<input", -1)).hasSize(2);
+        // 크기 class는 크기만, 굵게는 따로 (D-110)
+        assertThat(renderer.toSafeHtml("<span class=\"ts-xlarge\">큰 글자</span>"))
+                .isEqualTo("<p><span class=\"ts-xlarge\">큰 글자</span></p>\n");
+        // "- [ ] "는 "- "만 센다 (글머리 목록과 같게)
+        assertThat(PostRules.contentLength("- [ ] 가나\n- [x] 다\n* [X]\n- 라")).isEqualTo(
+                PostRules.contentLength("- 가나\n- 다\n* \n- 라"));
+        assertThat(PostRules.contentLength("[ ] 가")).isEqualTo(5);
+
+        // 글로 저장했다가 다시 불러오면 마크다운이 그대로, 글 화면에는 checkbox
+        String stored = "- [ ] 우유 사기\\n- [x] <span class=\\\"ts-large\\\">빵 사기</span>\\n- 글머리 하나";
+        long id = write(writer, "food", "할 일", stored);
+        getAs("/api/posts/" + id, writer)
+                .andExpect(jsonPath("$.contentMarkdown").value("- [ ] 우유 사기\n- [x] <span class=\"ts-large\">빵 사기</span>\n- 글머리 하나"))
+                .andExpect(jsonPath("$.contentHtml").value("<ul>\n"
+                        + "<li class=\"task-list-item\"><input type=\"checkbox\" disabled> 우유 사기</li>\n"
+                        + "<li class=\"task-list-item\"><input type=\"checkbox\" checked disabled> <span class=\"ts-large\">빵 사기</span></li>\n"
+                        + "<li>글머리 하나</li>\n</ul>\n"));
+    }
+
+    @Test
     @DisplayName("제목 1~30자, 본문 1000자(사진 문법은 빼고 셈), 태그 10개. 태그는 #·공백 정리 후 소문자 하나로")
     void inputRules() throws Exception {
         postAs("/api/blogs/food/posts", """
