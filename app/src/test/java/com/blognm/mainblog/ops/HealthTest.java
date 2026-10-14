@@ -78,8 +78,8 @@ class HealthTest extends IntegrationTest {
     }
 
     @Test
-    @DisplayName("APP_JOBS_ENABLED 기본값(true)이면 정리 작업 4개(글·인증·알림·블로그)가 등록된다")
+    @DisplayName("APP_JOBS_ENABLED 기본값(true)이면 정리 작업 5개(글·인증·알림·블로그·방문 기록)가 등록된다")
     void jobsEnabledByDefault() {
-        assertThat(scheduled.getScheduledTasks()).hasSize(4);
+        assertThat(scheduled.getScheduledTasks()).hasSize(5);
     }
 }

@@ -1,6 +1,7 @@
 import { api } from '../api.js';
 import { el, requireLogin } from '../layout.js';
 import { setupModeration } from './blog-moderation.js';
+import { setupStats } from './blog-stats.js';
 import { IMAGE_EXTENSIONS, IMAGE_MAX_BYTES, parseTags } from '../rules.js';
 import { FONTS, SWATCHES, THEMES, isAccent } from '../theme.js';
 
@@ -265,7 +266,8 @@ if (blog) {
     setupTheme();
   }
   moderation = setupModeration({ blog, base, me, reloadBlog: () => api.get(base) });
-  await Promise.all([loadRequests(), moderation.ready, loadCategories()]);
+  // 블로그 통계 (D-112). 블로그장·부블로그장 모두 본다
+  await Promise.all([setupStats(base), loadRequests(), moderation.ready, loadCategories()]);
 
   $('category-form').addEventListener('submit', async (e) => {
     e.preventDefault();

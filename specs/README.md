@@ -5,7 +5,7 @@
 | 폴더 | 기능 | 요구사항 ID | 원본 위치 |
 |---|---|---|---|
 | [001-member-account](001-member-account/spec.md) | 회원관리 (가입·로그인·계정) | USR-01~08, SEC-01~05, SEC-13 | 1편 3.1, 4.1, 4.4, 4.6 / 2편 6.5, 6.7 |
-| [002-blog-management](002-blog-management/spec.md) | 블로그 생성·참여·운영·폐쇄 | BLG-01~13 | 1편 2장, 3.2, 3.7 / 2편 6.5 |
+| [002-blog-management](002-blog-management/spec.md) | 블로그 생성·참여·운영·폐쇄, 블로그 통계(D-112) | BLG-01~13 | 1편 2장, 3.2, 3.7 / 2편 6.5 |
 | [003-social-notification](003-social-notification/spec.md) ([plan](003-social-notification/plan.md), [tasks](003-social-notification/tasks.md)) | 팔로우·구독·프로필·차단·신고·알림 | SOC-01~07 | 1편 3.3, 3.6 |
 | [004-board](004-board/spec.md) | 글·댓글·태그·이미지·검색·피드·조회수 | BRD-01~11 | 1편 3.4 / 2편 6.1~6.4, 6.6 |
 | [005-admin-moderation](005-admin-moderation/spec.md) ([plan](005-admin-moderation/plan.md), [tasks](005-admin-moderation/tasks.md)) | 메인 관리자와 제재 | ADM-01~07, SEC-09 | 1편 3.5, 3.7 |
@@ -68,6 +68,7 @@ spec 안의 `[NEEDS CLARIFICATION]`을 모은 목록입니다. 항목별 추천�
 | [D-93](../docs/03-decisions/D-93-글자-색.md) | 글자 색 7가지, 본문에는 정해 둔 색 class만 남김 | 004 |
 | [D-94](../docs/03-decisions/D-94-내-활동-쓴-댓글.md) | [내 활동]에 쓴 댓글 탭, 공개 체크 기본 켜짐 | 003 |
 | [D-95](../docs/03-decisions/D-95-제재-사유-항목.md) | 신고 처리·제재 때 제재 사유 항목 8가지 중 하나를 고르고 항목별로 나눠 봄 | 002, 005 |
+| [D-112](../docs/03-decisions/D-112-블로그-통계.md) | 블로그 통계: 시간별·일별·월별 방문자·조회수와 들어온 경로·검색어. 블로그장·부블로그장만 봄, IP 대신 날마다 바뀌는 해시, 400일 보관 (2026-10-14) | 002, 004 |
 
 D-83은 IP별 요청 제한을 1차에 서버 메모리에서 세는 결정(헌법 V "확인 필요")에 쓰려고 비워 두었습니다.
 
