@@ -47,6 +47,7 @@ dependencies {
     implementation "org.commonmark:commonmark-ext-gfm-tables:${commonmarkVersion}"
     implementation "org.commonmark:commonmark-ext-gfm-strikethrough:${commonmarkVersion}"
     implementation "org.commonmark:commonmark-ext-autolink:${commonmarkVersion}"
+    implementation "org.commonmark:commonmark-ext-task-list-items:${commonmarkVersion}"
     implementation 'org.jsoup:jsoup:1.18.3'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
