@@ -1,0 +1,45 @@
+# 릴리스 지우기: 번호를 잘못 붙인 깃허브 릴리스와 그 태그를 지운다.
+# Actions 탭 → "릴리스 지우기" → [Run workflow] → 지울 버전을 빈칸으로 나눠 적고 실행 (예: v1.9.0 v1.10.0)
+# 사이트 공지는 건드리지 않는다. 공지 제목·내용은 "버전 만들기"를 같은 번호로 다시 돌리면 고쳐진다 (D-97).
+name: 릴리스 지우기
+
+on:
+  workflow_dispatch:
+    inputs:
+      versions:
+        description: '지울 버전 (빈칸으로 나눔, 예: v1.9.0 v1.10.0)'
+        required: true
+
+permissions:
+  contents: write
+
+# 버전 만들기와 겹치지 않게 같은 줄에 선다
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  delete:
+    name: 릴리스와 태그 지우기
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      VERSIONS: ${{ github.event.inputs.versions }}
+    steps:
+      - name: 지우기
+        run: |
+          for v in $VERSIONS; do
+            if ! echo "$v" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+              echo "::error::버전 이름은 v1.0.0 모양으로 적어 주세요 (지금: $v)"
+              exit 1
+            fi
+          done
+          for v in $VERSIONS; do
+            if gh release view "$v" >/dev/null 2>&1; then
+              gh release delete "$v" --cleanup-tag --yes
+              echo "지움: $v"
+            else
+              gh api -X DELETE "repos/$GH_REPO/git/refs/tags/$v" >/dev/null 2>&1 && echo "태그만 지움: $v" || echo "없음: $v"
+            fi
+          done
