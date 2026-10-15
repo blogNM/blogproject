@@ -7,6 +7,11 @@
 
 ## 2026-10-15
 
+### 버전 번호를 올라간 순서대로 바꿈
+
+- **문서** 릴리스 번호를 사이트·깃허브에 올라간 순서대로 바꿈: 위쪽 메뉴 프로필 사진 v1.11.0 → **v1.9.0**, 다크모드 v1.9.0 → **v1.10.0**, 코드 블럭 입력·언어별 색 v1.10.0 → **v1.11.0**, 로봇 확인 reCAPTCHA v1.10.1 → **v1.11.1**. 코드 블럭 ⋮ 메뉴는 v1.12.0 그대로. `docs/releases/`·`static/img/releases/` 이름과 아래 항목의 번호도 함께 바꿈 (김채림 요청)
+- **설정** DB 마이그레이션 `V18__renumber_release_notices.sql`: 이미 올라간 사이트 공지 4건의 제목 번호만 바꿈. 공지 글·올린 시각·알림은 그대로, 알림을 다시 보내지 않음
+
 ### 코드 블럭 ⋮ 메뉴 (v1.12.0, D-120)
 
 - **기능** 글쓰기 코드 블럭에 마우스를 올리거나 커서가 들어가면 오른쪽 위에 "언어 이름 ⋮" 버튼. 누르면 복사·잘라내기·삭제·언어 ▸·기본 언어 ▸ 메뉴 (D-120, 김채림 요청)
@@ -16,22 +21,22 @@
 - **화면** 언어 목록을 java·cpp 같은 소문자 이름 대신 Java·C++·C# 같은 보이는 이름으로, 맨 위 "일반 텍스트"(언어 없음). Toast UI의 언어 입력 칸은 숨김 (D-120)
 - **문서** D-120, spec 004 Clarifications, CLAUDE.md·docs/README·specs/README 결정 번호와 목록, [v1.12.0 릴리스 노트](docs/releases/v1.12.0.md)와 고치기 전·후 캡처(`static/img/releases/v1.12.0/`)
 
-### 위쪽 메뉴 내 프로필 사진과 로그인 화면 다크모드 버튼 (v1.11.0, D-119)
+### 위쪽 메뉴 내 프로필 사진과 로그인 화면 다크모드 버튼 (v1.9.0, D-119)
 
 - **화면** 로그인한 위쪽 메뉴: "내 블로그 · 내 활동 · OO님 · 로그아웃" 글자 대신 오른쪽 끝에 내 프로필 사진(없으면 닉네임 첫 글자). 누르면 이름(내 활동으로 가는 링크)·내 블로그·내 정보·로그아웃 메뉴가 열리고, 바깥을 누르거나 Esc로 닫힘 (D-119, 김채림 요청)
 - **기능** 로그인·가입·소셜 가입 화면 오른쪽 위에 다크모드 달·해 버튼 (`layout.js`가 `main.auth-page` 화면에 붙임, D-116, D-119, 김채림 요청)
 - **기능** `/api/me`가 프로필 사진 주소 `imageUrl`도 줌. 내 정보 화면에서 닉네임·사진을 바꾸면 위쪽 사진·이름도 바로 바뀜 (SOC-03, D-119)
-- **문서** D-119, spec 001 Clarifications, CLAUDE.md·docs/README·specs/README 결정 번호와 목록, [v1.11.0 릴리스 노트](docs/releases/v1.11.0.md)와 고치기 전·후 캡처(`static/img/releases/v1.11.0/`)
+- **문서** D-119, spec 001 Clarifications, CLAUDE.md·docs/README·specs/README 결정 번호와 목록, [v1.9.0 릴리스 노트](docs/releases/v1.9.0.md)와 고치기 전·후 캡처(`static/img/releases/v1.9.0/`)
 - **설정** 테스트: `AccountTest.meShowsProfileImage`
 
-### 로봇 확인을 Google reCAPTCHA로 (v1.10.1, D-118)
+### 로봇 확인을 Google reCAPTCHA로 (v1.11.1, D-118)
 
 - **설정** 배포가 앞이 `RECAPTCHAR_`인 시크릿 이름(`RECAPTCHAR_SITE_KEY`·`RECAPTCHAR_SECRET_KEY`·`RECAPTCHAR_ID`·`RECAPTCHAR_PASSWORD` 등)도 읽음 (D-118, 김채림이 넣은 이름)
 - **기능** 로봇 확인을 Cloudflare Turnstile에서 Google reCAPTCHA v2 체크박스("로봇이 아닙니다")로 바꿈. 보이는 때(계정마다 3번, 같은 IP 1시간 5번)와 잠금(5번 5분)은 그대로, 관리자 로그인도 같음. Turnstile 코드는 지움 (D-118, 김채림 요청)
 - **설정** 키 `RECAPTCHA_SITE_KEY`·`RECAPTCHA_SECRET_KEY`(GitHub Actions secrets → `deploy.sh` → `secrets.env`). `RECAPTCHA_ID`·`RECAPTCHA_PASSWORD` 등 다른 이름도 읽음. 없으면 Google v2 테스트 키로 뜨고 서버 로그에 경고. `TURNSTILE_*`는 더 읽지 않음 (D-118)
 - **설정** CSP: reCAPTCHA 주소(`www.google.com/recaptcha/`, `www.gstatic.com/recaptcha/`, `recaptcha.google.com/recaptcha/`)만 열고 Cloudflare는 뺌. 회원·관리자 로그인 화면은 reCAPTCHA 상자 때문에 인라인 style 허용 (D-118)
 - **기능** API 이름: 로그인 요청 `turnstileToken` → `captchaToken`, 응답·`/api/auth/login-config`의 `turnstileSiteKey` → `captchaSiteKey`. 화면 `js/turnstile.js` → `js/captcha.js`, 다크모드면 상자도 어둡게
-- **문서** D-118, spec 001·005 Clarifications, CLAUDE.md·docs/README·specs/README 결정 번호와 목록, [도커-배포.md](docs/05-guides/도커-배포.md#로봇-확인-실제-키-넣기-d-118) 키 만드는 법, [로컬-실행.md](docs/05-guides/로컬-실행.md), 릴리스 노트 [v1.10.1](docs/releases/v1.10.1.md)
+- **문서** D-118, spec 001·005 Clarifications, CLAUDE.md·docs/README·specs/README 결정 번호와 목록, [도커-배포.md](docs/05-guides/도커-배포.md#로봇-확인-실제-키-넣기-d-118) 키 만드는 법, [로컬-실행.md](docs/05-guides/로컬-실행.md), 릴리스 노트 [v1.11.1](docs/releases/v1.11.1.md)
 - **설정** 테스트: `LoginTest`·`AdminTest`(로그인 화면 CSP)·`OgTagTest`를 새 이름과 CSP에 맞춤
 
 ### 메일 로그인 실패 원인 기록
@@ -40,22 +45,22 @@
 
 ## 2026-10-14
 
-### 코드 블럭 입력과 언어별 색 (v1.10.0, D-117)
+### 코드 블럭 입력과 언어별 색 (v1.11.0, D-117)
 
 - **수정** 빈 글에 코드 블럭을 넣으면 안내 문구가 코드 블럭 안에 들어가 친 글자가 사라지던 문제. 문서가 코드 블럭 하나뿐이면 뒤에 빈 문단을 붙임 (`js/rich-editor.js`, D-117, 김채림 요청)
 - **기능** 코드 블럭 언어 24가지(Java·JavaScript·TypeScript·Python·C·C++·C#·Kotlin·Go·Rust·Swift·PHP·Ruby·Dart·R·SQL·HTML·CSS·JSON·YAML·Bash·Markdown·Diff·Text)를 고르면 편집기에서 바로 언어별 색. Toast UI 코드 문법 강조 플러그인 3.1.0 + Prism 1.29.0을 `vendor/`에 둠 (D-117)
 - **기능** 글 화면·공지사항의 코드 블럭도 언어 색과 오른쪽 위 언어 이름. 코드 블럭이 있는 글에서만 Prism을 불러옴 (`js/code-highlight.js`, D-117)
 - **수정** 서버가 `pre > code`의 `language-이름` class만 남기도록 jsoup 거르기를 고침. 다른 class는 그대로 지움 (`MarkdownRenderer`, SEC-06, D-117)
 - **화면** 코드 블럭 고정폭 글꼴, 탭 4칸, 가로 스크롤, 글 화면(어두운 바탕)·편집기(밝은 바탕)에 맞춘 색 (`common.css`)
-- **문서** D-117, spec 004 Clarifications, CLAUDE.md·docs/README·specs/README 결정 번호와 목록, `vendor/prism/README.md`, 릴리스 노트 [v1.10.0](docs/releases/v1.10.0.md)과 전후 캡처 `/img/releases/v1.10.0/`
+- **문서** D-117, spec 004 Clarifications, CLAUDE.md·docs/README·specs/README 결정 번호와 목록, `vendor/prism/README.md`, 릴리스 노트 [v1.11.0](docs/releases/v1.11.0.md)과 전후 캡처 `/img/releases/v1.11.0/`
 - **설정** 테스트: `PostTest.codeBlockLanguage()`
 
-### 다크모드 (v1.9.0, D-116)
+### 다크모드 (v1.10.0, D-116)
 
 - **기능** 다크모드: 위쪽 메뉴 검색 칸 옆 달·해 버튼으로 켜고 끔. 고른 값은 브라우저(localStorage)에만 남고 처음에는 밝은 화면. `js/color-mode.js`가 그리기 전에 `<html data-mode="dark">`를 붙여 깜빡이지 않음 (D-116, 김채림 요청)
 - **화면** `css/dark.css`: 바탕·카드·글자·선 색과 입력 칸·진한 버튼·강조 글자·경고 띠·테스트 표시·워드마크를 어두운 화면에 맞춤. 로그인·가입·비밀번호 찾기·이메일 찾기 카드도 어둡게, 미로 그림은 어두운 보라. 구글 버튼은 구글 가이드의 어두운 버튼, 네이버·카카오 버튼은 가이드 색 그대로. 사람 확인 상자도 어두운 모양 (D-116, 2026-10-15 김채림 요청으로 바꿈)
 - **화면** 블로그 홈(테마 틀)·글쓰기·관리자 화면은 다크모드를 읽지 않아 늘 밝음 (D-116, D-89)
-- **문서** D-116, spec 001 Clarifications, CLAUDE.md·docs/README·specs/README 결정 번호와 목록, 릴리스 노트 [v1.9.0](docs/releases/v1.9.0.md)과 전후 캡처 `/img/releases/v1.9.0/`
+- **문서** D-116, spec 001 Clarifications, CLAUDE.md·docs/README·specs/README 결정 번호와 목록, 릴리스 노트 [v1.10.0](docs/releases/v1.10.0.md)과 전후 캡처 `/img/releases/v1.10.0/`
 
 ### 로봇 확인 보완 (v1.8.1, D-115)
 
