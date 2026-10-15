@@ -278,7 +278,7 @@ erDiagram
         bigint author_id FK "members"
         bigint category_id FK "없을 수 있음"
         varchar title "1~30자, FULLTEXT ngram"
-        text content_md "마크다운 원문, 최대 1000자"
+        text content_md "마크다운 원문, 최대 3000자(D-121)"
         boolean is_notice "블로그 공지"
         boolean author_left "블로그 탈퇴·강퇴로 탈퇴한 계정 표시"
         enum status "NORMAL, HIDDEN, DELETED"

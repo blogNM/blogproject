@@ -176,17 +176,17 @@ class PostTest extends IntegrationTest {
     }
 
     @Test
-    @DisplayName("제목 1~30자, 본문 1000자(사진 문법은 빼고 셈), 태그 10개. 태그는 #·공백 정리 후 소문자 하나로")
+    @DisplayName("제목 1~30자, 본문 3000자(사진 문법은 빼고 셈), 태그 10개. 태그는 #·공백 정리 후 소문자 하나로")
     void inputRules() throws Exception {
         postAs("/api/blogs/food/posts", """
                 {"title":"%s","content":"본문"}""".formatted("가".repeat(31)), writer)
                 .andExpect(jsonPath("$.code").value("INVALID_TITLE"));
         postAs("/api/blogs/food/posts", """
-                {"title":"제목","content":"%s"}""".formatted("가".repeat(1001)), writer)
+                {"title":"제목","content":"%s"}""".formatted("가".repeat(PostRules.CONTENT_MAX + 1)), writer)
                 .andExpect(jsonPath("$.code").value("CONTENT_TOO_LONG"));
         postAs("/api/blogs/food/posts", """
                 {"title":"제목","content":"%s![사진](/uploads/00000000-0000-0000-0000-000000000000)"}"""
-                .formatted("가".repeat(1000)), writer).andExpect(status().isOk());
+                .formatted("가".repeat(PostRules.CONTENT_MAX)), writer).andExpect(status().isOk());
         postAs("/api/blogs/food/posts", """
                 {"title":"제목","content":"본문","tags":["a","b","c","d","e","f","g","h","i","j","k"]}""", writer)
                 .andExpect(jsonPath("$.code").value("TOO_MANY_TAGS"));

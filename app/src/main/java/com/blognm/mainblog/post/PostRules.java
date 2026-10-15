@@ -12,7 +12,8 @@ import com.blognm.mainblog.common.ApiException;
 public final class PostRules {
 
     public static final int TITLE_MAX = 30;
-    public static final int CONTENT_MAX = 1000;
+    /** 본문 최대 글자 수, 공백 포함 (D-121). 블로그 글 권장 분량(공백 포함 2,500~3,000자)이 들어간다. */
+    public static final int CONTENT_MAX = 3000;
     public static final int TAGS_MAX = 10;
     public static final int CATEGORY_NAME_MAX = 20;
 
@@ -48,7 +49,7 @@ public final class PostRules {
         }
         if (contentLength(content) > CONTENT_MAX) {
             throw ApiException.badRequest("CONTENT_TOO_LONG",
-                    "본문은 %d자까지 쓸 수 있습니다. (사진은 글자 수에 넣지 않습니다.)".formatted(CONTENT_MAX));
+                    "본문은 공백 포함 %,d자까지 쓸 수 있습니다. (사진은 글자 수에 넣지 않습니다.)".formatted(CONTENT_MAX));
         }
         if (content.chars().anyMatch(c -> Character.isISOControl(c) && c != '\n' && c != '\t')) {
             throw ApiException.badRequest("INVALID_CONTENT", "본문에 쓸 수 없는 문자가 있습니다.");
