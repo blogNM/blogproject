@@ -1,6 +1,6 @@
 import { api } from '../api.js';
 import { initLayout } from '../layout.js';
-import { createCaptcha } from '../turnstile.js';
+import { createCaptcha } from '../captcha.js';
 
 // 미로 공은 SVG 애니메이션이라 CSS로 멈출 수 없어, 동작 줄이기를 켜면 여기서 멈춘다 (D-105)
 if (matchMedia('(prefers-reduced-motion: reduce)').matches) document.querySelectorAll('svg.art').forEach((svg) => svg.pauseAnimations());
@@ -65,13 +65,13 @@ form.addEventListener('submit', async (e) => {
       email: form.email.value,
       password: form.password.value,
       rememberMe: document.getElementById('remember').checked,
-      turnstileToken: captcha.token(),
+      captchaToken: captcha.token(),
     });
     location.href = next;
   } catch (err) {
     errorBox.textContent = err.message;
     if (err.details && err.details.captchaRequired) {
-      await captcha.show(err.details.turnstileSiteKey);
+      await captcha.show(err.details.captchaSiteKey);
     }
   } finally {
     button.disabled = false;

@@ -81,14 +81,14 @@ public class AdminAccountService implements AdminTokenCheck, ApplicationRunner {
      * 회원 로그인처럼 아이디마다 3번 틀리면 사람 확인, 5번이면 5분 잠금 (SEC-03, SEC-13, D-115).
      */
     @Transactional(noRollbackFor = ApiException.class)
-    public Login login(String rawId, String password, String turnstileToken, String clientIp) {
+    public Login login(String rawId, String password, String captchaToken, String clientIp) {
         if (!rateLimiter.tryAcquire("admin-login:" + clientIp, props.loginPerMinute(), Duration.ofMinutes(1))) {
             throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "TOO_MANY_REQUESTS", "로그인을 너무 자주 시도했습니다. 잠시 뒤에 다시 해 주세요.");
         }
         String id = rawId == null ? "" : rawId.strip().toLowerCase();
         // 아이디는 30자까지라 그보다 긴 값은 잘라서 센다 (실패 표의 열 길이 안에 두기)
         LoginGuard.Attempt attempt = guard.begin(LoginGuard.adminKey(id.length() > 60 ? id.substring(0, 60) : id),
-                clientIp, turnstileToken);
+                clientIp, captchaToken);
         List<Map<String, Object>> rows = jdbc.queryForList(
                 "SELECT id, password_hash, must_change_password FROM admins WHERE login_id = ?", id);
         if (rows.isEmpty() || password == null || !encoder.matches(password, (String) rows.get(0).get("password_hash"))) {

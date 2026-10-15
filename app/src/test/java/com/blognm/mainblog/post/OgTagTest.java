@@ -121,7 +121,7 @@ class OgTagTest extends IntegrationTest {
     void editorPages() throws Exception {
         mvc.perform(MockMvcRequestBuilders.get("/blog/food/write")).andExpect(forwardedUrl("/post-edit.html"))
                 .andExpect(header().string("Content-Security-Policy", Matchers.containsString("style-src 'self' 'unsafe-inline'")))
-                .andExpect(header().string("Content-Security-Policy", Matchers.containsString("script-src 'self' https://challenges.cloudflare.com;")));
+                .andExpect(header().string("Content-Security-Policy", Matchers.containsString("script-src 'self' https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/;")));
         mvc.perform(MockMvcRequestBuilders.get("/blog/food/posts/1/edit")).andExpect(forwardedUrl("/post-edit.html"));
         // 블로그를 고르는 글쓰기 (D-101)
         mvc.perform(MockMvcRequestBuilders.get("/write")).andExpect(forwardedUrl("/post-edit.html"))

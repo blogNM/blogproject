@@ -128,12 +128,12 @@ app:
     mail-per-hour: ${RATE_MAIL_PER_HOUR:10}
     # 가입 화면 이메일 중복 확인 (D-99)
     email-check-per-minute: ${RATE_EMAIL_CHECK_PER_MINUTE:20}
-  turnstile:
-    # Cloudflare Turnstile (D-79). 기본값은 Cloudflare가 제공하는 "항상 통과" 테스트 키.
-    # 실제 사이트는 GitHub Actions secrets의 TURNSTILE_SITE_KEY·TURNSTILE_SECRET_KEY로 실제 키를 넣는다 (D-115)
-    site-key: ${TURNSTILE_SITE_KEY:1x00000000000000000000AA}
-    secret-key: ${TURNSTILE_SECRET_KEY:1x0000000000000000000000000000000AA}
-    verify-url: https://challenges.cloudflare.com/turnstile/v0/siteverify
+  recaptcha:
+    # Google reCAPTCHA v2 체크박스 (D-79, D-118). 기본값은 Google이 공개한 "늘 통과" 테스트 키.
+    # 실제 사이트는 GitHub Actions secrets의 RECAPTCHA_SITE_KEY·RECAPTCHA_SECRET_KEY로 실제 키를 넣는다
+    site-key: ${RECAPTCHA_SITE_KEY:6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI}
+    secret-key: ${RECAPTCHA_SECRET_KEY:6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe}
+    verify-url: https://www.google.com/recaptcha/api/siteverify
 
 # 블로그 (002). 개수 제한은 설정 파일 + 환경변수 (BLG-10, D-52)
 blog:

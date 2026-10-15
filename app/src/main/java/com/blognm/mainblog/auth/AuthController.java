@@ -25,15 +25,15 @@ public class AuthController {
     private final LoginService loginService;
     private final PasswordResetService passwordResetService;
     private final AuthCookies cookies;
-    private final TurnstileVerifier turnstile;
+    private final CaptchaVerifier captcha;
 
     public AuthController(SignupService signupService, LoginService loginService,
-            PasswordResetService passwordResetService, AuthCookies cookies, TurnstileVerifier turnstile) {
+            PasswordResetService passwordResetService, AuthCookies cookies, CaptchaVerifier captcha) {
         this.signupService = signupService;
         this.loginService = loginService;
         this.passwordResetService = passwordResetService;
         this.cookies = cookies;
-        this.turnstile = turnstile;
+        this.captcha = captcha;
     }
 
     // ----- 회원가입 (USR-01, USR-02) -----
@@ -76,7 +76,7 @@ public class AuthController {
 
     @GetMapping("/login-config")
     public Map<String, String> loginConfig() {
-        return Map.of("turnstileSiteKey", turnstile.siteKey());
+        return Map.of("captchaSiteKey", captcha.siteKey());
     }
 
     @PostMapping("/login")

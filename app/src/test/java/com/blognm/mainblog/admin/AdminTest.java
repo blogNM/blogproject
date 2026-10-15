@@ -87,13 +87,17 @@ class AdminTest extends IntegrationTest {
     }
 
     @Test
-    @DisplayName("관리자 화면은 공지 편집기 때문에 인라인 style만 허용하고, 로그인 화면은 그대로 막는다 (D-106)")
+    @DisplayName("관리자 화면은 공지 편집기, 로그인 화면은 reCAPTCHA 때문에 인라인 style만 허용하고, 다른 화면은 그대로 막는다 (D-106, D-118)")
     void adminEditorCsp() throws Exception {
         Cookie admin = readyAdmin();
         getAs("/admin/index.html", admin).andExpect(status().isOk())
                 .andExpect(header().string("Content-Security-Policy", Matchers.containsString("style-src 'self' 'unsafe-inline';")))
-                .andExpect(header().string("Content-Security-Policy", Matchers.containsString("script-src 'self' https://challenges.cloudflare.com;")));
+                .andExpect(header().string("Content-Security-Policy", Matchers.containsString("script-src 'self' https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/;")));
         getAs("/admin/login.html")
+                .andExpect(header().string("Content-Security-Policy", Matchers.containsString("style-src 'self' 'unsafe-inline';")));
+        getAs("/login.html")
+                .andExpect(header().string("Content-Security-Policy", Matchers.containsString("style-src 'self' 'unsafe-inline';")));
+        getAs("/index.html")
                 .andExpect(header().string("Content-Security-Policy", Matchers.containsString("style-src 'self';")));
     }
 

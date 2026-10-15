@@ -107,7 +107,7 @@ class PasswordResetTest extends IntegrationTest {
     @DisplayName("비밀번호를 바꾸면 로그인 잠금도 풀린다")
     void unlocksLogin() throws Exception {
         for (int i = 0; i < 5; i++) {
-            postJson("/api/auth/login", "{\"email\":\"%s\",\"password\":\"Wrong123!\",\"turnstileToken\":\"x\"}"
+            postJson("/api/auth/login", "{\"email\":\"%s\",\"password\":\"Wrong123!\",\"captchaToken\":\"x\"}"
                     .formatted(EMAIL));
         }
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM login_failures WHERE email = ?", Integer.class, EMAIL))

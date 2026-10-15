@@ -34,7 +34,7 @@ class LoginTest extends IntegrationTest {
     private static final String PASSWORD = "Abcd1234!";
 
     @MockitoBean
-    TurnstileVerifier turnstile;
+    CaptchaVerifier captcha;
 
     @Autowired
     AdminAccountService adminAccounts;
@@ -42,28 +42,28 @@ class LoginTest extends IntegrationTest {
     @BeforeEach
     void setUp() throws Exception {
         signup(EMAIL, PASSWORD, "로그인회원");
-        when(turnstile.siteKey()).thenReturn("test-site-key");
-        when(turnstile.verify(eq("good-token"), any())).thenReturn(true);
+        when(captcha.siteKey()).thenReturn("test-site-key");
+        when(captcha.verify(eq("good-token"), any())).thenReturn(true);
     }
 
-    private MvcResult login(String password, boolean rememberMe, String turnstileToken) throws Exception {
-        String token = turnstileToken == null ? "null" : "\"" + turnstileToken + "\"";
+    private MvcResult login(String password, boolean rememberMe, String captchaToken) throws Exception {
+        String token = captchaToken == null ? "null" : "\"" + captchaToken + "\"";
         return postJson("/api/auth/login", """
-                {"email":"%s","password":"%s","rememberMe":%s,"turnstileToken":%s}"""
+                {"email":"%s","password":"%s","rememberMe":%s,"captchaToken":%s}"""
                 .formatted(EMAIL, password, rememberMe, token)).andReturn();
     }
 
-    private MvcResult loginAs(String email, String password, String turnstileToken) throws Exception {
-        String token = turnstileToken == null ? "null" : "\"" + turnstileToken + "\"";
+    private MvcResult loginAs(String email, String password, String captchaToken) throws Exception {
+        String token = captchaToken == null ? "null" : "\"" + captchaToken + "\"";
         return postJson("/api/auth/login", """
-                {"email":"%s","password":"%s","rememberMe":false,"turnstileToken":%s}"""
+                {"email":"%s","password":"%s","rememberMe":false,"captchaToken":%s}"""
                 .formatted(email, password, token)).andReturn();
     }
 
-    private MvcResult adminLogin(String password, String turnstileToken) throws Exception {
-        String token = turnstileToken == null ? "null" : "\"" + turnstileToken + "\"";
+    private MvcResult adminLogin(String password, String captchaToken) throws Exception {
+        String token = captchaToken == null ? "null" : "\"" + captchaToken + "\"";
         return postJson("/api/admin/auth/login", """
-                {"loginId":"rootadmin","password":"%s","turnstileToken":%s}"""
+                {"loginId":"rootadmin","password":"%s","captchaToken":%s}"""
                 .formatted(password, token)).andReturn();
     }
 

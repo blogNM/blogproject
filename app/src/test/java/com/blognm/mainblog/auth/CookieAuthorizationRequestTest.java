@@ -186,7 +186,7 @@ class CookieAuthorizationRequestTest extends IntegrationTest {
                 new AppProperties.Auth("another-jwt-secret-0123456789-abcdefghijk", a.accessTokenTtl(),
                         a.rememberMeTtl(), a.idleTimeout(), a.sessionMaxTtl(), a.cookieSecure(), a.codeHashSecret()),
                 props.signup(), props.passwordReset(), props.emailFind(), props.login(), props.rateLimit(),
-                props.turnstile());
+                props.recaptcha());
         assertThat(new CookieOAuth2AuthorizationRequestRepository(otherKey, clock)
                 .loadAuthorizationRequest(callback("google", state, cookie))).isNull();
         assertThat(otherInstance().loadAuthorizationRequest(callback("google", state, cookie))).isNotNull();

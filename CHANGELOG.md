@@ -7,6 +7,15 @@
 
 ## 2026-10-15
 
+### 로봇 확인을 Google reCAPTCHA로 (v1.10.1, D-118)
+
+- **기능** 로봇 확인을 Cloudflare Turnstile에서 Google reCAPTCHA v2 체크박스("로봇이 아닙니다")로 바꿈. 보이는 때(계정마다 3번, 같은 IP 1시간 5번)와 잠금(5번 5분)은 그대로, 관리자 로그인도 같음. Turnstile 코드는 지움 (D-118, 김채림 요청)
+- **설정** 키 `RECAPTCHA_SITE_KEY`·`RECAPTCHA_SECRET_KEY`(GitHub Actions secrets → `deploy.sh` → `secrets.env`). `RECAPTCHA_ID`·`RECAPTCHA_PASSWORD` 등 다른 이름도 읽음. 없으면 Google v2 테스트 키로 뜨고 서버 로그에 경고. `TURNSTILE_*`는 더 읽지 않음 (D-118)
+- **설정** CSP: reCAPTCHA 주소(`www.google.com/recaptcha/`, `www.gstatic.com/recaptcha/`, `recaptcha.google.com/recaptcha/`)만 열고 Cloudflare는 뺌. 회원·관리자 로그인 화면은 reCAPTCHA 상자 때문에 인라인 style 허용 (D-118)
+- **기능** API 이름: 로그인 요청 `turnstileToken` → `captchaToken`, 응답·`/api/auth/login-config`의 `turnstileSiteKey` → `captchaSiteKey`. 화면 `js/turnstile.js` → `js/captcha.js`, 다크모드면 상자도 어둡게
+- **문서** D-118, spec 001·005 Clarifications, CLAUDE.md·docs/README·specs/README 결정 번호와 목록, [도커-배포.md](docs/05-guides/도커-배포.md#로봇-확인-실제-키-넣기-d-118) 키 만드는 법, [로컬-실행.md](docs/05-guides/로컬-실행.md), 릴리스 노트 [v1.10.1](docs/releases/v1.10.1.md)
+- **설정** 테스트: `LoginTest`·`AdminTest`(로그인 화면 CSP)·`OgTagTest`를 새 이름과 CSP에 맞춤
+
 ### 메일 로그인 실패 원인 기록
 
 - **수정** 메일 서버가 로그인을 거절하면 서버 기록에 메일 서버의 답(예: Gmail `535 5.7.8 Username and Password not accepted`)을 함께 남김. 받는 사람·인증번호는 그대로 남기지 않음
