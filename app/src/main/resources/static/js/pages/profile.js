@@ -121,13 +121,35 @@ function renderActions() {
       toast(err.message);
     }
   });
+  // 관심 없음 (SOC-08, D-123): 나에게만 숨긴다. 상대에게는 알리지 않는다.
+  const mute = el('button', { type: 'button' }, profile.mutedByMe ? '관심 없음 풀기' : '관심 없음');
+  mute.setAttribute('aria-pressed', String(profile.mutedByMe));
+  mute.hidden = profile.blockedByMe;
+  mute.addEventListener('click', async () => {
+    if (!me) return login();
+    if (!profile.mutedByMe && !confirm(`${profile.nickname}님의 글을 메인 피드와 검색에서 숨길까요? 팔로우 중이면 팔로우도 풀려요. 상대에게는 알리지 않아요.`)) return;
+    mute.disabled = true;
+    try {
+      const res = await api.post(`/api/members/${memberId}/mute`);
+      profile.mutedByMe = res.muted;
+      if (res.muted && profile.followedByMe) {
+        profile.followedByMe = false;
+        $('follower-count').textContent = String(Math.max(0, Number($('follower-count').textContent) - 1));
+      }
+      toast(res.muted ? '이제 메인 피드와 검색에서 이 회원의 글이 보이지 않아요.' : '관심 없음을 풀었어요.');
+      renderActions();
+    } catch (err) {
+      toast(err.message);
+      mute.disabled = false;
+    }
+  });
   // 블로그 글·댓글에서 들어왔으면 그 블로그 안의 신고로 보낸다. 블로그 멤버가 아니면 서버가 메인 관리자에게 넘긴다.
   const fromBlog = params.get('blog');
   const report = el('button', { type: 'button', class: 'link-button muted-link' }, fromBlog ? '이 블로그에 신고' : '신고');
   report.addEventListener('click', () => openReport(fromBlog
     ? { targetType: 'MEMBER', targetId: memberId, slug: fromBlog, key: params.get('key') || undefined }
     : { targetType: 'MEMBER', targetId: memberId }, !!me));
-  actions.append(follow, block, report);
+  actions.append(follow, mute, block, report);
 }
 
 function renderBlogs() {

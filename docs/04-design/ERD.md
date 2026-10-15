@@ -32,6 +32,8 @@ erDiagram
     members ||--o{ subscriptions : "구독"
     blogs ||--o{ subscriptions : ""
     members ||--o{ blocks : "차단"
+    members ||--o{ member_mutes : "관심 없음"
+    blogs ||--o{ blog_mutes : "관심 없음"
     members ||--o{ notifications : "받음"
     members ||--o{ reports : "신고"
     blogs ||--o{ join_requests : "신청"
@@ -401,6 +403,16 @@ erDiagram
         bigint blocked_id PK, FK "차단당한 회원"
         datetime created_at
     }
+    member_mutes {
+        bigint member_id PK, FK "숨긴 회원"
+        bigint muted_id PK, FK "숨겨진 회원"
+        datetime created_at
+    }
+    blog_mutes {
+        bigint member_id PK, FK "숨긴 회원"
+        bigint blog_id PK, FK "숨겨진 블로그"
+        datetime created_at
+    }
     reports {
         bigint id PK
         bigint reporter_id FK "members"
@@ -443,6 +455,10 @@ erDiagram
     blogs ||--o{ subscriptions : "구독자"
     members ||--o{ blocks : "차단함"
     members ||--o{ blocks : "차단당함"
+    members ||--o{ member_mutes : "숨김"
+    members ||--o{ member_mutes : "숨겨짐"
+    members ||--o{ blog_mutes : "숨김"
+    blogs ||--o{ blog_mutes : "숨겨짐"
     members ||--o{ reports : "신고함"
     blogs |o--o{ reports : ""
     members ||--o{ notifications : "받음"
@@ -453,6 +469,7 @@ erDiagram
 |---|---|---|
 | `follows`, `subscriptions` | 회원 팔로우, 블로그 구독. 다시 누르면 행을 지움 | SOC-01, D-02 |
 | `blocks` | 회원 차단. 차단할 때 서로의 `follows`를 지움 | SOC-05, D-36 |
+| `member_mutes`, `blog_mutes` | 관심 없음. 나에게만 피드·검색·블로그 목록에서 숨김. 숨길 때 내 `follows`·`subscriptions`를 지움. 회원·블로그가 지워지면 함께 지움 | SOC-08, D-123 |
 | `reports` | 신고. 블로그 안 멤버와 그 글·댓글은 블로그장, 블로그장과 블로그장의 글·댓글, 블로그 자체, 메인 프로필 신고는 관리자에게. 접수처는 신고할 때 `handler`에 정해 둠 | SOC-06, D-45, D-85 |
 | `notifications` | 알림. 30초 폴링으로 안 읽은 것을 셈 | SOC-04, D-72 |
 | `notification_settings` | 끌 수 있는 알림만 행을 둠. 행이 없으면 켜짐 | SOC-04, D-56 |

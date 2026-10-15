@@ -34,15 +34,17 @@ public class ProfileService {
     private final PostCards cards;
     private final FollowService follows;
     private final BlockService blocks;
+    private final MuteService mutes;
     private final SocialProperties props;
     private final Clock clock;
 
     public ProfileService(NamedParameterJdbcTemplate jdbc, PostCards cards, FollowService follows, BlockService blocks,
-            SocialProperties props, Clock clock) {
+            MuteService mutes, SocialProperties props, Clock clock) {
         this.jdbc = jdbc;
         this.cards = cards;
         this.follows = follows;
         this.blocks = blocks;
+        this.mutes = mutes;
         this.props = props;
         this.clock = clock;
     }
@@ -56,6 +58,7 @@ public class ProfileService {
         return new Profile(m.id(), m.nickname(), m.bio(), m.imageUrl(), m.joinedAt(), self,
                 follows.following(viewerId, memberId),
                 viewerId != null && !self && blocks.blockedBy(viewerId, memberId),
+                !self && mutes.memberMuted(viewerId, memberId),
                 count("SELECT COUNT(*) FROM follows f JOIN members x ON x.id = f.follower_id "
                         + "WHERE f.followee_id = :id AND x.status = 'ACTIVE'", memberId),
                 count("SELECT COUNT(*) FROM follows f JOIN members x ON x.id = f.followee_id "
@@ -296,7 +299,7 @@ public class ProfileService {
 
     /** visible: 보는 사람이 열 수 있는 목록. mySettings: 본인에게만, 다른 사람에게 보여주기 체크 값. */
     public record Profile(long id, String nickname, String bio, String imageUrl, String joinedAt, boolean me,
-            boolean followedByMe, boolean blockedByMe, long followers, long following, List<BlogCard> ownedBlogs,
+            boolean followedByMe, boolean blockedByMe, boolean mutedByMe, long followers, long following, List<BlogCard> ownedBlogs,
             List<BlogCard> joinedBlogs, Visibility visible, Visibility mySettings, boolean test) {
     }
 

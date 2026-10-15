@@ -183,7 +183,9 @@ public class BlogService {
                 owner ? blog.getShareToken() : null, managePosts, editInfo, themeView(blog), blog.getOwnerId(),
                 count("SELECT COUNT(*) FROM subscriptions WHERE blog_id = ?", blog.getId()),
                 viewerId != null && count("SELECT COUNT(*) FROM subscriptions WHERE blog_id = ? AND member_id = ?",
-                        blog.getId(), viewerId) > 0, closeBy, transfer, blog.isHidden(), ownerMember.isTest());
+                        blog.getId(), viewerId) > 0, closeBy, transfer, blog.isHidden(), ownerMember.isTest(),
+                viewerId != null && count("SELECT COUNT(*) FROM blog_mutes WHERE blog_id = ? AND member_id = ?",
+                        blog.getId(), viewerId) > 0);
     }
 
     private long count(String sql, Object... args) {
@@ -495,7 +497,8 @@ public class BlogService {
             String status, LocalDateTime closeScheduledAt, String ownerNickname, long memberCount, List<String> tags,
             String createdAt, String myRole, String myRequest, String canRequestAt, String shareToken,
             boolean canManagePosts, boolean canEditInfo, ThemeView theme, long ownerId, long subscribers,
-            boolean subscribed, String closeRequestedBy, TransferView transfer, boolean hidden, boolean ownerTest) {
+            boolean subscribed, String closeRequestedBy, TransferView transfer, boolean hidden, boolean ownerTest,
+            boolean muted) {
     }
 
     /** toMe면 내가 받은 요청. 아니면 블로그장이 보낸 요청. */

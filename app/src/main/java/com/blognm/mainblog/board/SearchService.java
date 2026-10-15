@@ -50,14 +50,14 @@ public class SearchService {
         String tag = BlogRules.normalizeTag(query);
         Map<Type, Long> counts = Map.of(
                 Type.POST, countPosts(postCondition(Type.POST, phrase, tag, query), viewerId),
-                Type.BLOG, countBlogs(phrase, tag),
+                Type.BLOG, countBlogs(phrase, tag, viewerId),
                 Type.TAG, tag == null ? 0 : countPosts(postCondition(Type.TAG, phrase, tag, query), viewerId),
                 Type.NICKNAME, countPosts(postCondition(Type.NICKNAME, phrase, tag, query), viewerId));
         if (viewerId != null) {
             remember(viewerId, query);
         }
         if (type == Type.BLOG) {
-            return new Result(query, type, sort, counts, null, blogs(phrase, tag, sort, page, counts.get(Type.BLOG)));
+            return new Result(query, type, sort, counts, null, blogs(phrase, tag, sort, page, counts.get(Type.BLOG), viewerId));
         }
         if (type == Type.TAG && tag == null) {
             return new Result(query, type, sort, counts, new PostCards.Page(List.of(), 1, 10, 0, 0), null);
@@ -149,14 +149,20 @@ public class SearchService {
               OR b.id IN (SELECT bt.blog_id FROM blog_tags bt JOIN tags t ON t.id = bt.tag_id WHERE t.name = :tag))
             """;
 
+    /** "관심 없음"으로 숨긴 블로그는 뺀다 (SOC-08, D-123). 로그인하지 않았으면 -1이라 아무것도 빠지지 않는다. */
+    private static final String NOT_MUTED = """
+            AND NOT EXISTS (SELECT 1 FROM blog_mutes bu WHERE bu.member_id = :viewerId AND bu.blog_id = b.id)
+            """;
+
     /** 블로그 이름·소개에 맞거나, 검색어와 같은 블로그 태그가 달린 블로그 (BLG-03). */
-    private long countBlogs(String phrase, String tag) {
-        Long n = jdbc.queryForObject("SELECT COUNT(*) FROM blogs b WHERE " + BLOG_WHERE,
-                Map.of("phrase", phrase, "tag", tag == null ? "" : tag), Long.class);
+    private long countBlogs(String phrase, String tag, Long viewerId) {
+        Long n = jdbc.queryForObject("SELECT COUNT(*) FROM blogs b WHERE " + BLOG_WHERE + NOT_MUTED,
+                Map.of("phrase", phrase, "tag", tag == null ? "" : tag, "viewerId", viewerId == null ? -1L : viewerId),
+                Long.class);
         return n == null ? 0 : n;
     }
 
-    private BlogPage blogs(String phrase, String tag, Sort sort, int page, long total) {
+    private BlogPage blogs(String phrase, String tag, Sort sort, int page, long total, Long viewerId) {
         int size = 12;
         int current = Math.max(page, 1);
         String order = switch (sort) {
@@ -170,8 +176,9 @@ public class SearchService {
                        (SELECT COUNT(*) FROM subscriptions s WHERE s.blog_id = b.id) AS subscriber_count,
                        (SELECT COUNT(*) FROM blog_memberships x WHERE x.blog_id = b.id AND x.status = 'ACTIVE') AS member_count
                 FROM blogs b JOIN members m ON m.id = b.owner_id
-                WHERE\s""" + BLOG_WHERE + " ORDER BY " + order + " LIMIT :size OFFSET :offset",
-                Map.of("phrase", phrase, "tag", tag == null ? "" : tag, "size", size, "offset", (long) (current - 1) * size),
+                WHERE\s""" + BLOG_WHERE + NOT_MUTED + " ORDER BY " + order + " LIMIT :size OFFSET :offset",
+                Map.of("phrase", phrase, "tag", tag == null ? "" : tag, "size", size, "offset", (long) (current - 1) * size,
+                        "viewerId", viewerId == null ? -1L : viewerId),
                 (rs, i) -> new BlogCard(rs.getString("slug"), rs.getString("name"), rs.getString("description"),
                         rs.getString("theme_accent"), rs.getString("nickname"),
                         rs.getString("cover") == null ? null : "/uploads/" + rs.getString("cover"),

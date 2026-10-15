@@ -26,12 +26,15 @@ public class SocialController {
 
     private final FollowService follows;
     private final BlockService blocks;
+    private final MuteService mutes;
     private final ProfileService profiles;
     private final ImageService images;
 
-    public SocialController(FollowService follows, BlockService blocks, ProfileService profiles, ImageService images) {
+    public SocialController(FollowService follows, BlockService blocks, MuteService mutes, ProfileService profiles,
+            ImageService images) {
         this.follows = follows;
         this.blocks = blocks;
+        this.mutes = mutes;
         this.profiles = profiles;
         this.images = images;
     }
@@ -100,6 +103,29 @@ public class SocialController {
         follows.requireActive(id);
         follows.limit("block", me.memberId(), "차단");
         return Map.of("blocked", blocks.toggle(me.memberId(), id));
+    }
+
+    // ----- 관심 없음 (SOC-08, D-123): 나에게만 숨김 -----
+
+    @PostMapping("/api/members/{id}/mute")
+    public Map<String, Boolean> muteMember(@PathVariable long id, @AuthenticationPrincipal MemberPrincipal me) {
+        if (id == me.memberId()) {
+            throw ApiException.badRequest("SELF_MUTE", "자기 자신은 숨길 수 없습니다.");
+        }
+        follows.requireActive(id);
+        follows.limit("mute", me.memberId(), "관심 없음");
+        return Map.of("muted", mutes.toggleMember(me.memberId(), id));
+    }
+
+    @PostMapping("/api/blogs/{slug}/mute")
+    public Map<String, Boolean> muteBlog(@PathVariable String slug, @AuthenticationPrincipal MemberPrincipal me) {
+        follows.limit("mute", me.memberId(), "관심 없음");
+        return Map.of("muted", mutes.toggleBlog(me.memberId(), slug));
+    }
+
+    @GetMapping("/api/me/mutes")
+    public MuteService.Muted muted(@AuthenticationPrincipal MemberPrincipal me) {
+        return mutes.list(me.memberId());
     }
 
     // ----- 내 정보: 소개·사진·공개 설정·차단 목록 -----

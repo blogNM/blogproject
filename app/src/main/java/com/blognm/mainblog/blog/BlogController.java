@@ -39,8 +39,9 @@ public class BlogController {
 
     @GetMapping("/api/blogs")
     public BlogQueryService.Page list(@RequestParam(defaultValue = "latest") String sort,
-            @RequestParam(required = false) String q, @RequestParam(defaultValue = "1") int page) {
-        return queryService.list(sort, q, page);
+            @RequestParam(required = false) String q, @RequestParam(defaultValue = "1") int page,
+            @AuthenticationPrincipal MemberPrincipal me) {
+        return queryService.list(sort, q, page, me == null ? null : me.memberId());
     }
 
     @PostMapping("/api/blogs")

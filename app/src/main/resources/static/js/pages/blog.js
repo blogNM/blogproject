@@ -262,6 +262,24 @@ function renderActions(blog) {
     });
     actions.append(sub);
   }
+  // 관심 없음 (SOC-08, D-123): 메인 피드·검색·블로그 목록에서 이 블로그를 나에게만 숨긴다. 내 블로그에는 없다.
+  if (me && !blog.myRole) {
+    const mute = el('button', { type: 'button' }, blog.muted ? '관심 없음 풀기' : '관심 없음');
+    mute.setAttribute('aria-pressed', String(blog.muted));
+    mute.addEventListener('click', async () => {
+      if (!blog.muted && !confirm('이 블로그를 메인 피드·검색·블로그 목록에서 숨길까요? 구독 중이면 구독도 풀려요. 블로그에는 알리지 않아요.')) return;
+      mute.disabled = true;
+      try {
+        const res = await api.post(`${base}/mute`);
+        toast(res.muted ? '이제 메인 피드·검색·블로그 목록에서 이 블로그가 보이지 않아요.' : '관심 없음을 풀었어요.');
+        await load();
+      } catch (err) {
+        toast(err.message);
+        mute.disabled = false;
+      }
+    });
+    actions.append(mute);
+  }
   if (!blog.myRole || blog.myRole !== 'OWNER') {
     const report = el('button', { type: 'button', class: 'link-button muted-link' }, '블로그 신고');
     report.addEventListener('click', () => openReport({ targetType: 'BLOG', slug: blog.slug, key }, !!me));
