@@ -8,6 +8,25 @@ export const TEXT_COLORS = [['red', '빨강'], ['orange', '주황'], ['green', '
 export const HIGHLIGHTS = [['yellow', '노랑'], ['green', '연두'], ['pink', '분홍'], ['blue', '하늘']];
 export const SIZES = [['small', '작게'], ['large', '크게'], ['xlarge', '아주 크게']];
 
+// 사진 크기 (D-114). 글 칸 너비의 10~100%를 10% 단위로 고른다. 주소 끝에 "#w=60"처럼 붙여 마크다운에 남기고,
+// 편집 칸과 글 화면은 CSS로 그 너비만큼 보여 준다. 100%(원래 크기)는 표시를 붙이지 않는다.
+// 서버(MarkdownRenderer)도 정해 둔 값만 남기고 다른 #표시는 지운다. CSP가 style 속성을 막으므로 class·주소로 준다.
+export const IMAGE_WIDTHS = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+const WIDTH_MARK = /#w=(\d{2,3})$/;
+
+/** 사진 주소에 붙은 크기(%). 없거나 정해 둔 값이 아니면 100. */
+export function imageWidthOf(url) {
+  const m = WIDTH_MARK.exec(String(url || ''));
+  const w = m ? Number(m[1]) : 100;
+  return IMAGE_WIDTHS.includes(w) ? w : 100;
+}
+
+/** 사진 주소의 크기 표시를 w(%)로 바꾼다. 100이면 표시를 뺀다. */
+export function withImageWidth(url, w) {
+  const base = String(url || '').replace(/#.*$/, '');
+  return w >= 100 ? base : `${base}#w=${w}`;
+}
+
 // 서버의 MarkdownRenderer.TEXT_SIZES·HIGHLIGHTS·TEXT_COLORS와 같다. 마크다운에는 바깥부터 이 순서로 감싼다.
 const GROUPS = [
   ['ts-', SIZES.map(([c]) => 'ts-' + c)],
@@ -234,6 +253,10 @@ function prettyLines(html) {
  */
 export function createRichEditor({ host, height, placeholder, uploadImage, withCode = false }) {
   host.classList.add('rich-editor');
+  // 도구 막대가 붙을 높이 = 위쪽 메뉴 높이 (관리자 화면처럼 메뉴가 붙지 않으면 0)
+  const header = document.querySelector('.site-header');
+  const stickyHeader = header && getComputedStyle(header).position === 'sticky';
+  host.style.setProperty('--sticky-top', stickyHeader ? `${header.offsetHeight}px` : '0px');
   const head = make('div', { class: 'rich-editor-head' });
   head.append(make('p', { class: 'rich-editor-tip' }, '쓰는 칸에 보이는 모양 그대로 올라가요. 색·크기·형광펜을 먼저 고르고 쓰거나, 글자를 골라 바꿀 수 있어요.'));
   const htmlButton = make('button', { type: 'button', class: 'rich-html-toggle', 'aria-pressed': 'false' }, 'HTML 보기');
@@ -304,17 +327,31 @@ export function createRichEditor({ host, height, placeholder, uploadImage, withC
     };
   }
 
+  // 편집기를 다 만들기 전(처음 그릴 때)에는 크기 막대를 맞추지 않는다
+  let sizeBarReady = false;
+  /** 사진을 고르면(눌러 선택) 크기 막대를 보여 준다. 편집 상태가 바뀔 때마다 다시 맞춘다. */
+  function imageSizePlugin(context) {
+    return { wysiwygPlugins: [() => new context.pmState.Plugin({ view: () => ({ update: () => syncSizeBar() }) })] };
+  }
+
   const editor = new window.toastui.Editor({
     el: editorBox,
-    height,
+    // 쓰는 칸은 글·사진만큼 늘어난다. 큰 사진을 넣어도 이어 쓰는 글이 칸 밖으로 밀려 가려지지 않는다 (D-114).
+    // 도구 막대는 화면 위에 붙어 따라온다 (common.css .rich-editor .toastui-editor-toolbar)
+    height: 'auto',
+    minHeight: height,
     initialEditType: 'wysiwyg',
     hideModeSwitch: true,
     language: 'ko-KR',
     usageStatistics: false,
     placeholder,
     toolbarItems,
-    plugins: [normalizePlugin],
-    hooks: { addImageBlobHook: uploadImage },
+    plugins: [normalizePlugin, imageSizePlugin],
+    // 사진을 넣으면 바로 다음 줄로 내려가서, 이어 쓰는 글이 사진 옆에 붙지 않고 사진 아래에 쓰인다 (D-114)
+    hooks: { addImageBlobHook: (blob, callback) => uploadImage(blob, (url, alt) => {
+      callback(url, alt);
+      breakAfterImage();
+    }) },
     // 마크다운의 <span class="…">을 편집 칸에서도 그 모양으로 보이게 한다
     customHTMLRenderer: {
       htmlInline: {
@@ -392,6 +429,131 @@ export function createRichEditor({ host, height, placeholder, uploadImage, withC
     host.querySelectorAll('.toolbar-size').forEach((b) => { b.dataset.now = size ? size.slice(3) : ''; });
   }
   editor.on('caretChange', showCurrent);
+
+  // ----- 사진 크기 막대 (D-114) -----
+  // 사진을 누르면 위에 막대가 뜬다. [−]·[+]·끌기 막대로 바꾸거나, 사진 위에서 마우스 휠·두 손가락 확대/축소로 바꾼다.
+  const sizeBar = make('div', { class: 'image-size-bar', role: 'group', 'aria-label': '사진 크기' });
+  sizeBar.hidden = true;
+  const smaller = make('button', { type: 'button', class: 'image-size-step', 'aria-label': '사진 작게' }, '−');
+  const range = make('input', { type: 'range', min: String(IMAGE_WIDTHS[0]), max: '100', step: '10', 'aria-label': '사진 크기 (%)' });
+  const bigger = make('button', { type: 'button', class: 'image-size-step', 'aria-label': '사진 크게' }, '+');
+  const shown = make('output', { class: 'image-size-value' }, '100%');
+  const reset = make('button', { type: 'button', class: 'image-size-reset' }, '원래 크기');
+  sizeBar.title = '사진 위에서 마우스 휠을 돌리거나 두 손가락으로 벌리고 오므려도 크기가 바뀌어요';
+  sizeBar.append(make('span', { class: 'image-size-label' }, '크기'), smaller, range, bigger, shown, reset);
+  editorBox.append(sizeBar);
+  // 막대를 누르는 동안 편집 칸이 선택을 잃지 않게 한다 (끌기 막대는 그대로 끌린다)
+  sizeBar.addEventListener('mousedown', (e) => { if (e.target !== range) e.preventDefault(); });
+
+  /** pos의 노드(사진) 하나를 고른 선택. Toast UI가 NodeSelection을 내보내지 않아 Selection.fromJSON으로 만든다. */
+  function nodeSelection(state, doc, pos) {
+    const Selection = Object.getPrototypeOf(state.selection.constructor);
+    return Selection.fromJSON(doc, { type: 'node', anchor: pos });
+  }
+
+  /** 커서 바로 앞이 방금 넣은 사진이면 그 뒤에서 줄(문단)을 나눈다. 글 화면에서도 사진 다음 줄이 된다. */
+  function breakAfterImage() {
+    const v = view();
+    const { state } = v;
+    const { $from, empty } = state.selection;
+    if (!empty || !$from.nodeBefore || $from.nodeBefore.type.name !== 'image') return;
+    v.dispatch(state.tr.split($from.pos).scrollIntoView());
+  }
+
+  /** 지금 골라 둔 사진: { pos, node, dom } 또는 null */
+  function selectedImage() {
+    const v = view();
+    const sel = v.state.selection;
+    if (!sel.node || sel.node.type.name !== 'image') return null;
+    const dom = v.nodeDOM(sel.from);
+    return dom && dom.nodeName === 'IMG' ? { pos: sel.from, node: sel.node, dom } : null;
+  }
+
+  function syncSizeBar() {
+    if (!sizeBarReady) return;
+    const picked = selectedImage();
+    if (!picked) {
+      sizeBar.hidden = true;
+      return;
+    }
+    const w = imageWidthOf(picked.node.attrs.imageUrl);
+    range.value = String(w);
+    shown.textContent = `${w}%`;
+    smaller.disabled = w <= IMAGE_WIDTHS[0];
+    bigger.disabled = w >= 100;
+    reset.disabled = w >= 100;
+    sizeBar.hidden = false;
+    placeSizeBar(picked.dom);
+  }
+
+  /** 막대는 사진 왼쪽 위 안쪽에 겹쳐 둔다. 사진이 작아 다 들어가지 않으면 사진 위(자리가 없으면 아래)에 둔다. */
+  function placeSizeBar(img) {
+    const box = editorBox.getBoundingClientRect();
+    const r = img.getBoundingClientRect();
+    const barW = sizeBar.offsetWidth;
+    const barH = sizeBar.offsetHeight;
+    let top;
+    if (r.width >= barW + 16 && r.height >= barH + 16) top = r.top - box.top + 8;
+    else if (r.top - box.top >= barH + 6 + 48) top = r.top - box.top - barH - 6; // 48: 도구 막대 높이
+    else top = r.bottom - box.top + 6;
+    const left = r.width >= barW + 16 ? r.left - box.left + 8 : r.left - box.left;
+    // 화면을 내려 사진 윗부분이 도구 막대 밑으로 들어가면, 막대는 도구 막대 바로 아래에 둔다
+    const toolbar = host.querySelector('.toastui-editor-toolbar');
+    if (toolbar) {
+      const minTop = toolbar.getBoundingClientRect().bottom - box.top + 6;
+      if (top < minTop && r.bottom - box.top > minTop + barH) top = minTop;
+    }
+    sizeBar.style.top = `${top}px`;
+    sizeBar.style.left = `${Math.max(8, Math.min(left, box.width - barW - 8))}px`;
+  }
+
+  function setImageWidth(w) {
+    const picked = selectedImage();
+    if (!picked) return;
+    const next = IMAGE_WIDTHS.reduce((a, b) => (Math.abs(b - w) < Math.abs(a - w) ? b : a));
+    const url = withImageWidth(picked.node.attrs.imageUrl, next);
+    if (url === picked.node.attrs.imageUrl) return;
+    const v = view();
+    const tr = v.state.tr.setNodeMarkup(picked.pos, undefined, { ...picked.node.attrs, imageUrl: url });
+    tr.setSelection(nodeSelection(v.state, tr.doc, picked.pos));
+    v.dispatch(tr);
+  }
+  const stepBy = (d) => {
+    const picked = selectedImage();
+    if (picked) setImageWidth(imageWidthOf(picked.node.attrs.imageUrl) + d);
+  };
+  smaller.addEventListener('click', () => stepBy(-10));
+  bigger.addEventListener('click', () => stepBy(10));
+  reset.addEventListener('click', () => setImageWidth(100));
+  range.addEventListener('input', () => setImageWidth(Number(range.value)));
+
+  // 사진을 누르면 그 사진을 고른다. 휠은 고른 사진 위에서만 크기를 바꾸고, 그 밖에서는 화면을 그대로 내린다.
+  const wwRoot = editor.getEditorElements().wwEditor;
+  wwRoot.addEventListener('mousedown', (e) => {
+    if (e.target.nodeName !== 'IMG' || e.target.classList.contains('ProseMirror-separator')) return;
+    const v = view();
+    const pos = v.posAtDOM(e.target, 0);
+    const node = v.state.doc.nodeAt(pos);
+    if (!node || node.type.name !== 'image') return;
+    e.preventDefault();
+    v.dispatch(v.state.tr.setSelection(nodeSelection(v.state, v.state.doc, pos)));
+    v.focus();
+  });
+  let wheelSum = 0;
+  wwRoot.addEventListener('wheel', (e) => {
+    const picked = selectedImage();
+    if (!picked || e.target !== picked.dom) return;
+    e.preventDefault();
+    // 두 손가락 확대/축소(ctrlKey)는 작은 값이 여러 번 오므로 모아서 한 칸씩 바꾼다
+    wheelSum += e.deltaY;
+    const threshold = e.ctrlKey ? 12 : 40;
+    if (Math.abs(wheelSum) < threshold) return;
+    stepBy(wheelSum < 0 ? 10 : -10);
+    wheelSum = 0;
+  }, { passive: false });
+  window.addEventListener('scroll', () => { if (!sizeBar.hidden) syncSizeBar(); }, { passive: true });
+  window.addEventListener('resize', () => { if (!sizeBar.hidden) syncSizeBar(); });
+  sizeBarReady = true;
 
   // ----- HTML 구조 칸 -----
   let timer = null;

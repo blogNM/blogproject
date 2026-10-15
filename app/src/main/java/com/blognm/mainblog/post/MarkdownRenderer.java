@@ -2,6 +2,7 @@ package com.blognm.mainblog.post;
 
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import org.commonmark.Extension;
 import org.commonmark.ext.autolink.AutolinkExtension;
@@ -74,7 +75,9 @@ public class MarkdownRenderer {
         clean.select("img[src]").forEach(img -> {
             if (!isAllowedImage(img.attr("src"))) {
                 img.remove();
+                return;
             }
+            img.attr("src", keepOnlyWidthMark(img.attr("src")));
         });
         clean.outputSettings().prettyPrint(false);
         return clean.body().html();
@@ -110,6 +113,21 @@ public class MarkdownRenderer {
         input.attr("disabled", true);
         li.addClass("task-list-item");
     }
+
+    /**
+     * 사진 크기 표시(D-114). 편집기가 주소 끝에 붙인 "#w=10"~"#w=90"(10 단위)만 남기고, 다른 # 뒤 글자는 지운다.
+     * 화면은 이 표시를 CSS(img[src$="#w=60"])로 읽어 글 칸 너비의 그만큼으로 보여 준다.
+     */
+    static String keepOnlyWidthMark(String src) {
+        int hash = src.indexOf('#');
+        if (hash < 0) {
+            return src;
+        }
+        String mark = src.substring(hash);
+        return IMAGE_WIDTH_MARK.matcher(mark).matches() ? src : src.substring(0, hash);
+    }
+
+    private static final Pattern IMAGE_WIDTH_MARK = Pattern.compile("#w=[1-9]0");
 
     private static boolean isAllowedImage(String src) {
         return src.startsWith("/uploads/") || src.startsWith("/img/releases/") || src.startsWith("/img/guides/");
