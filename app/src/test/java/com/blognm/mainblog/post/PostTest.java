@@ -78,6 +78,19 @@ class PostTest extends IntegrationTest {
     }
 
     @Test
+    @DisplayName("코드 블록 언어는 pre 안 code의 language-이름 class만 남는다 (D-117)")
+    void codeBlockLanguage() {
+        MarkdownRenderer renderer = new MarkdownRenderer();
+        assertThat(renderer.toSafeHtml("```java\nint a = 1;\n```"))
+                .isEqualTo("<pre><code class=\"language-java\">int a = 1;\n</code></pre>\n");
+        assertThat(renderer.toSafeHtml("```\nplain\n```")).isEqualTo("<pre><code>plain\n</code></pre>\n");
+        // 언어 칸에 이상한 값을 넣거나 본문 code에 class를 달면 class를 지운다
+        assertThat(renderer.toSafeHtml("```x\" onclick=\"a\nb\n```")).doesNotContain("class=", "onclick");
+        assertThat(renderer.toSafeHtml("<code class=\"language-java evil\">x</code>")).doesNotContain("class=");
+        assertThat(renderer.toSafeHtml("<p><code class=\"language-java\">x</code></p>")).doesNotContain("class=");
+    }
+
+    @Test
     @DisplayName("글자 색은 정해 둔 색 class만 남고, 다른 class·style은 지워져 글자만 남는다. 색 표시는 글자 수에 넣지 않는다")
     void textColor() throws Exception {
         long id = write(writer, "food", "색",

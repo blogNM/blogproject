@@ -7,6 +7,16 @@
 
 ## 2026-10-14
 
+### 코드 블럭 입력과 언어별 색 (v1.10.0, D-117)
+
+- **수정** 빈 글에 코드 블럭을 넣으면 안내 문구가 코드 블럭 안에 들어가 친 글자가 사라지던 문제. 문서가 코드 블럭 하나뿐이면 뒤에 빈 문단을 붙임 (`js/rich-editor.js`, D-117, 김채림 요청)
+- **기능** 코드 블럭 언어 24가지(Java·JavaScript·TypeScript·Python·C·C++·C#·Kotlin·Go·Rust·Swift·PHP·Ruby·Dart·R·SQL·HTML·CSS·JSON·YAML·Bash·Markdown·Diff·Text)를 고르면 편집기에서 바로 언어별 색. Toast UI 코드 문법 강조 플러그인 3.1.0 + Prism 1.29.0을 `vendor/`에 둠 (D-117)
+- **기능** 글 화면·공지사항의 코드 블럭도 언어 색과 오른쪽 위 언어 이름. 코드 블럭이 있는 글에서만 Prism을 불러옴 (`js/code-highlight.js`, D-117)
+- **수정** 서버가 `pre > code`의 `language-이름` class만 남기도록 jsoup 거르기를 고침. 다른 class는 그대로 지움 (`MarkdownRenderer`, SEC-06, D-117)
+- **화면** 코드 블럭 고정폭 글꼴, 탭 4칸, 가로 스크롤, 글 화면(어두운 바탕)·편집기(밝은 바탕)에 맞춘 색 (`common.css`)
+- **문서** D-117, spec 004 Clarifications, CLAUDE.md·docs/README·specs/README 결정 번호와 목록, `vendor/prism/README.md`, 릴리스 노트 [v1.10.0](docs/releases/v1.10.0.md)과 전후 캡처 `/img/releases/v1.10.0/`
+- **설정** 테스트: `PostTest.codeBlockLanguage()`
+
 ### 다크모드 (v1.9.0, D-116)
 
 - **기능** 다크모드: 위쪽 메뉴 검색 칸 옆 달·해 버튼으로 켜고 끔. 고른 값은 브라우저(localStorage)에만 남고 처음에는 밝은 화면. `js/color-mode.js`가 그리기 전에 `<html data-mode="dark">`를 붙여 깜빡이지 않음 (D-116, 김채림 요청)

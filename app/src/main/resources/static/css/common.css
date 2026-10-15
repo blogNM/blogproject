@@ -349,6 +349,31 @@ select { padding: 10px 14px; border: 1px solid var(--line); border-radius: 999px
 .post-content pre { background: #1E1D33; color: #F1ECF7; padding: 14px 16px; border-radius: var(--radius-sm); overflow-x: auto; }
 .post-content code { background: var(--soft); padding: 1px 5px; border-radius: 6px; font-size: 0.9em; }
 .post-content pre code { background: none; padding: 0; color: inherit; }
+/* Prism의 token class(comment 등)가 댓글 목록의 .comment 모양을 받지 않게 한다 */
+.token.comment { padding: 0; border: 0; }
+/* 코드 블록 (D-117): 고정폭 글꼴, 탭 4칸, 오른쪽 위 언어 이름, 언어별 색 (Prism token, 어두운 바탕용) */
+.post-content pre, .post-content pre code { font-family: "D2Coding", "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace; font-size: 0.88rem; line-height: 1.6; tab-size: 4; }
+.post-content pre.code-block { position: relative; padding-top: 30px; }
+.post-content pre.code-block::before { content: attr(data-lang); position: absolute; top: 8px; right: 12px; font-family: var(--font); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; color: #A9A3BF; }
+.post-content .token.comment, .post-content .token.prolog, .post-content .token.doctype, .post-content .token.cdata { color: #8C88A3; font-style: italic; }
+.post-content .token.punctuation { color: #C9C4DA; }
+.post-content .token.keyword, .post-content .token.important, .post-content .token.atrule, .post-content .token.rule { color: #D69CFF; }
+.post-content .token.string, .post-content .token.char, .post-content .token.attr-value, .post-content .token.regex, .post-content .token.inserted { color: #A6E3A1; }
+.post-content .token.number, .post-content .token.boolean, .post-content .token.constant, .post-content .token.symbol { color: #F7B67E; }
+.post-content .token.function, .post-content .token.class-name, .post-content .token.selector { color: #8FC8FF; }
+.post-content .token.tag, .post-content .token.deleted { color: #FF8BA0; }
+.post-content .token.attr-name, .post-content .token.property, .post-content .token.variable, .post-content .token.builtin, .post-content .token.annotation { color: #F2D388; }
+.post-content .token.operator, .post-content .token.entity, .post-content .token.url { color: #9DDCE6; }
+/* 글쓰기 칸의 코드 블록 (밝은 바탕) */
+.toastui-editor-contents pre, .toastui-editor-contents pre code { font-family: "D2Coding", "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace; tab-size: 4; }
+.toastui-editor-contents .token.comment, .toastui-editor-contents .token.prolog { color: #7A778C; font-style: italic; }
+.toastui-editor-contents .token.keyword, .toastui-editor-contents .token.atrule, .toastui-editor-contents .token.rule { color: #8A16C4; }
+.toastui-editor-contents .token.string, .toastui-editor-contents .token.char, .toastui-editor-contents .token.attr-value, .toastui-editor-contents .token.regex { color: #1F7A3A; }
+.toastui-editor-contents .token.number, .toastui-editor-contents .token.boolean, .toastui-editor-contents .token.constant { color: #B35A00; }
+.toastui-editor-contents .token.function, .toastui-editor-contents .token.class-name, .toastui-editor-contents .token.selector { color: #1D5FB8; }
+.toastui-editor-contents .token.tag { color: #C2304A; }
+.toastui-editor-contents .token.attr-name, .toastui-editor-contents .token.property, .toastui-editor-contents .token.variable, .toastui-editor-contents .token.builtin, .toastui-editor-contents .token.annotation { color: #8A5A00; }
+.toastui-editor-contents .token.operator, .toastui-editor-contents .token.punctuation { color: #4A475C; }
 .post-content blockquote { margin: 14px 0; padding: 6px 18px; border-left: 4px solid var(--rose); color: var(--muted); background: #FBF7F5; border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
 .post-content ul, .post-content ol { padding-left: 1.5em; }
 .post-content li + li { margin-top: 2px; }

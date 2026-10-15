@@ -3,6 +3,7 @@ import { ApiError, api } from '../api.js';
 import { el, initLayout, renderNotFound } from '../layout.js';
 import { NOTICE_CATEGORIES, categoryBadge } from '../notice-category.js';
 import { renderPager } from '../pager.js';
+import { highlightCode } from '../code-highlight.js';
 
 await initLayout();
 const $ = (id) => document.getElementById(id);
@@ -16,6 +17,7 @@ if (id) {
     $('category').replaceChildren(categoryBadge(n.category));
     $('meta').textContent = n.updatedAt && n.updatedAt !== n.createdAt ? `${n.createdAt} · 고침 ${n.updatedAt}` : n.createdAt;
     $('content').innerHTML = n.html;
+    highlightCode($('content'));
     // 사용 방법 안내 공지면 다른 안내도 옆으로 넘겨 볼 수 있게 (D-104)
     if (n.category === 'NOTICE' && n.title.startsWith('사용 방법')) {
       const more = el('p', { class: 'guide-more' });

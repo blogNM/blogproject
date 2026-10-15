@@ -241,6 +241,10 @@ function prettyLines(html) {
   return lines;
 }
 
+/** 코드 블록에서 고를 수 있는 언어 (D-117). 이 이름이 마크다운 ```이름 과 글 화면의 언어 표시가 된다. */
+const CODE_LANGUAGES = ['java', 'javascript', 'typescript', 'python', 'c', 'cpp', 'csharp', 'kotlin', 'go', 'rust',
+  'swift', 'php', 'ruby', 'dart', 'r', 'sql', 'html', 'css', 'json', 'yaml', 'bash', 'markdown', 'diff', 'text'];
+
 /**
  * 편집기를 만든다.
  * @param {object} o
@@ -334,6 +338,36 @@ export function createRichEditor({ host, height, placeholder, uploadImage, withC
     return { wysiwygPlugins: [() => new context.pmState.Plugin({ view: () => ({ update: () => syncSizeBar() }) })] };
   }
 
+  /**
+   * 빈 글에서 바로 코드 블록을 넣으면 Toast UI가 "빈 글" 안내 문구를 코드 블록 안에 그려, 그 문구에 막혀 글자가 들어가지 않았다.
+   * 코드 블록만 있는 글이면 아래에 빈 문단을 하나 두어 빈 글로 보지 않게 한다. 빈 문단은 저장할 때 없어진다 (D-117).
+   */
+  function codeBlockPlugin(context) {
+    return {
+      wysiwygPlugins: [() => new context.pmState.Plugin({
+        appendTransaction(transactions, _old, state) {
+          if (!transactions.some((t) => t.docChanged)) return null;
+          const { doc, schema } = state;
+          if (doc.childCount !== 1 || doc.firstChild.type.name !== 'codeBlock') return null;
+          return state.tr.insert(doc.content.size, schema.nodes.paragraph.create());
+        },
+      })],
+    };
+  }
+
+  // 코드 블록 언어를 고르면 그 언어의 색으로 칠한다 (D-117). Prism과 Toast UI 플러그인은 글쓰기 화면이 미리 읽어 둔다
+  const plugins = [normalizePlugin, imageSizePlugin];
+  if (withCode) {
+    plugins.push(codeBlockPlugin);
+    if (window.toastui.codeSyntaxHighlight && window.Prism) {
+      // 고르는 목록에는 자주 쓰는 이름만 (Prism에는 js·py 같은 줄임말과 내부용 이름도 있어 목록이 길어진다)
+      const languages = {};
+      CODE_LANGUAGES.forEach((name) => { if (window.Prism.languages[name]) languages[name] = window.Prism.languages[name]; });
+      const highlighter = Object.assign(Object.create(window.Prism), { languages });
+      plugins.push([window.toastui.codeSyntaxHighlight, { highlighter }]);
+    }
+  }
+
   const editor = new window.toastui.Editor({
     el: editorBox,
     // 쓰는 칸은 글·사진만큼 늘어난다. 큰 사진을 넣어도 이어 쓰는 글이 칸 밖으로 밀려 가려지지 않는다 (D-114).
@@ -346,7 +380,7 @@ export function createRichEditor({ host, height, placeholder, uploadImage, withC
     usageStatistics: false,
     placeholder,
     toolbarItems,
-    plugins: [normalizePlugin, imageSizePlugin],
+    plugins,
     // 사진을 넣으면 바로 다음 줄로 내려가서, 이어 쓰는 글이 사진 옆에 붙지 않고 사진 아래에 쓰인다 (D-114)
     hooks: { addImageBlobHook: (blob, callback) => uploadImage(blob, (url, alt) => {
       callback(url, alt);

@@ -35,6 +35,7 @@ public class MarkdownRenderer {
     private static final Safelist SAFELIST = Safelist.relaxed()
             .addTags("del", "s", "hr")
             .addAttributes("span", "class")
+            .addAttributes("code", "class")
             .removeProtocols("img", "src", "http", "https")
             .addProtocols("img", "src", "https")
             .addAttributes("a", "rel")
@@ -51,6 +52,9 @@ public class MarkdownRenderer {
     /** 글자 크기와 형광펜 강조. 관리자 공지 편집기가 같은 방식(정해 둔 class의 span)으로 넣는다 (D-102). */
     public static final Set<String> TEXT_SIZES = Set.of("ts-small", "ts-large", "ts-xlarge");
     public static final Set<String> HIGHLIGHTS = Set.of("hl-yellow", "hl-green", "hl-pink", "hl-blue");
+
+    /** 코드 블록 언어 표시 (D-117). 마크다운 ```java 가 code class="language-java"가 된다. 이 모양의 class 하나만 남긴다. */
+    private static final Pattern CODE_LANGUAGE = Pattern.compile("language-[a-z0-9+#-]{1,20}");
 
     private final Parser parser = Parser.builder().extensions(EXTENSIONS).build();
     /**
@@ -69,6 +73,12 @@ public class MarkdownRenderer {
             String cls = span.attr("class");
             if (!TEXT_COLORS.contains(cls) && !TEXT_SIZES.contains(cls) && !HIGHLIGHTS.contains(cls)) {
                 span.unwrap();
+            }
+        });
+        clean.select("code[class]").forEach(code -> {
+            String cls = code.attr("class");
+            if (!(code.parent() != null && code.parent().is("pre") && CODE_LANGUAGE.matcher(cls).matches())) {
+                code.removeAttr("class");
             }
         });
         clean.select("input").forEach(MarkdownRenderer::keepOnlyTaskCheckbox);
