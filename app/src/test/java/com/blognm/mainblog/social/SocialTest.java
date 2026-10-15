@@ -21,7 +21,7 @@ import com.blognm.mainblog.notification.NotificationCleanupJob;
 import com.blognm.mainblog.support.IntegrationTest;
 import com.jayway.jsonpath.JsonPath;
 
-/** 003 소셜: 팔로우·구독(US1~2), 프로필·내 활동(SOC-03, SOC-07), 차단(SOC-05), 신고(US5), 알림(SOC-04) */
+/** 003 소셜: 팔로우·구독(US1~2), 프로필·내 활동(SOC-03, SOC-07), 차단(SOC-05), 관심 없음(SOC-08), 신고(US5), 알림(SOC-04) */
 class SocialTest extends IntegrationTest {
 
     @Autowired
@@ -191,6 +191,53 @@ class SocialTest extends IntegrationTest {
         postAs("/api/members/" + strangerId + "/block", null, owner).andExpect(status().isOk());
         postAs("/api/posts/" + postId + "/like", null, stranger).andExpect(status().isForbidden());
         postAs("/api/blogs/food/join", "{}", stranger).andExpect(jsonPath("$.code").value("JOIN_BLOCKED"));
+    }
+
+    @Test
+    @DisplayName("관심 없음은 나에게만 피드·검색·블로그 목록에서 숨기고, 내 팔로우·구독을 푼다. 직접 들어가면 보인다 (SOC-08, D-123)")
+    void mute() throws Exception {
+        postAs("/api/blogs", """
+                {"slug":"trip","name":"여행 맛집","visibility":"PUBLIC","joinPolicy":"FREE"}""", other)
+                .andExpect(status().isOk());
+        id(postAs("/api/blogs/trip/posts", """
+                {"title":"여행 글","content":"본문","tags":[]}""", other));
+        postAs("/api/members/" + ownerId + "/follow", null, reader).andExpect(status().isOk());
+        postAs("/api/blogs/trip/subscribe", null, reader).andExpect(status().isOk());
+        getAs("/api/feed", reader).andExpect(jsonPath("$.total").value(2));
+
+        // 회원을 숨기면 그 회원의 글이 빠지고 내 팔로우가 풀린다. 상대에게 알림은 가지 않는다
+        int alerts = jdbc.queryForObject("SELECT COUNT(*) FROM notifications WHERE recipient_id = ?", Integer.class, ownerId);
+        postAs("/api/members/" + ownerId + "/mute", null, reader).andExpect(jsonPath("$.muted").value(true));
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM follows", Integer.class)).isZero();
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM notifications WHERE recipient_id = ?", Integer.class, ownerId))
+                .isEqualTo(alerts);
+        getAs("/api/feed", reader).andExpect(jsonPath("$.total").value(1))
+                .andExpect(jsonPath("$.items[0].title").value("여행 글"));
+        getAs("/api/search?q=블로그장&type=nickname", reader).andExpect(jsonPath("$.posts.total").value(0));
+        getAs("/api/members/" + ownerId, reader).andExpect(jsonPath("$.mutedByMe").value(true));
+        getAs("/api/members/" + ownerId + "/posts", reader).andExpect(jsonPath("$.total").value(1));
+        // 다른 사람에게는 그대로
+        getAs("/api/feed", other).andExpect(jsonPath("$.total").value(2));
+
+        // 블로그를 숨기면 그 블로그의 글과 블로그 카드가 빠지고 내 구독이 풀린다
+        postAs("/api/blogs/trip/mute", null, reader).andExpect(jsonPath("$.muted").value(true));
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM subscriptions", Integer.class)).isZero();
+        getAs("/api/feed", reader).andExpect(jsonPath("$.total").value(0));
+        getAs("/api/blogs", reader).andExpect(jsonPath("$.total").value(1))
+                .andExpect(jsonPath("$.items[0].slug").value("food"));
+        getAs("/api/blogs").andExpect(jsonPath("$.total").value(2));
+        getAs("/api/search?q=맛집&type=blog", reader).andExpect(jsonPath("$.counts.BLOG").value(1))
+                .andExpect(jsonPath("$.blogs.items[0].slug").value("food"));
+        getAs("/api/blogs/trip", reader).andExpect(status().isOk()).andExpect(jsonPath("$.muted").value(true));
+
+        getAs("/api/me/mutes", reader).andExpect(jsonPath("$.members[0].nickname").value("블로그장"))
+                .andExpect(jsonPath("$.blogs[0].slug").value("trip"));
+
+        // 한 번 더 누르면 풀린다
+        postAs("/api/members/" + ownerId + "/mute", null, reader).andExpect(jsonPath("$.muted").value(false));
+        postAs("/api/blogs/trip/mute", null, reader).andExpect(jsonPath("$.muted").value(false));
+        getAs("/api/feed", reader).andExpect(jsonPath("$.total").value(2));
+        postAs("/api/members/" + readerId + "/mute", null, reader).andExpect(status().isBadRequest());
     }
 
     @Test

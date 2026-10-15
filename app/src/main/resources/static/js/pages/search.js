@@ -46,7 +46,7 @@ async function search() {
       t.querySelector('.count').textContent = String(res.counts[t.dataset.type.toUpperCase()] ?? 0);
     });
     const page = state.type === 'blog' ? res.blogs : res.posts;
-    $('post-results').replaceChildren(...(state.type === 'blog' ? [] : res.posts.items.map((p) => feedCard(p, { from: 'search', q: state.q }))));
+    $('post-results').replaceChildren(...(state.type === 'blog' ? [] : res.posts.items.map((p) => feedCard(p, { from: 'search', q: state.q, me }))));
     $('blog-results').replaceChildren(...(state.type === 'blog' ? res.blogs.items.map((b) => blogCard(b, { from: 'search', q: state.q })) : []));
     $('summary').textContent = page.total === 0 ? '' : `${TYPE_NAME[state.type]}에서 "${state.q}" ${page.total}건`;
     showEmpty(page.total === 0);

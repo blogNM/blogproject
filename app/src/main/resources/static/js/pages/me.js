@@ -1,5 +1,5 @@
 import { api } from '../api.js';
-import { el, requireLogin, updateAccount } from '../layout.js';
+import { el, requireLogin, toast, updateAccount } from '../layout.js';
 import { PASSWORD_MESSAGE, PASSWORD_RULE } from '../rules.js';
 import { withTestBadge } from '../test-badge.js';
 
@@ -119,6 +119,34 @@ async function loadBlocked() {
   }));
 }
 loadBlocked();
+
+// ----- 관심 없음 (SOC-08, D-123) -----
+
+async function loadMuted() {
+  const { members, blogs } = await api.get('/api/me/mutes');
+  const row = (link, url) => {
+    const li = el('li', { class: 'list-row' });
+    const undo = el('button', { type: 'button' }, '풀기');
+    undo.addEventListener('click', async () => {
+      undo.disabled = true;
+      try {
+        await api.post(url);
+      } catch (err) {
+        toast(err.message);
+      }
+      loadMuted();
+    });
+    li.append(link, undo);
+    return li;
+  };
+  $('muted-members').replaceChildren(...(members.length
+    ? members.map((m) => row(withTestBadge(el('a', { href: '/members/' + m.id }, m.nickname), m.test), `/api/members/${m.id}/mute`))
+    : [el('li', { class: 'muted' }, '숨긴 회원이 없어요.')]));
+  $('muted-blogs').replaceChildren(...(blogs.length
+    ? blogs.map((b) => row(el('a', { href: '/blog/' + encodeURIComponent(b.slug) }, b.name), `/api/blogs/${encodeURIComponent(b.slug)}/mute`))
+    : [el('li', { class: 'muted' }, '숨긴 블로그가 없어요.')]));
+}
+loadMuted();
 
 function show(id, text, ok) {
   $(id).textContent = text;

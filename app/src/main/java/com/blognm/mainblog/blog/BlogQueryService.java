@@ -32,12 +32,21 @@ public class BlogQueryService {
      * 검색은 이름·소개(FULLTEXT ngram)와 태그(정확히 같은 이름)로 찾는다.
      */
     public Page list(String sort, String rawQuery, int page) {
+        return list(sort, rawQuery, page, null);
+    }
+
+    /** 로그인한 회원에게는 "관심 없음"으로 숨긴 블로그를 빼고 보여준다 (SOC-08, D-123). */
+    public Page list(String sort, String rawQuery, int page, Long viewerId) {
         int size = props.pageSize();
         int current = Math.max(page, 1);
         MapSqlParameterSource params = new MapSqlParameterSource();
         StringBuilder where = new StringBuilder("""
                 b.visibility = 'PUBLIC' AND b.is_hidden = FALSE AND b.status IN ('ACTIVE', 'CLOSING')
                 """);
+        if (viewerId != null) {
+            where.append(" AND NOT EXISTS (SELECT 1 FROM blog_mutes bu WHERE bu.member_id = :viewerId AND bu.blog_id = b.id)");
+            params.addValue("viewerId", viewerId);
+        }
 
         String query = rawQuery == null ? "" : rawQuery.strip();
         if (!query.isEmpty()) {

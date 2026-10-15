@@ -51,7 +51,7 @@ async function loadFeed() {
     } else {
       // 블로그 통계에 어느 피드에서 눌렀는지 남긴다 (D-112)
       const from = { latest: 'feed', popular: 'popular', following: 'following', subscribed: 'subscribed' }[feedState.tab];
-      list.replaceChildren(...res.items.map((p) => feedCard(p, { from })));
+      list.replaceChildren(...res.items.map((p) => feedCard(p, { from, me })));
     }
     renderPager($('feed-pager'), res.page, res.totalPages, (p) => { feedState.page = p; loadFeed(); });
   } catch (e) {

@@ -19,6 +19,7 @@ import com.blognm.mainblog.post.MarkdownRenderer;
  * 메인 피드와 통합 검색이 함께 쓰는 글 카드 목록.
  * 공개 블로그(숨김·폐쇄 제외)의 정상 글만 나온다. 일부 공개·비공개 블로그의 글은 나오지 않는다 (004 Edge Cases).
  * 로그인한 회원에게는 서로 차단한 회원의 글을 빼고 보여준다 (SC-005, 추천안 #10 양방향).
+ * "관심 없음"으로 숨긴 회원이 쓴 글과 숨긴 블로그의 글도 뺀다 (SOC-08, D-123).
  */
 @Component
 public class PostCards {
@@ -49,6 +50,8 @@ public class PostCards {
                 AND NOT EXISTS (SELECT 1 FROM blocks bk
                                 WHERE (bk.blocker_id = :viewerId AND bk.blocked_id = p.author_id)
                                    OR (bk.blocker_id = p.author_id AND bk.blocked_id = :viewerId))
+                AND NOT EXISTS (SELECT 1 FROM member_mutes mu WHERE mu.member_id = :viewerId AND mu.muted_id = p.author_id)
+                AND NOT EXISTS (SELECT 1 FROM blog_mutes bu WHERE bu.member_id = :viewerId AND bu.blog_id = p.blog_id)
                 """;
     }
 
