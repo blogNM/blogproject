@@ -17,6 +17,7 @@ import com.blognm.mainblog.auth.AuthCookies;
 import com.blognm.mainblog.auth.LoginService;
 import com.blognm.mainblog.auth.MemberPrincipal;
 import com.blognm.mainblog.common.ApiException;
+import com.blognm.mainblog.social.ProfileService;
 
 @RestController
 public class MeController {
@@ -24,11 +25,14 @@ public class MeController {
     private final MemberRepository members;
     private final AccountService accountService;
     private final AuthCookies cookies;
+    private final ProfileService profiles;
 
-    public MeController(MemberRepository members, AccountService accountService, AuthCookies cookies) {
+    public MeController(MemberRepository members, AccountService accountService, AuthCookies cookies,
+            ProfileService profiles) {
         this.members = members;
         this.accountService = accountService;
         this.cookies = cookies;
+        this.profiles = profiles;
     }
 
     /** 화면 위쪽의 로그인 상태 표시용. 매번 DB에서 회원 상태를 다시 본다 (헌법 II). */
@@ -37,7 +41,7 @@ public class MeController {
         Member member = members.findById(principal.memberId())
                 .filter(Member::isActive)
                 .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "LOGIN_REQUIRED", "다시 로그인해 주세요."));
-        return new MeResponse(member.getId(), member.getNickname(), member.isTest());
+        return new MeResponse(member.getId(), member.getNickname(), member.isTest(), profiles.imageUrlOf(member.getId()));
     }
 
     // ----- 내 정보 (USR-07) -----
@@ -75,7 +79,7 @@ public class MeController {
     }
 
     /** test: 테스트 회원이면 화면 위 닉네임 옆에 "테스트" 표시 (D-113). */
-    public record MeResponse(long id, String nickname, boolean test) {
+    public record MeResponse(long id, String nickname, boolean test, String imageUrl) {
     }
 
     public record ProfileBody(String nickname, String phone) {

@@ -89,6 +89,65 @@ function modeToggle() {
   return button;
 }
 
+/** 프로필 사진 동그라미. 사진이 없으면 닉네임 첫 글자. */
+function avatarOf(me, size) {
+  const face = el('span', { class: 'avatar ' + size });
+  face.append(me.imageUrl ? el('img', { src: me.imageUrl, alt: '' }) : el('span', {}, [...(me.nickname || '?')][0]));
+  return face;
+}
+
+let repaintAccount = null;
+
+/** 내 정보 화면에서 닉네임·사진을 바꾸면 위쪽 메뉴도 바로 바꾼다. */
+export function updateAccount(changes) {
+  if (repaintAccount) repaintAccount(changes);
+}
+
+/**
+ * 위쪽 메뉴 오른쪽 끝의 내 프로필 사진. 누르면 이름(내 활동으로 가는 링크)과 내 블로그·내 정보·로그아웃이 열린다 (D-119).
+ */
+function accountMenu(me) {
+  const wrap = el('div', { class: 'account' });
+  const button = el('button', { type: 'button', class: 'account-button', 'aria-haspopup': 'true', 'aria-expanded': 'false' });
+  const menu = el('div', { class: 'account-menu', hidden: '' });
+  const who = el('a', { href: '/members/' + me.id, class: 'account-who' });
+  const current = { ...me };
+  const paint = () => {
+    button.setAttribute('aria-label', current.nickname + '님 메뉴');
+    button.title = current.nickname + '님';
+    button.replaceChildren(avatarOf(current, 'small'));
+    const name = el('span', { class: 'account-name' });
+    name.append(el('strong', {}, current.nickname + '님'));
+    // 테스트 회원으로 들어왔으면 닉네임 옆에 "테스트" 표시 (D-113). 표시 모듈이 이 파일을 쓰므로 여기서 직접 만든다
+    if (current.test) name.append(el('span', { class: 'test-badge', title: '기능을 확인하려고 만든 테스트 계정이에요' }, '테스트'));
+    name.append(el('span', { class: 'muted' }, '내 활동 보기'));
+    who.replaceChildren(avatarOf(current, ''), name);
+  };
+  repaintAccount = (changes) => { Object.assign(current, changes); paint(); };
+  paint();
+  const logout = el('button', { type: 'button', class: 'link-button' }, '로그아웃');
+  logout.addEventListener('click', async () => {
+    try {
+      await api.post('/api/auth/logout');
+    } finally {
+      location.href = '/';
+    }
+  });
+  menu.append(who, el('a', { href: '/my-blogs.html' }, '내 블로그'), el('a', { href: '/me.html' }, '내 정보'), logout);
+
+  const open = (show) => {
+    menu.hidden = !show;
+    button.setAttribute('aria-expanded', String(show));
+  };
+  button.addEventListener('click', () => open(menu.hidden));
+  document.addEventListener('click', (e) => { if (!wrap.contains(e.target)) open(false); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !menu.hidden) { open(false); button.focus(); }
+  });
+  wrap.append(button, menu);
+  return wrap;
+}
+
 function renderHeader(me) {
   const header = document.querySelector('header.site-header');
   if (!header) return;
@@ -101,22 +160,8 @@ function renderHeader(me) {
   if (toggle) nav.append(toggle);
 
   if (me) {
-    nav.append(el('a', { href: '/my-blogs.html' }, '내 블로그'));
-    nav.append(el('a', { href: '/members/' + me.id }, '내 활동'));
-    const nick = el('a', { href: '/me.html', class: 'nickname' }, me.nickname + '님');
-    // 테스트 회원으로 들어왔으면 닉네임 옆에 "테스트" 표시 (D-113). 표시 모듈이 이 파일을 쓰므로 여기서 직접 만든다
-    if (me.test) nick.append(el('span', { class: 'test-badge', title: '기능을 확인하려고 만든 테스트 계정이에요' }, '테스트'));
-    nav.append(nick);
-    const logout = el('button', { type: 'button', class: 'link-button' }, '로그아웃');
-    logout.addEventListener('click', async () => {
-      try {
-        await api.post('/api/auth/logout');
-      } finally {
-        location.href = '/';
-      }
-    });
-    nav.append(logout);
     mountBell(nav);
+    nav.append(accountMenu(me));
   } else {
     nav.append(el('a', { href: '/login.html' }, '로그인'));
     nav.append(el('a', { href: '/signup.html', class: 'cta' }, '무료로 시작하기'));
@@ -207,6 +252,11 @@ export async function initLayout() {
   addPasswordToggles();
   const me = await loadMe();
   renderHeader(me);
+  // 위쪽 메뉴가 없는 로그인·가입 화면은 오른쪽 위에 다크모드 버튼만 둔다
+  if (!document.querySelector('header.site-header') && document.querySelector('main.auth-page')) {
+    const toggle = modeToggle();
+    if (toggle) document.body.append(Object.assign(toggle, { className: 'mode-toggle floating' }));
+  }
   if (me) {
     renderFooter(me);
     startActivityHeartbeat();

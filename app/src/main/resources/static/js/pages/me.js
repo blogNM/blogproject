@@ -1,7 +1,7 @@
 import { api } from '../api.js';
-import { el, requireLogin } from '../layout.js';
+import { el, requireLogin, updateAccount } from '../layout.js';
 import { PASSWORD_MESSAGE, PASSWORD_RULE } from '../rules.js';
-import { testBadge, withTestBadge } from '../test-badge.js';
+import { withTestBadge } from '../test-badge.js';
 
 const me = await requireLogin();
 
@@ -50,6 +50,7 @@ $('photo-input').addEventListener('change', async (e) => {
   try {
     const res = await api.upload('/api/me/profile-image', form);
     showPhoto(res.url);
+    updateAccount({ imageUrl: res.url });
     show('bio-message', '프로필 사진을 바꿨습니다.', true);
   } catch (err) {
     show('bio-message', err.message, false);
@@ -60,6 +61,7 @@ $('photo-delete').addEventListener('click', async () => {
   try {
     await api.del('/api/me/profile-image');
     showPhoto(null);
+    updateAccount({ imageUrl: null });
   } catch (err) {
     show('bio-message', err.message, false);
   }
@@ -129,11 +131,7 @@ $('profile-form').addEventListener('submit', async (e) => {
     await api.put('/api/me/profile', { nickname: $('nickname').value, phone: $('phone').value });
     show('profile-message', '저장했습니다.', true);
     await loadProfile();
-    const nick = document.querySelector('.site-nav .nickname');
-    if (nick) {
-      nick.textContent = $('nickname').value + '님';
-      if (me && me.test) nick.append(testBadge());
-    }
+    updateAccount({ nickname: $('nickname').value });
   } catch (err) {
     show('profile-message', err.message, false);
   }

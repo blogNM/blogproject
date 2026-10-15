@@ -266,6 +266,13 @@ public class ProfileService {
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "MEMBER_NOT_FOUND", "회원을 찾을 수 없습니다."));
     }
 
+    /** 위쪽 메뉴에 보일 내 프로필 사진 주소. 사진이 없으면 null. */
+    public String imageUrlOf(long memberId) {
+        return jdbc.query("""
+                SELECT i.stored_name FROM members m JOIN images i ON i.id = m.profile_image_id WHERE m.id = :id
+                """, Map.of("id", memberId), (rs, i) -> image(rs.getString(1))).stream().findFirst().orElse(null);
+    }
+
     private static String image(String storedName) {
         return storedName == null ? null : "/uploads/" + storedName;
     }

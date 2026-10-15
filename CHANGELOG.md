@@ -7,6 +7,14 @@
 
 ## 2026-10-15
 
+### 위쪽 메뉴 내 프로필 사진과 로그인 화면 다크모드 버튼 (D-119)
+
+- **화면** 로그인한 위쪽 메뉴: "내 블로그 · 내 활동 · OO님 · 로그아웃" 글자 대신 오른쪽 끝에 내 프로필 사진(없으면 닉네임 첫 글자). 누르면 이름(내 활동으로 가는 링크)·내 블로그·내 정보·로그아웃 메뉴가 열리고, 바깥을 누르거나 Esc로 닫힘 (D-119, 김채림 요청)
+- **기능** 로그인·가입·소셜 가입 화면 오른쪽 위에 다크모드 달·해 버튼 (`layout.js`가 `main.auth-page` 화면에 붙임, D-116, D-119, 김채림 요청)
+- **기능** `/api/me`가 프로필 사진 주소 `imageUrl`도 줌. 내 정보 화면에서 닉네임·사진을 바꾸면 위쪽 사진·이름도 바로 바뀜 (SOC-03, D-119)
+- **문서** D-119, spec 001 Clarifications, CLAUDE.md·docs/README·specs/README 결정 번호와 목록
+- **설정** 테스트: `AccountTest.meShowsProfileImage`
+
 ### 로봇 확인을 Google reCAPTCHA로 (v1.10.1, D-118)
 
 - **설정** 배포가 앞이 `RECAPTCHAR_`인 시크릿 이름(`RECAPTCHAR_SITE_KEY`·`RECAPTCHAR_SECRET_KEY`·`RECAPTCHAR_ID`·`RECAPTCHAR_PASSWORD` 등)도 읽음 (D-118, 김채림이 넣은 이름)
