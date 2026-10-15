@@ -366,6 +366,7 @@ export function createRichEditor({ host, height, placeholder, uploadImage, withC
    * 빈 글에서 바로 코드 블록을 넣으면 Toast UI가 "빈 글" 안내 문구를 코드 블록 안에 그려, 그 문구에 막혀 글자가 들어가지 않았다.
    * 코드 블록만 있는 글이면 아래에 빈 문단을 하나 두어 빈 글로 보지 않게 한다. 빈 문단은 저장할 때 없어진다 (D-117).
    * 새로 넣은 빈 코드 블록에는 [기본 언어]로 고른 언어를 붙인다 (D-120).
+   * 코드 블록 마지막 줄에서 엔터를 두 번 치면(빈 줄에서 한 번 더) 빈 줄을 지우고 블록 아래 문단으로 나간다 (D-120).
    */
   function codeBlockPlugin(context) {
     const countBlocks = (doc) => {
@@ -375,6 +376,24 @@ export function createRichEditor({ host, height, placeholder, uploadImage, withC
     };
     return {
       wysiwygPlugins: [() => new context.pmState.Plugin({
+        props: {
+          handleKeyDown(view, event) {
+            if (event.key !== 'Enter' || event.shiftKey || event.ctrlKey || event.metaKey || event.altKey || event.isComposing) return false;
+            const { state } = view;
+            const { $from, empty } = state.selection;
+            const block = $from.parent;
+            if (!empty || block.type.name !== 'codeBlock' || $from.parentOffset !== block.content.size) return false;
+            if (!block.textContent.endsWith('\n')) return false;
+            const after = $from.after();
+            const tr = state.tr.delete($from.pos - 1, $from.pos);
+            const at = tr.mapping.map(after);
+            tr.insert(at, state.schema.nodes.paragraph.create());
+            const Selection = Object.getPrototypeOf(state.selection.constructor);
+            tr.setSelection(Selection.near(tr.doc.resolve(at + 1)));
+            view.dispatch(tr.scrollIntoView());
+            return true;
+          },
+        },
         appendTransaction(transactions, oldState, state) {
           if (!transactions.some((t) => t.docChanged)) return null;
           let tr = null;
@@ -814,6 +833,26 @@ export function createRichEditor({ host, height, placeholder, uploadImage, withC
       place();
     }
     button.addEventListener('click', (e) => (menu.hidden ? openMenu(e.detail === 0) : closeMenu()));
+
+    // 코드 블록 안에서 [코드블럭] 도구를 누르면 Toast UI는 아무것도 하지 않는다. 그 블록 바로 아래에 새 코드 블록을 만든다
+    host.addEventListener('click', (e) => {
+      if (!e.target.closest || !e.target.closest('.toastui-editor-toolbar-icons.codeblock')) return;
+      const v = view();
+      const { state } = v;
+      const { $from } = state.selection;
+      let depth = $from.depth;
+      while (depth > 0 && $from.node(depth).type.name !== 'codeBlock') depth -= 1;
+      if (depth === 0) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const at = $from.after(depth);
+      const lang = defaultCodeLanguage();
+      const tr = state.tr.insert(at, state.schema.nodes.codeBlock.create(lang ? { language: lang } : null));
+      const Selection = Object.getPrototypeOf(state.selection.constructor);
+      tr.setSelection(Selection.near(tr.doc.resolve(at + 1)));
+      v.dispatch(tr.scrollIntoView());
+      v.focus();
+    }, true);
     document.addEventListener('mousedown', (e) => {
       if (!menu.hidden && !menu.contains(e.target) && !button.contains(e.target)) closeMenu();
     });
