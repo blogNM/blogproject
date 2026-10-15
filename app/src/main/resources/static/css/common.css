@@ -1009,3 +1009,27 @@ a.feature:hover .feature-more span, a.feature:focus-visible .feature-more span {
 
 /* 로그인·가입 화면 오른쪽 위 다크모드 버튼 (D-116, D-119) */
 .mode-toggle.floating { position: fixed; top: 16px; right: 16px; z-index: 50; box-shadow: var(--shadow); }
+
+/* 코드 블록 ⋮ 메뉴 (D-120). Toast UI의 언어 이름·입력 칸 대신 "언어 이름 ⋮" 버튼과 메뉴를 쓴다 */
+.rich-editor .toastui-editor-contents :is(.toastui-editor-ww-code-block, .toastui-editor-ww-code-block-highlighting)::after { content: none; background-image: none; }
+.rich-editor .toastui-editor-contents :is(.toastui-editor-ww-code-block, .toastui-editor-ww-code-block-highlighting) pre { padding-top: 34px; }
+.code-menu-button { position: absolute; z-index: 24; display: inline-flex; align-items: center; gap: 4px; min-width: 0; margin: 0; padding: 2px 4px 2px 10px; border: 1px solid transparent; border-radius: 6px; background: none; color: #7A778C; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.02em; cursor: pointer; }
+.code-menu-button:hover, .code-menu-button[aria-expanded="true"] { background: #fff; border-color: var(--line); color: var(--ink); }
+.code-menu-button[hidden] { display: none; }
+.code-menu-dots { font-size: 1.1rem; line-height: 1; padding: 0 4px; }
+.code-menu { position: absolute; z-index: 27; min-width: 180px; padding: 6px; background: #fff; border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow); font-size: 0.88rem; }
+.code-menu[hidden] { display: none; }
+.code-menu-item { display: flex; align-items: center; gap: 6px; width: 100%; min-width: 0; margin: 0; padding: 6px 10px; border: 0; border-radius: 6px; background: none; color: var(--ink); font-size: inherit; font-weight: 500; text-align: left; cursor: pointer; }
+.code-menu-item:hover, .code-menu-item:focus-visible, .code-menu-group.open > .code-menu-item { background: var(--purple); color: #fff; outline: none; }
+.code-menu-item.has-sub > span:first-child { flex: 1; }
+.code-menu-arrow { font-size: 1.1rem; line-height: 1; }
+.code-menu-line { margin: 6px 4px; border: 0; border-top: 1px solid var(--line); }
+.code-menu-group { position: relative; }
+.code-menu-sub { display: none; position: absolute; top: -6px; left: calc(100% + 6px); min-width: 170px; max-height: min(70vh, 640px); overflow-y: auto; padding: 6px; background: #fff; border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow); }
+.code-menu-sub.left { left: auto; right: calc(100% + 6px); }
+.code-menu-group.open > .code-menu-sub { display: block; }
+.code-menu-check { width: 1em; text-align: center; font-weight: 700; }
+@media (max-width: 600px) {
+  /* 좁은 화면에서는 하위 메뉴를 옆이 아니라 아래로 펼친다 */
+  .code-menu-sub, .code-menu-sub.left { position: static; margin: 2px 0 4px 12px; max-height: 50vh; box-shadow: none; }
+}
