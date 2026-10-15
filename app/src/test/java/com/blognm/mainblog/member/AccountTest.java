@@ -47,6 +47,22 @@ class AccountTest extends IntegrationTest {
     }
 
     @Test
+    @DisplayName("위쪽 메뉴용 /api/me에 프로필 사진 주소가 나온다. 사진이 없으면 null (D-119)")
+    void meShowsProfileImage() throws Exception {
+        getAs("/api/me", me).andExpect(jsonPath("$.nickname").value("내닉네임"))
+                .andExpect(jsonPath("$.imageUrl").doesNotExist());
+
+        Long memberId = jdbc.queryForObject("SELECT id FROM members WHERE email = ?", Long.class, EMAIL);
+        String stored = "11111111-2222-3333-4444-555555555555";
+        jdbc.update("""
+                INSERT INTO images (uploader_id, stored_name, original_name, mime_type, size_bytes)
+                VALUES (?, ?, 'me.png', 'image/png', 100)""", memberId, stored);
+        jdbc.update("UPDATE members SET profile_image_id = (SELECT id FROM images WHERE stored_name = ?) WHERE id = ?",
+                stored, memberId);
+        getAs("/api/me", me).andExpect(jsonPath("$.imageUrl").value("/uploads/" + stored));
+    }
+
+    @Test
     @DisplayName("다른 회원이 쓰는 닉네임으로는 바꿀 수 없다")
     void nicknameTaken() throws Exception {
         signup("other@example.com", PW, "남의닉");

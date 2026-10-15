@@ -992,3 +992,20 @@ a.feature:hover .feature-more span, a.feature:focus-visible .feature-more span {
 .image-size-bar input[type="range"] { width: 120px; margin: 0; accent-color: var(--purple); }
 .image-size-value { min-width: 3.2em; font-variant-numeric: tabular-nums; font-weight: 700; color: var(--purple); }
 @media (max-width: 600px) { .image-size-bar input[type="range"] { width: 100px; } }
+
+/* 위쪽 메뉴의 내 프로필 사진과 펼침 메뉴 (D-119) */
+.avatar.small { width: 32px; height: 32px; font-size: 0.9rem; }
+.account { position: relative; display: inline-flex; }
+.account-button { width: 40px; height: 40px; min-width: 0; padding: 4px; border: 0; border-radius: 50%; background: none; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+.account-button:hover, .account-button[aria-expanded="true"] { background: var(--highlight); }
+.account-menu { position: absolute; top: calc(100% + 8px); right: 0; z-index: 60; width: 240px; padding: 8px; display: flex; flex-direction: column; gap: 2px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); }
+.account-menu[hidden] { display: none; }
+.site-nav .account-menu a, .site-nav .account-menu .link-button { display: block; width: 100%; padding: 9px 12px; border-radius: 10px; text-align: left; }
+.site-nav .account-menu .account-who { display: flex; gap: 12px; align-items: center; padding: 10px 12px 12px; margin-bottom: 4px; border-bottom: 1px solid var(--line); border-radius: 10px 10px 0 0; }
+.account-name { display: flex; flex-direction: column; min-width: 0; }
+.account-name strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.account-name .test-badge { align-self: flex-start; margin: 2px 0; }
+.account-name .muted { font-size: 0.8rem; font-weight: 500; }
+
+/* 로그인·가입 화면 오른쪽 위 다크모드 버튼 (D-116, D-119) */
+.mode-toggle.floating { position: fixed; top: 16px; right: 16px; z-index: 50; box-shadow: var(--shadow); }
