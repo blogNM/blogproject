@@ -1,5 +1,6 @@
 import { api } from '../api.js';
 import { initLayout } from '../layout.js';
+import { createCaptcha } from '../turnstile.js';
 
 // 미로 공은 SVG 애니메이션이라 CSS로 멈출 수 없어, 동작 줄이기를 켜면 여기서 멈춘다 (D-105)
 if (matchMedia('(prefers-reduced-motion: reduce)').matches) document.querySelectorAll('svg.art').forEach((svg) => svg.pauseAnimations());
@@ -51,36 +52,8 @@ api.get('/api/auth/social/config')
   })
   .catch(() => {});
 
-let turnstileToken = null;
-let widgetId = null;
-
-// 로그인 3번 실패 뒤부터 Cloudflare Turnstile을 보여준다 (SEC-13, D-79)
-function loadTurnstile() {
-  if (window.turnstile) return Promise.resolve(window.turnstile);
-  return new Promise((resolve, reject) => {
-    const s = document.createElement('script');
-    s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
-    s.async = true;
-    s.onload = () => resolve(window.turnstile);
-    s.onerror = reject;
-    document.head.append(s);
-  });
-}
-
-async function showCaptcha(siteKey) {
-  captchaBox.hidden = false;
-  const ts = await loadTurnstile();
-  if (widgetId === null) {
-    widgetId = ts.render(captchaBox, {
-      sitekey: siteKey,
-      callback: (token) => { turnstileToken = token; },
-      'expired-callback': () => { turnstileToken = null; },
-    });
-  } else {
-    ts.reset(widgetId);
-    turnstileToken = null;
-  }
-}
+// 같은 이메일로 3번, 같은 IP에서 계정을 바꿔 가며 5번 틀리면 사람 확인 상자가 나온다 (SEC-13, D-79, D-115)
+const captcha = createCaptcha(captchaBox);
 
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -92,13 +65,13 @@ form.addEventListener('submit', async (e) => {
       email: form.email.value,
       password: form.password.value,
       rememberMe: document.getElementById('remember').checked,
-      turnstileToken,
+      turnstileToken: captcha.token(),
     });
     location.href = next;
   } catch (err) {
     errorBox.textContent = err.message;
     if (err.details && err.details.captchaRequired) {
-      await showCaptcha(err.details.turnstileSiteKey);
+      await captcha.show(err.details.turnstileSiteKey);
     }
   } finally {
     button.disabled = false;

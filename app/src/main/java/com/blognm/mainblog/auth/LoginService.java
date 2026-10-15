@@ -28,24 +28,22 @@ public class LoginService {
     private final String dummyHash;
 
     private final MemberRepository members;
-    private final LoginFailureRepository failures;
     private final RefreshTokenRepository refreshTokens;
     private final PasswordEncoder passwordEncoder;
     private final JwtProvider jwtProvider;
-    private final TurnstileVerifier turnstile;
+    private final LoginGuard guard;
     private final RateLimiter rateLimiter;
     private final AppProperties props;
     private final Clock clock;
 
-    public LoginService(MemberRepository members, LoginFailureRepository failures,
+    public LoginService(MemberRepository members, LoginGuard guard,
             RefreshTokenRepository refreshTokens, PasswordEncoder passwordEncoder, JwtProvider jwtProvider,
-            TurnstileVerifier turnstile, RateLimiter rateLimiter, AppProperties props, Clock clock) {
+            RateLimiter rateLimiter, AppProperties props, Clock clock) {
         this.members = members;
-        this.failures = failures;
+        this.guard = guard;
         this.refreshTokens = refreshTokens;
         this.passwordEncoder = passwordEncoder;
         this.jwtProvider = jwtProvider;
-        this.turnstile = turnstile;
         this.rateLimiter = rateLimiter;
         this.props = props;
         this.clock = clock;
@@ -59,37 +57,17 @@ public class LoginService {
                     "로그인 요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.");
         }
         String email = normalizeOrFail(req.email());
-        LocalDateTime now = LocalDateTime.now(clock);
-        AppProperties.Login cfg = props.login();
-
-        failures.insertIfAbsent(email, now);
-        LoginFailure failure = failures.findForUpdate(email).orElseThrow();
-        failure.resetIfLockExpired(now);
-        if (failure.isLocked(now)) {
-            throw locked(failure);
-        }
-        if (failure.getFailCount() >= cfg.captchaAfterFailures() && !turnstile.verify(req.turnstileToken(), clientIp)) {
-            throw new DetailedApiException(HttpStatus.BAD_REQUEST, "CAPTCHA_REQUIRED", "사람인지 확인해 주세요.",
-                    Map.of("captchaRequired", true, "turnstileSiteKey", turnstile.siteKey()));
-        }
+        LoginGuard.Attempt attempt = guard.begin(email, clientIp, req.turnstileToken());
 
         Optional<Member> member = members.findByEmail(email).filter(Member::isActive);
         String hash = member.map(Member::getPasswordHash).orElse(dummyHash);
         boolean matches = req.password() != null && passwordEncoder.matches(req.password(), hash);
         if (member.isEmpty() || !matches) {
-            failure.recordFailure(now, cfg.lockAfterFailures(), now.plus(cfg.lockDuration()));
-            if (failure.isLocked(now)) {
-                throw locked(failure);
-            }
-            boolean captcha = failure.getFailCount() >= cfg.captchaAfterFailures();
-            throw new DetailedApiException(HttpStatus.UNAUTHORIZED, "LOGIN_FAILED",
-                    "이메일 또는 비밀번호가 맞지 않습니다.",
-                    captcha ? Map.of("captchaRequired", true, "turnstileSiteKey", turnstile.siteKey())
-                            : Map.of("captchaRequired", false));
+            throw guard.fail(attempt, "이메일 또는 비밀번호가 맞지 않습니다.");
         }
 
-        failures.delete(failure);
-        return issue(member.get(), req.remember(), now);
+        guard.succeed(attempt);
+        return issue(member.get(), req.remember(), attempt.now());
     }
 
     /**
@@ -143,13 +121,6 @@ public class LoginService {
             throw new DetailedApiException(HttpStatus.UNAUTHORIZED, "LOGIN_FAILED",
                     "이메일 또는 비밀번호가 맞지 않습니다.", Map.of("captchaRequired", false));
         }
-    }
-
-    private ApiException locked(LoginFailure failure) {
-        return new DetailedApiException(HttpStatus.LOCKED, "LOGIN_LOCKED",
-                "로그인에 여러 번 실패해 %d분 동안 로그인할 수 없습니다. 잠시 후 다시 시도해 주세요."
-                        .formatted(props.login().lockDuration().toMinutes()),
-                Map.of("lockedUntil", failure.getLockedUntil().toString()));
     }
 
     private static ApiException loginRequired() {

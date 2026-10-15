@@ -119,6 +119,9 @@ app:
     captcha-after-failures: ${LOGIN_CAPTCHA_AFTER:3}
     lock-after-failures: ${LOGIN_LOCK_AFTER:5}
     lock-duration: ${LOGIN_LOCK_DURATION:5m}
+    # 같은 IP에서 계정을 바꿔 가며 틀려도 사람 확인을 띄운다. 잠금은 계정에만 건다 (D-115)
+    captcha-after-ip-failures: ${LOGIN_CAPTCHA_AFTER_IP:5}
+    ip-window: ${LOGIN_IP_WINDOW:1h}
   rate-limit:
     # IP별 요청 제한 (D-80). 수치는 추천안 #4 기본값, 1차는 서버 메모리에서 셈 (D-83 대기)
     login-per-minute: ${RATE_LOGIN_PER_MINUTE:20}
@@ -126,7 +129,8 @@ app:
     # 가입 화면 이메일 중복 확인 (D-99)
     email-check-per-minute: ${RATE_EMAIL_CHECK_PER_MINUTE:20}
   turnstile:
-    # Cloudflare Turnstile (D-79). 기본값은 Cloudflare가 제공하는 "항상 통과" 테스트 키
+    # Cloudflare Turnstile (D-79). 기본값은 Cloudflare가 제공하는 "항상 통과" 테스트 키.
+    # 실제 사이트는 GitHub Actions secrets의 TURNSTILE_SITE_KEY·TURNSTILE_SECRET_KEY로 실제 키를 넣는다 (D-115)
     site-key: ${TURNSTILE_SITE_KEY:1x00000000000000000000AA}
     secret-key: ${TURNSTILE_SECRET_KEY:1x0000000000000000000000000000000AA}
     verify-url: https://challenges.cloudflare.com/turnstile/v0/siteverify

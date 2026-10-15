@@ -18,11 +18,13 @@ import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MvcResult;
 
+import com.blognm.mainblog.admin.AdminAccountService;
 import com.blognm.mainblog.support.IntegrationTest;
 
 /** 001 User Story 2 - 로그인과 로그아웃 */
@@ -33,6 +35,9 @@ class LoginTest extends IntegrationTest {
 
     @MockitoBean
     TurnstileVerifier turnstile;
+
+    @Autowired
+    AdminAccountService adminAccounts;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -46,6 +51,20 @@ class LoginTest extends IntegrationTest {
         return postJson("/api/auth/login", """
                 {"email":"%s","password":"%s","rememberMe":%s,"turnstileToken":%s}"""
                 .formatted(EMAIL, password, rememberMe, token)).andReturn();
+    }
+
+    private MvcResult loginAs(String email, String password, String turnstileToken) throws Exception {
+        String token = turnstileToken == null ? "null" : "\"" + turnstileToken + "\"";
+        return postJson("/api/auth/login", """
+                {"email":"%s","password":"%s","rememberMe":false,"turnstileToken":%s}"""
+                .formatted(email, password, token)).andReturn();
+    }
+
+    private MvcResult adminLogin(String password, String turnstileToken) throws Exception {
+        String token = turnstileToken == null ? "null" : "\"" + turnstileToken + "\"";
+        return postJson("/api/admin/auth/login", """
+                {"loginId":"rootadmin","password":"%s","turnstileToken":%s}"""
+                .formatted(password, token)).andReturn();
     }
 
     private static Cookie cookie(MvcResult r, String name) {
@@ -143,7 +162,58 @@ class LoginTest extends IntegrationTest {
 
         MvcResult ok = login(PASSWORD, false, "good-token");
         assertThat(ok.getResponse().getStatus()).isEqualTo(200);
-        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM login_failures", Integer.class)).isZero();
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM login_failures WHERE email = ?", Integer.class, EMAIL))
+                .isZero();
+    }
+
+    @Test
+    @DisplayName("같은 IP에서 이메일을 바꿔 가며 5번 틀려도 사람 확인을 요구하고, 1시간 지나면 풀린다 (SEC-13, D-115)")
+    void captchaAfterIpFailuresAcrossEmails() throws Exception {
+        for (int i = 0; i < 4; i++) {
+            assertThat(loginAs("other" + i + "@example.com", "Wrong123!", null).getResponse().getContentAsString())
+                    .contains("\"captchaRequired\":false");
+        }
+        assertThat(loginAs("other4@example.com", "Wrong123!", null).getResponse().getContentAsString())
+                .contains("\"captchaRequired\":true");
+
+        // 처음 쓰는 이메일이어도, 맞는 비밀번호여도 사람 확인부터
+        assertThat(login(PASSWORD, false, null).getResponse().getContentAsString()).contains("CAPTCHA_REQUIRED");
+        assertThat(login(PASSWORD, false, "good-token").getResponse().getStatus()).isEqualTo(200);
+        // 로그인에 성공해도 IP 수는 그대로라 다른 이메일은 여전히 사람 확인
+        assertThat(loginAs("other5@example.com", "Wrong123!", null).getResponse().getContentAsString())
+                .contains("CAPTCHA_REQUIRED");
+        // IP로는 잠그지 않는다: 계정마다 1~2번만 틀렸으니 423이 아니다
+        assertThat(loginAs("other0@example.com", "Wrong123!", "good-token").getResponse().getStatus()).isEqualTo(401);
+
+        clock.advance(Duration.ofHours(1).plusSeconds(1));
+        assertThat(loginAs("other6@example.com", "Wrong123!", null).getResponse().getContentAsString())
+                .contains("\"captchaRequired\":false");
+    }
+
+    @Test
+    @DisplayName("관리자 로그인도 3번 틀리면 사람 확인, 5번이면 5분 잠금 (SEC-03, SEC-13, D-115)")
+    void adminCaptchaAndLock() throws Exception {
+        adminAccounts.run(null);
+        for (int i = 0; i < 2; i++) {
+            assertThat(adminLogin("Wrong123!", null).getResponse().getContentAsString())
+                    .contains("\"captchaRequired\":false");
+        }
+        MvcResult third = adminLogin("Wrong123!", null);
+        assertThat(third.getResponse().getStatus()).isEqualTo(401);
+        assertThat(third.getResponse().getContentAsString()).contains("\"captchaRequired\":true")
+                .contains("test-site-key");
+
+        assertThat(adminLogin("Temp1234!", null).getResponse().getContentAsString()).contains("CAPTCHA_REQUIRED");
+        assertThat(adminLogin("Wrong123!", "good-token").getResponse().getStatus()).isEqualTo(401);
+        assertThat(adminLogin("Wrong123!", "good-token").getResponse().getStatus()).isEqualTo(423);
+        assertThat(adminLogin("Temp1234!", "good-token").getResponse().getStatus()).isEqualTo(423);
+
+        // 잠금이 풀려도 같은 IP에서 5번 틀린 것은 1시간 동안 남아 사람 확인은 계속 묻는다
+        clock.advance(Duration.ofMinutes(5).plusSeconds(1));
+        assertThat(adminLogin("Temp1234!", null).getResponse().getContentAsString()).contains("CAPTCHA_REQUIRED");
+        assertThat(adminLogin("Temp1234!", "good-token").getResponse().getStatus()).isEqualTo(200);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM login_failures WHERE email = 'admin:rootadmin'",
+                Integer.class)).isZero();
     }
 
     @Test
@@ -158,7 +228,9 @@ class LoginTest extends IntegrationTest {
         assertThat(login(PASSWORD, false, "good-token").getResponse().getStatus()).isEqualTo(423);
 
         clock.advance(Duration.ofMinutes(5).plusSeconds(1));
-        assertThat(login(PASSWORD, false, null).getResponse().getStatus()).isEqualTo(200);
+        // 계정 잠금은 풀렸지만 같은 IP에서 5번 틀린 것은 1시간 동안 남아 사람 확인은 계속 묻는다 (D-115)
+        assertThat(login(PASSWORD, false, null).getResponse().getContentAsString()).contains("CAPTCHA_REQUIRED");
+        assertThat(login(PASSWORD, false, "good-token").getResponse().getStatus()).isEqualTo(200);
     }
 
     @Test
