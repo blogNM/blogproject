@@ -45,6 +45,8 @@ export function createCaptcha(box) {
           widgetId = ts.render(holder, {
             sitekey: siteKey,
             language: 'ko',
+            // 다크모드면 확인 상자도 어둡게 (D-116). 관리자 화면은 다크모드를 읽지 않아 늘 밝다
+            theme: document.documentElement.dataset.mode === 'dark' ? 'dark' : 'light',
             callback: (t) => { token = t; message.textContent = ''; },
             'expired-callback': () => { token = null; message.textContent = '확인 시간이 지났어요. 다시 확인해 주세요.'; },
             'error-callback': () => { token = null; message.textContent = LOAD_FAILED; },
