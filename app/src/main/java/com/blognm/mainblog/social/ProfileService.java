@@ -56,10 +56,7 @@ public class ProfileService {
         return new Profile(m.id(), m.nickname(), m.bio(), m.imageUrl(), m.joinedAt(), self,
                 follows.following(viewerId, memberId),
                 viewerId != null && !self && blocks.blockedBy(viewerId, memberId),
-                count("SELECT COUNT(*) FROM follows f JOIN members x ON x.id = f.follower_id "
-                        + "WHERE f.followee_id = :id AND x.status = 'ACTIVE'", memberId),
-                count("SELECT COUNT(*) FROM follows f JOIN members x ON x.id = f.followee_id "
-                        + "WHERE f.follower_id = :id AND x.status = 'ACTIVE'", memberId),
+                followerCount(memberId), followingCount(memberId),
                 blogs(memberId, viewerId, true), blogs(memberId, viewerId, false),
                 self ? new Visibility(true, true, true, true, true) : visibility, self ? visibility : null, m.test());
     }
@@ -264,6 +261,18 @@ public class ProfileService {
                 rs.getBoolean("is_test")))
                 .stream().findFirst()
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "MEMBER_NOT_FOUND", "회원을 찾을 수 없습니다."));
+    }
+
+    /** 나를 팔로우하는 활동 중 회원 수. */
+    public long followerCount(long memberId) {
+        return count("SELECT COUNT(*) FROM follows f JOIN members x ON x.id = f.follower_id "
+                + "WHERE f.followee_id = :id AND x.status = 'ACTIVE'", memberId);
+    }
+
+    /** 내가 팔로우하는 활동 중 회원 수. */
+    public long followingCount(long memberId) {
+        return count("SELECT COUNT(*) FROM follows f JOIN members x ON x.id = f.followee_id "
+                + "WHERE f.follower_id = :id AND x.status = 'ACTIVE'", memberId);
     }
 
     /** 위쪽 메뉴에 보일 내 프로필 사진 주소. 사진이 없으면 null. */

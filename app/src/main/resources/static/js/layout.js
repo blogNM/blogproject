@@ -104,13 +104,14 @@ export function updateAccount(changes) {
 }
 
 /**
- * 위쪽 메뉴 오른쪽 끝의 내 프로필 사진. 누르면 이름(내 활동으로 가는 링크)과 내 블로그·내 정보·로그아웃이 열린다 (D-119).
+ * 위쪽 메뉴 오른쪽 끝의 내 프로필 사진. 누르면 이름(내 활동으로 가는 링크)·팔로워·팔로잉 수와 내 블로그·내 정보·로그아웃이 열린다 (D-119).
  */
 function accountMenu(me) {
   const wrap = el('div', { class: 'account' });
   const button = el('button', { type: 'button', class: 'account-button', 'aria-haspopup': 'true', 'aria-expanded': 'false' });
   const menu = el('div', { class: 'account-menu', hidden: '' });
   const who = el('a', { href: '/members/' + me.id, class: 'account-who' });
+  const follow = el('div', { class: 'account-follow' });
   const current = { ...me };
   const paint = () => {
     button.setAttribute('aria-label', current.nickname + '님 메뉴');
@@ -122,6 +123,12 @@ function accountMenu(me) {
     if (current.test) name.append(el('span', { class: 'test-badge', title: '기능을 확인하려고 만든 테스트 계정이에요' }, '테스트'));
     name.append(el('span', { class: 'muted' }, '내 활동 보기'));
     who.replaceChildren(avatarOf(current, ''), name);
+    const count = (tab, label, n) => {
+      const a = el('a', { href: '/members/' + current.id + '?tab=' + tab });
+      a.append(el('span', {}, label + ' '), el('strong', {}, String(n ?? 0)));
+      return a;
+    };
+    follow.replaceChildren(count('followers', '팔로워', current.followers), count('following', '팔로잉', current.following));
   };
   repaintAccount = (changes) => { Object.assign(current, changes); paint(); };
   paint();
@@ -133,7 +140,7 @@ function accountMenu(me) {
       location.href = '/';
     }
   });
-  menu.append(who, el('a', { href: '/my-blogs.html' }, '내 블로그'), el('a', { href: '/me.html' }, '내 정보'), logout);
+  menu.append(who, follow, el('a', { href: '/my-blogs.html' }, '내 블로그'), el('a', { href: '/me.html' }, '내 정보'), logout);
 
   const open = (show) => {
     menu.hidden = !show;

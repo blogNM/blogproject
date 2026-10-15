@@ -7,6 +7,13 @@
 
 ## 2026-10-15
 
+### 위쪽 사진 메뉴에 팔로워·팔로잉 수 (v1.12.2, D-119)
+
+- **화면** 위쪽 내 사진을 누르면 열리는 메뉴의 "OO님" 아래에 팔로워 N · 팔로잉 N. 누르면 내 활동의 팔로워·팔로잉 탭으로 감 (D-119, 김채림 요청)
+- **기능** `/api/me`가 `followers`·`following` 수도 줌 (`ProfileService.followerCount`·`followingCount`, 프로필 화면과 같은 계산)
+- **문서** D-119와 spec 001 Clarifications에 한 줄, [v1.12.2 릴리스 노트](docs/releases/v1.12.2.md)와 캡처(`static/img/releases/v1.12.2/`)
+- **설정** 테스트: `AccountTest.meShowsFollowCounts`
+
 ### 본문 최대 글자 수를 공백 포함 3,000자로 (D-121)
 
 - **기능** 글 본문 최대 글자 수 1000자 → **공백 포함 3,000자**. 세는 기준(사진 문법·색 표시·체크박스 표시는 빼고 셈)은 그대로 (D-121, 김채림 요청)
