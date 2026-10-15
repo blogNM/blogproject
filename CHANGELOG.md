@@ -9,6 +9,7 @@
 
 ### 로봇 확인을 Google reCAPTCHA로 (v1.10.1, D-118)
 
+- **설정** 배포가 앞이 `RECAPTCHAR_`인 시크릿 이름(`RECAPTCHAR_SITE_KEY`·`RECAPTCHAR_SECRET_KEY`·`RECAPTCHAR_ID`·`RECAPTCHAR_PASSWORD` 등)도 읽음 (D-118, 김채림이 넣은 이름)
 - **기능** 로봇 확인을 Cloudflare Turnstile에서 Google reCAPTCHA v2 체크박스("로봇이 아닙니다")로 바꿈. 보이는 때(계정마다 3번, 같은 IP 1시간 5번)와 잠금(5번 5분)은 그대로, 관리자 로그인도 같음. Turnstile 코드는 지움 (D-118, 김채림 요청)
 - **설정** 키 `RECAPTCHA_SITE_KEY`·`RECAPTCHA_SECRET_KEY`(GitHub Actions secrets → `deploy.sh` → `secrets.env`). `RECAPTCHA_ID`·`RECAPTCHA_PASSWORD` 등 다른 이름도 읽음. 없으면 Google v2 테스트 키로 뜨고 서버 로그에 경고. `TURNSTILE_*`는 더 읽지 않음 (D-118)
 - **설정** CSP: reCAPTCHA 주소(`www.google.com/recaptcha/`, `www.gstatic.com/recaptcha/`, `recaptcha.google.com/recaptcha/`)만 열고 Cloudflare는 뺌. 회원·관리자 로그인 화면은 reCAPTCHA 상자 때문에 인라인 style 허용 (D-118)
