@@ -57,7 +57,7 @@ public class LoginService {
                     "로그인 요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.");
         }
         String email = normalizeOrFail(req.email());
-        LoginGuard.Attempt attempt = guard.begin(email, clientIp, req.turnstileToken());
+        LoginGuard.Attempt attempt = guard.begin(email, clientIp, req.captchaToken());
 
         Optional<Member> member = members.findByEmail(email).filter(Member::isActive);
         String hash = member.map(Member::getPasswordHash).orElse(dummyHash);
@@ -127,7 +127,7 @@ public class LoginService {
         return new ApiException(HttpStatus.UNAUTHORIZED, "LOGIN_REQUIRED", "다시 로그인해 주세요.");
     }
 
-    public record LoginRequest(String email, String password, Boolean rememberMe, String turnstileToken) {
+    public record LoginRequest(String email, String password, Boolean rememberMe, String captchaToken) {
 
         boolean remember() {
             return Boolean.TRUE.equals(rememberMe);

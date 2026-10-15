@@ -43,13 +43,14 @@ import com.blognm.mainblog.auth.SocialLoginHandler;
 @EnableMethodSecurity
 public class SecurityConfig {
 
-    /** Turnstile 스크립트·iframe만 바깥 주소를 허용한다. 스크립트는 어느 화면에서도 인라인을 허용하지 않는다. */
+    /** reCAPTCHA 스크립트·iframe만 바깥 주소를 허용한다. 스크립트는 어느 화면에서도 인라인을 허용하지 않는다. */
     static final String CSP = csp("'self'");
 
     /**
      * 글쓰기 화면과 관리자 화면(공지 쓰기, D-106)만 인라인 style을 허용한다. Toast UI Editor가 style 속성으로 화면을 그리기 때문이다.
      * 관리자 화면은 탭을 주소의 #로 고르는 한 페이지라 공지 탭만 따로 고를 수 없다. 관리자만 열 수 있다.
      * 에디터 파일은 서버에 두고(/vendor/toastui) 바깥 주소에서 받지 않는다. 스크립트 규칙은 같다.
+     * 회원·관리자 로그인 화면도 허용한다. Google reCAPTCHA 상자가 style 속성으로 크기와 숨김을 주기 때문이다 (D-118).
      */
     static final String EDITOR_CSP = csp("'self' 'unsafe-inline'");
 
@@ -58,16 +59,19 @@ public class SecurityConfig {
             PathPatternRequestMatcher.withDefaults().matcher("/write"),
             PathPatternRequestMatcher.withDefaults().matcher("/blog/*/posts/*/edit"),
             PathPatternRequestMatcher.withDefaults().matcher("/post-edit.html"),
-            PathPatternRequestMatcher.withDefaults().matcher("/admin/index.html"));
+            PathPatternRequestMatcher.withDefaults().matcher("/admin/index.html"),
+            PathPatternRequestMatcher.withDefaults().matcher("/login.html"),
+            PathPatternRequestMatcher.withDefaults().matcher("/admin/login.html"));
 
     private static String csp(String styleSrc) {
         return String.join("; ",
                 "default-src 'self'",
-                "script-src 'self' https://challenges.cloudflare.com",
-                "frame-src https://challenges.cloudflare.com",
+                // 로봇 확인 Google reCAPTCHA (D-118). Google이 권하는 주소만 연다
+                "script-src 'self' https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/",
+                "frame-src https://www.google.com/recaptcha/ https://recaptcha.google.com/recaptcha/",
                 "style-src " + styleSrc,
                 "img-src 'self' data:",
-                "connect-src 'self'",
+                "connect-src 'self' https://www.google.com/recaptcha/",
                 "object-src 'none'",
                 "base-uri 'self'",
                 "form-action 'self'",

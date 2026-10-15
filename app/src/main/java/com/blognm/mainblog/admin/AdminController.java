@@ -50,7 +50,7 @@ public class AdminController {
 
     @PostMapping("/auth/login")
     public Map<String, Boolean> login(@RequestBody LoginBody body, HttpServletRequest request, HttpServletResponse response) {
-        AdminAccountService.Login login = accounts.login(body.loginId(), body.password(), body.turnstileToken(),
+        AdminAccountService.Login login = accounts.login(body.loginId(), body.password(), body.captchaToken(),
                 ClientIp.of(request));
         cookies.writeAdmin(response, login.token());
         return Map.of("mustChangePassword", login.mustChangePassword());
@@ -242,7 +242,7 @@ public class AdminController {
         return s;
     }
 
-    public record LoginBody(String loginId, String password, String turnstileToken) {
+    public record LoginBody(String loginId, String password, String captchaToken) {
     }
 
     public record PasswordBody(String currentPassword, String newPassword) {

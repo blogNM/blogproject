@@ -16,7 +16,7 @@ public record AppProperties(
         EmailFind emailFind,
         Login login,
         RateLimit rateLimit,
-        Turnstile turnstile) {
+        Recaptcha recaptcha) {
 
     public record Mail(String mode, String from) {
     }
@@ -51,6 +51,6 @@ public record AppProperties(
     public record RateLimit(int loginPerMinute, int mailPerHour, int emailCheckPerMinute) {
     }
 
-    public record Turnstile(String siteKey, String secretKey, String verifyUrl) {
+    public record Recaptcha(String siteKey, String secretKey, String verifyUrl) {
     }
 }

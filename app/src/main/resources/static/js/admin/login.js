@@ -1,7 +1,7 @@
 // 관리자 로그인 (ADM-01). 회원 로그인과 따로 쓴다.
 import { api } from '../api.js';
 import { addPasswordToggles } from '../layout.js';
-import { createCaptcha } from '../turnstile.js';
+import { createCaptcha } from '../captcha.js';
 
 addPasswordToggles();
 
@@ -22,14 +22,14 @@ form.addEventListener('submit', async (e) => {
   button.disabled = true;
   try {
     await api.post('/api/admin/auth/login', {
-      loginId, password: form.password.value, turnstileToken: captcha.token(),
+      loginId, password: form.password.value, captchaToken: captcha.token(),
     });
     location.href = '/admin/index.html';
   } catch (err) {
     errorBox.textContent = err.message;
     button.disabled = false;
     if (err.details && err.details.captchaRequired) {
-      await captcha.show(err.details.turnstileSiteKey);
+      await captcha.show(err.details.captchaSiteKey);
     }
   }
 });
