@@ -63,6 +63,21 @@ class AccountTest extends IntegrationTest {
     }
 
     @Test
+    @DisplayName("위쪽 메뉴용 /api/me에 팔로워·팔로잉 수가 나온다 (D-119)")
+    void meShowsFollowCounts() throws Exception {
+        getAs("/api/me", me).andExpect(jsonPath("$.followers").value(0))
+                .andExpect(jsonPath("$.following").value(0));
+
+        signup("friend@example.com", PW, "친구", "김친구", "010-9999-8888");
+        Long meId = jdbc.queryForObject("SELECT id FROM members WHERE email = ?", Long.class, EMAIL);
+        Long friendId = jdbc.queryForObject("SELECT id FROM members WHERE email = ?", Long.class, "friend@example.com");
+        jdbc.update("INSERT INTO follows (follower_id, followee_id) VALUES (?, ?)", friendId, meId);
+        jdbc.update("INSERT INTO follows (follower_id, followee_id) VALUES (?, ?)", meId, friendId);
+        getAs("/api/me", me).andExpect(jsonPath("$.followers").value(1))
+                .andExpect(jsonPath("$.following").value(1));
+    }
+
+    @Test
     @DisplayName("다른 회원이 쓰는 닉네임으로는 바꿀 수 없다")
     void nicknameTaken() throws Exception {
         signup("other@example.com", PW, "남의닉");

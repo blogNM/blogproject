@@ -41,7 +41,9 @@ public class MeController {
         Member member = members.findById(principal.memberId())
                 .filter(Member::isActive)
                 .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "LOGIN_REQUIRED", "다시 로그인해 주세요."));
-        return new MeResponse(member.getId(), member.getNickname(), member.isTest(), profiles.imageUrlOf(member.getId()));
+        long id = member.getId();
+        return new MeResponse(id, member.getNickname(), member.isTest(), profiles.imageUrlOf(id),
+                profiles.followerCount(id), profiles.followingCount(id));
     }
 
     // ----- 내 정보 (USR-07) -----
@@ -79,7 +81,7 @@ public class MeController {
     }
 
     /** test: 테스트 회원이면 화면 위 닉네임 옆에 "테스트" 표시 (D-113). */
-    public record MeResponse(long id, String nickname, boolean test, String imageUrl) {
+    public record MeResponse(long id, String nickname, boolean test, String imageUrl, long followers, long following) {
     }
 
     public record ProfileBody(String nickname, String phone) {
