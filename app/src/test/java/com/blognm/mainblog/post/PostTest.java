@@ -147,6 +147,22 @@ class PostTest extends IntegrationTest {
     }
 
     @Test
+    @DisplayName("사진 크기 표시는 #w=10~90(10 단위)만 남기고, 다른 # 뒤 글자는 지운다 (D-114)")
+    void imageWidthMark() {
+        MarkdownRenderer renderer = new MarkdownRenderer();
+        String id = "/uploads/3f2b9c4e-0d1a-4b8c-9e7f-1a2b3c4d5e6f";
+        assertThat(renderer.toSafeHtml("![카페](" + id + "#w=60)\n이어 쓴 글"))
+                .isEqualTo("<p><img src=\"" + id + "#w=60\" alt=\"카페\"><br>\n이어 쓴 글</p>\n");
+        assertThat(renderer.toSafeHtml("![a](" + id + ")")).contains("src=\"" + id + "\"");
+        // 정해 두지 않은 값·다른 표시는 지운다
+        for (String bad : new String[] {"#w=55", "#w=100", "#w=5", "#w=60x", "#x", "#w=60\"onerror=", "#"}) {
+            assertThat(MarkdownRenderer.keepOnlyWidthMark(id + bad)).as(bad).isEqualTo(id);
+        }
+        // 사진 문법은 크기 표시가 붙어도 글자 수에 넣지 않는다
+        assertThat(PostRules.contentLength("![a](" + id + "#w=30)가")).isEqualTo(1);
+    }
+
+    @Test
     @DisplayName("제목 1~30자, 본문 1000자(사진 문법은 빼고 셈), 태그 10개. 태그는 #·공백 정리 후 소문자 하나로")
     void inputRules() throws Exception {
         postAs("/api/blogs/food/posts", """
