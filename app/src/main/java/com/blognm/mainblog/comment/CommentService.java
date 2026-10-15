@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.blognm.mainblog.board.BoardProperties;
 import com.blognm.mainblog.common.ApiException;
+import com.blognm.mainblog.common.Profanity;
 import com.blognm.mainblog.notification.NotificationWriter;
 import com.blognm.mainblog.post.PostService;
 import com.blognm.mainblog.ratelimit.RateLimiter;
@@ -167,7 +168,8 @@ public class CommentService {
         if (length < 1 || length > CONTENT_MAX) {
             throw ApiException.badRequest("INVALID_COMMENT", "댓글은 1~%d자로 써 주세요.".formatted(CONTENT_MAX));
         }
-        return content;
+        // 욕설은 저장할 때 *로 가린다 (D-125)
+        return Profanity.mask(content);
     }
 
     private Optional<Row> find(long id) {

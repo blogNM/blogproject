@@ -5,6 +5,7 @@ import java.util.Locale;
 import java.util.regex.Pattern;
 
 import com.blognm.mainblog.common.ApiException;
+import com.blognm.mainblog.common.Profanity;
 
 /** 회원 입력 규칙 (001 입력 규칙, 6.5, 6.7, SEC-02). 화면에서도 같은 규칙을 안내하지만 서버가 최종 확인한다. */
 public final class MemberRules {
@@ -53,6 +54,10 @@ public final class MemberRules {
             if (lower.contains(reserved)) {
                 throw ApiException.badRequest("RESERVED_NICKNAME", "사용할 수 없는 닉네임입니다.");
             }
+        }
+        // 닉네임은 가리면 한글·영문·숫자 규칙에 어긋나므로 받지 않는다 (D-125)
+        if (Profanity.contains(nickname)) {
+            throw ApiException.badRequest("PROFANE_NICKNAME", "욕설이 든 닉네임은 쓸 수 없습니다.");
         }
         return nickname;
     }

@@ -64,6 +64,18 @@ class PostTest extends IntegrationTest {
     }
 
     @Test
+    @DisplayName("제목·본문의 욕설은 *로 가려서 저장하고, 욕설 태그는 받지 않는다 (D-125)")
+    void profanityIsMasked() throws Exception {
+        long id = write(writer, "food", "시발 맛집", "**존나** 맛있다");
+        getAs("/api/posts/" + id)
+                .andExpect(jsonPath("$.title").value("** 맛집"))
+                .andExpect(jsonPath("$.contentHtml").value("<p><strong>**</strong> 맛있다</p>\n"));
+        postAs("/api/blogs/food/posts", """
+                {"title":"태그","content":"본문","tags":["병신"]}""", writer)
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("PROFANE_TAG"));
+    }
+
+    @Test
     @DisplayName("본문의 스크립트·이벤트 속성·javascript 링크·iframe·style은 서버가 걸러낸다 (US1-2)")
     void xssIsFiltered() throws Exception {
         long id = write(writer, "food", "XSS",
