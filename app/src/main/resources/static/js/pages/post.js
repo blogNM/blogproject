@@ -3,6 +3,8 @@ import { suspendedText } from '../blog-card.js';
 import { el, initLayout, renderNotFound, toast } from '../layout.js';
 import { openReport } from '../report.js';
 import { applyBlogLook } from '../theme.js';
+import { recordVisit } from '../visit.js';
+import { withTestBadge } from '../test-badge.js';
 
 const me = await initLayout();
 
@@ -40,6 +42,8 @@ if (post && post.blogSlug !== slug) {
   location.replace(`/blog/${encodeURIComponent(post.blogSlug)}/posts/${post.id}` + location.search);
 } else if (post) {
   document.title = `${post.title} - ${post.blogName}`;
+  // 블로그 통계: 이 글을 연 것과 들어온 경로를 남긴다 (D-112)
+  recordVisit(post.blogSlug, { postId: post.id, key });
   $('blog-link').textContent = post.blogName;
   $('blog-link').href = blogHref;
   $('list-link').href = listHref();
@@ -52,7 +56,8 @@ if (post && post.blogSlug !== slug) {
   $('title').textContent = post.title;
   const author = post.authorId ? el('a', { href: memberHref(post.authorId), class: 'author-link' }, post.authorName)
     : document.createTextNode(post.authorName);
-  $('meta').replaceChildren(author,
+  // 테스트 회원이 쓴 글은 작성자 이름 옆에 "테스트" 표시 (D-113)
+  $('meta').replaceChildren(withTestBadge(author, post.authorTest),
     document.createTextNode(` · ${post.createdAt}` + (post.updatedAt ? ` (수정 ${post.updatedAt})` : '')));
   $('content').innerHTML = post.contentHtml;
   $('tags').replaceChildren(...post.tags.map((t) => {
@@ -111,10 +116,14 @@ function listHref() {
   return blogHref + '#all-posts';
 }
 
-/** 블로그 안에서 연 프로필. 거기서 신고하면 이 블로그의 블로그장이 처리한다 (SOC-06, D-85). */
-function memberHref(id) {
+/**
+ * 블로그 안에서 연 프로필. 거기서 신고하면 이 블로그의 블로그장이 처리한다 (SOC-06, D-85).
+ * 댓글 쓴 사람을 눌렀으면 from=comment를 붙여, 그 프로필에서 들어간 블로그 통계에 "댓글 보고"로 남긴다 (D-112).
+ */
+function memberHref(id, from) {
   const q = new URLSearchParams({ blog: post.blogSlug });
   if (key) q.set('key', key);
+  if (from) q.set('from', from);
   return `/members/${id}?${q}`;
 }
 
@@ -212,8 +221,8 @@ function commentItem(c, rootId) {
   const li = el('li', { class: c.deleted ? 'comment deleted' : 'comment', id: 'comment-' + c.id });
   if (!c.deleted) {
     const head = el('div', { class: 'comment-head' });
-    head.append(c.authorId ? el('a', { class: 'comment-author', href: memberHref(c.authorId) }, c.authorName)
-      : el('span', { class: 'comment-author' }, c.authorName), el('span', { class: 'muted' }, c.createdAt));
+    head.append(withTestBadge(c.authorId ? el('a', { class: 'comment-author', href: memberHref(c.authorId, 'comment') }, c.authorName)
+      : el('span', { class: 'comment-author' }, c.authorName), c.authorTest), el('span', { class: 'muted' }, c.createdAt));
     if (c.edited) head.append(el('span', { class: 'muted' }, '수정됨'));
     li.append(head);
   }

@@ -5,13 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>블로그 만들기 - Creat_</title>
   <link rel="icon" href="/img/creat-mark.svg" type="image/svg+xml">
+  <script src="/js/color-mode.js"></script>
   <link rel="stylesheet" href="/css/common.css">
+  <link rel="stylesheet" href="/css/dark.css">
   <script type="module" src="/js/pages/blog-new.js"></script>
+  <link rel="modulepreload" href="/js/api.js">
+  <link rel="modulepreload" href="/js/layout.js">
+  <link rel="modulepreload" href="/js/notifications.js">
+  <link rel="modulepreload" href="/js/visit.js">
 </head>
 <body>
   <header class="site-header"></header>
   <main class="container">
-    <section class="card narrow">
+    <section class="card narrow create-card">
       <h1>블로그 만들기</h1>
       <form id="blog-form" novalidate>
         <label for="name">블로그 이름</label>
@@ -32,9 +38,36 @@
         <label for="tags">태그 (선택, 쉼표로 구분, 5개까지)</label>
         <input id="tags" placeholder="여행, 사진">
 
-        <label for="cover">대표 이미지 (선택)</label>
+        <fieldset class="theme-picker">
+          <legend>테마 틀</legend>
+          <p class="hint">블로그 모양을 골라요. 색·글꼴·문구도 바꿀 수 있고, 나중에 블로그 관리에서 언제든 다시 꾸밀 수 있어요.</p>
+          <div id="theme-cards" class="theme-cards theme-squares"></div>
+          <p id="theme-summary" class="hint theme-summary" aria-live="polite"></p>
+        </fieldset>
+
+        <div class="theme-options">
+          <div>
+            <label>강조 색</label>
+            <div id="swatches" class="swatches"></div>
+            <div class="row color-row">
+              <input id="accent" maxlength="7" aria-label="강조 색 #RRGGBB" placeholder="#7C0CB4">
+              <input id="accent-picker" type="color" aria-label="색 고르기">
+            </div>
+          </div>
+          <div>
+            <label for="font">글꼴</label>
+            <select id="font"></select>
+          </div>
+        </div>
+
+        <label for="hero-title">머리 사진 위 큰 문구 (선택, 40자까지, 비우면 블로그 이름)</label>
+        <input id="hero-title" maxlength="40">
+        <label for="hero-subtitle">작은 문구 (선택, 100자까지, 비우면 블로그 소개)</label>
+        <input id="hero-subtitle" maxlength="100">
+
+        <label for="cover">머리 사진 (선택)</label>
         <input id="cover" type="file" accept=".jpg,.jpeg,.png,.gif,.webp,image/jpeg,image/png,image/gif,image/webp">
-        <p class="hint">블로그 머리에 들어갑니다. jpg·jpeg·png·gif·webp, 3MB까지. 나중에 블로그 관리에서 바꿀 수 있습니다.</p>
+        <p class="hint">블로그 머리에 들어갑니다. jpg·jpeg·png·gif·webp, 3MB까지. 가로로 긴 사진이 잘 어울려요.</p>
 
         <fieldset class="choices">
           <legend>공개 범위</legend>

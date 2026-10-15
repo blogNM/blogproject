@@ -2,6 +2,7 @@ package com.blognm.mainblog.config;
 
 import java.nio.charset.StandardCharsets;
 
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -12,6 +13,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
@@ -26,8 +28,12 @@ import org.springframework.security.web.util.matcher.RequestMatcher;
 
 import com.blognm.mainblog.auth.AccessTokenValidator;
 import com.blognm.mainblog.auth.AdminTokenCheck;
+import com.blognm.mainblog.auth.CookieOAuth2AuthorizationRequestRepository;
 import com.blognm.mainblog.auth.JwtAuthenticationFilter;
 import com.blognm.mainblog.auth.JwtProvider;
+import com.blognm.mainblog.auth.NoStoreAuthorizedClientRepository;
+import com.blognm.mainblog.auth.SelectAccountRequestResolver;
+import com.blognm.mainblog.auth.SocialLoginHandler;
 
 /**
  * 보안 헤더·CSRF·인증 (SEC-10, SEC-11, SEC-12, 헌법 III).
@@ -41,15 +47,18 @@ public class SecurityConfig {
     static final String CSP = csp("'self'");
 
     /**
-     * 글쓰기 화면만 인라인 style을 허용한다. Toast UI Editor가 style 속성으로 화면을 그리기 때문이다.
+     * 글쓰기 화면과 관리자 화면(공지 쓰기, D-106)만 인라인 style을 허용한다. Toast UI Editor가 style 속성으로 화면을 그리기 때문이다.
+     * 관리자 화면은 탭을 주소의 #로 고르는 한 페이지라 공지 탭만 따로 고를 수 없다. 관리자만 열 수 있다.
      * 에디터 파일은 서버에 두고(/vendor/toastui) 바깥 주소에서 받지 않는다. 스크립트 규칙은 같다.
      */
     static final String EDITOR_CSP = csp("'self' 'unsafe-inline'");
 
     static final RequestMatcher EDITOR_PAGES = new OrRequestMatcher(
             PathPatternRequestMatcher.withDefaults().matcher("/blog/*/write"),
+            PathPatternRequestMatcher.withDefaults().matcher("/write"),
             PathPatternRequestMatcher.withDefaults().matcher("/blog/*/posts/*/edit"),
-            PathPatternRequestMatcher.withDefaults().matcher("/post-edit.html"));
+            PathPatternRequestMatcher.withDefaults().matcher("/post-edit.html"),
+            PathPatternRequestMatcher.withDefaults().matcher("/admin/index.html"));
 
     private static String csp(String styleSrc) {
         return String.join("; ",
@@ -67,7 +76,9 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtProvider jwtProvider,
-            AccessTokenValidator tokenValidator, AdminTokenCheck adminCheck, AppProperties props)
+            AccessTokenValidator tokenValidator, AdminTokenCheck adminCheck, AppProperties props,
+            ObjectProvider<ClientRegistrationRepository> socialClients, SocialLoginHandler socialHandler,
+            CookieOAuth2AuthorizationRequestRepository socialRequests)
             throws Exception {
         CookieCsrfTokenRepository csrfRepository = CookieCsrfTokenRepository.withHttpOnlyFalse();
         csrfRepository.setCookieCustomizer(c -> c.secure(props.auth().cookieSecure()).sameSite("Lax"));
@@ -98,6 +109,8 @@ public class SecurityConfig {
                         .requestMatchers("/admin/login.html", "/api/admin/auth/login").permitAll()
                         .requestMatchers("/admin", "/admin/**", "/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/auth/**", "/api/csrf").permitAll()
+                        // 배포 스크립트가 새 서버가 준비됐는지 묻는 주소 (D-111)
+                        .requestMatchers(HttpMethod.GET, "/api/health").permitAll()
                         // 릴리스 공지: 로그인 대신 서버에만 있는 토큰으로 확인한다 (D-97)
                         .requestMatchers(HttpMethod.POST, "/api/release-notices").permitAll()
                         // 블로그 목록·검색·블로그 정보는 비회원도 본다. 비공개 여부는 서비스가 다시 확인한다.
@@ -105,6 +118,8 @@ public class SecurityConfig {
                         // 글 목록·카테고리·글 상세도 공개 범위 안에서 비회원이 읽는다 (004).
                         .requestMatchers(HttpMethod.GET, "/api/blogs/*/posts", "/api/blogs/*/categories",
                                 "/api/posts/*", "/api/posts/*/comments").permitAll()
+                        // 블로그 통계용 방문 기록 (D-112). 로그인하지 않은 방문자도 보낸다
+                        .requestMatchers(HttpMethod.POST, "/api/blogs/*/visits").permitAll()
                         // 메인 피드·공지·통합 검색 (004 4단계). 팔로우·구독 탭은 서비스가 로그인을 확인한다.
                         .requestMatchers(HttpMethod.GET, "/api/feed", "/api/notices", "/api/notices/*", "/api/search").permitAll()
                         // 프로필·팔로워·내 활동 목록 (5단계). 비공개로 둔 목록은 서비스가 막는다 (D-91).
@@ -123,6 +138,21 @@ public class SecurityConfig {
                         .accessDeniedHandler((req, res, ex) -> writeError(res, HttpStatus.FORBIDDEN,
                                 "FORBIDDEN", "요청을 처리할 수 없습니다. 페이지를 새로고침한 뒤 다시 시도해 주세요.")))
                 .addFilterBefore(new JwtAuthenticationFilter(jwtProvider, tokenValidator, adminCheck), UsernamePasswordAuthenticationFilter.class);
+        // 구글 로그인 (D-103)·네이버 로그인 (D-107)·카카오 로그인 (D-108). CLIENT_ID가 있는 회사만 /oauth2/authorization/{google|naver|kakao} 주소를 연다.
+        // 로그인 화면은 우리 화면을 쓰고, 끝나면 SocialLoginHandler가 JWT 쿠키를 내려준다.
+        ClientRegistrationRepository clients = socialClients.getIfAvailable();
+        if (clients != null) {
+            http.oauth2Login(o -> o
+                    .clientRegistrationRepository(clients)
+                    .loginPage("/login.html")
+                    // 카카오·구글은 매번 계정 고르기 화면을 띄운다 (D-108)
+                    // 서버가 두 대라 로그인 요청 값(state 등)은 세션이 아니라 암호화한 쿠키에 둔다 (D-111)
+                    .authorizationEndpoint(a -> a.authorizationRequestResolver(new SelectAccountRequestResolver(clients))
+                            .authorizationRequestRepository(socialRequests))
+                    .authorizedClientRepository(new NoStoreAuthorizedClientRepository())
+                    .successHandler(socialHandler)
+                    .failureHandler(socialHandler));
+        }
         return http.build();
     }
 

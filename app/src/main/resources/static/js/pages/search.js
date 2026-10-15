@@ -2,7 +2,7 @@
 import { api, ApiError } from '../api.js';
 import { blogCard } from '../blog-card.js';
 import { feedCard, renderPager } from '../feed-card.js';
-import { el, initLayout } from '../layout.js';
+import { el, initLayout, motionImage } from '../layout.js';
 
 const $ = (id) => document.getElementById(id);
 const me = await initLayout();
@@ -18,7 +18,7 @@ $('q').value = state.q;
 $('sort').value = state.sort;
 $('size').value = state.size;
 
-const EMPTY = '검색 결과가 없습니다';
+const EMPTY = '검색 결과가 없어요.';
 const TYPE_NAME = { post: '글 제목', blog: '블로그', tag: '태그', nickname: '닉네임' };
 
 /** 화면 규칙도 서버와 같다: 2~20자, 글자나 숫자가 있어야 한다 (6.1). */
@@ -46,12 +46,24 @@ async function search() {
       t.querySelector('.count').textContent = String(res.counts[t.dataset.type.toUpperCase()] ?? 0);
     });
     const page = state.type === 'blog' ? res.blogs : res.posts;
-    $('post-results').replaceChildren(...(state.type === 'blog' ? [] : res.posts.items.map(feedCard)));
-    $('blog-results').replaceChildren(...(state.type === 'blog' ? res.blogs.items.map(blogCard) : []));
-    $('summary').textContent = page.total === 0 ? EMPTY : `${TYPE_NAME[state.type]}에서 "${state.q}" ${page.total}건`;
+    $('post-results').replaceChildren(...(state.type === 'blog' ? [] : res.posts.items.map((p) => feedCard(p, { from: 'search', q: state.q }))));
+    $('blog-results').replaceChildren(...(state.type === 'blog' ? res.blogs.items.map((b) => blogCard(b, { from: 'search', q: state.q })) : []));
+    $('summary').textContent = page.total === 0 ? '' : `${TYPE_NAME[state.type]}에서 "${state.q}" ${page.total}건`;
+    showEmpty(page.total === 0);
     renderPager($('pager'), page.page, page.totalPages, (p) => { state.page = p; search(); });
   } catch (e) {
     $('error').textContent = e instanceof ApiError ? e.message : '검색하지 못했어요. 잠시 뒤에 다시 해 주세요.';
+  }
+}
+
+/** 검색 결과가 없을 때 가운데 그림과 문구. 그림은 돋보기와 빈 상자 중 하나를 고른다 (D-105) */
+const EMPTY_ARTS = [['/img/empty-search.svg', '/img/empty-search-still.svg'], ['/img/empty-box.svg', '/img/empty-box-still.svg']];
+function showEmpty(empty) {
+  const box = $('search-empty');
+  box.hidden = !empty;
+  if (empty) {
+    const [src, still] = EMPTY_ARTS[Math.floor(Math.random() * EMPTY_ARTS.length)];
+    box.replaceChildren(motionImage(src, still, { width: '200', height: '170' }), el('p', {}, EMPTY));
   }
 }
 

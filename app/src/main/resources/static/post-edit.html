@@ -9,6 +9,10 @@
   <link rel="stylesheet" href="/css/common.css">
   <script src="/vendor/toastui/toastui-editor-all.min.js"></script>
   <script type="module" src="/js/pages/post-edit.js"></script>
+  <link rel="modulepreload" href="/js/api.js">
+  <link rel="modulepreload" href="/js/layout.js">
+  <link rel="modulepreload" href="/js/notifications.js">
+  <link rel="modulepreload" href="/js/visit.js">
 </head>
 <body>
   <header class="site-header"></header>
@@ -17,6 +21,11 @@
     <form id="post-form" class="card" novalidate hidden>
       <p class="post-blog"><a id="blog-link" href="/"></a></p>
       <h1 id="heading">글쓰기</h1>
+      <div id="blog-choice" hidden>
+        <label for="blog-select">글을 쓸 블로그</label>
+        <select id="blog-select"></select>
+        <p class="hint">만들었거나 참여한 블로그 중에서 골라요. 고른 블로그에 글이 올라가요.</p>
+      </div>
       <p id="draft-message" class="info" role="status" hidden></p>
 
       <label for="title">제목</label>
@@ -32,7 +41,7 @@
 
       <label for="editor">본문</label>
       <div id="editor"></div>
-      <p class="hint"><span id="length">0</span> / 1000자 (사진은 글자 수에 넣지 않습니다) · 사진은 jpg·png·gif·webp, 한 장 3MB, 글 하나에 10장까지</p>
+      <p class="hint"><span id="length">0</span> / 1000자 (사진은 글자 수에 넣지 않습니다) · 사진은 jpg·png·gif·webp, 한 장 3MB, 글 하나에 10장까지 · 사진을 누르면 크기를 바꿀 수 있어요 (사진 위에서 휠·두 손가락 확대/축소)</p>
 
       <label for="tags">태그 (쉼표로 구분, 10개까지)</label>
       <input id="tags" type="text" placeholder="예: 맛집, 서울">

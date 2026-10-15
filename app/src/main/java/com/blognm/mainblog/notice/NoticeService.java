@@ -29,6 +29,8 @@ public class NoticeService {
 
     /** 공지 카테고리 (D-98). 화면에는 일반·업데이트·수정·점검으로 보인다. */
     public enum Category { NOTICE, UPDATE, FIX, MAINTENANCE }
+    /** 사용 방법 안내 공지의 제목 머리 (D-104). 일반 공지 중 제목이 이렇게 시작하는 글을 /guides에서 넘겨 본다. */
+    public static final String GUIDE_PREFIX = "사용 방법";
     private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("yyyy.MM.dd");
 
     private final NamedParameterJdbcTemplate jdbc;
@@ -80,6 +82,19 @@ public class NoticeService {
                 }).stream().findFirst().orElseThrow(NoticeService::notFound);
     }
 
+    /**
+     * 사용 방법 안내 (D-104). 지우지 않은 일반(NOTICE) 공지 중 제목이 "사용 방법"으로 시작하는 글을 id 순서로.
+     * 본문은 공지 상세와 같이 서버가 바꾸고 거른 HTML.
+     */
+    @Transactional(readOnly = true)
+    public List<Guide> guides() {
+        return jdbc.query("""
+                SELECT id, title, content_md FROM notices
+                WHERE status = 'NORMAL' AND category = 'NOTICE' AND title LIKE :prefix ORDER BY id
+                """, Map.of("prefix", GUIDE_PREFIX + "%"),
+                (rs, i) -> new Guide(rs.getLong("id"), rs.getString("title"), renderer.toSafeHtml(rs.getString("content_md"))));
+    }
+
     @Transactional
     public long create(long adminId, String rawTitle, String rawContent, Category category) {
         String title = title(rawTitle);
@@ -105,9 +120,15 @@ public class NoticeService {
         return id;
     }
 
+    /** 공지 편집기 미리보기. 보여 줄 때와 같은 변환·거르기 (D-102). */
+    public String preview(String rawContent) {
+        return renderer.toSafeHtml(rawContent == null ? "" : rawContent);
+    }
+
     /**
      * 깃허브에서 버전(릴리스)을 만들면 같은 내용을 공지로 올린다 (D-97). 작성자는 가장 먼저 만든 관리자.
-     * 같은 제목의 공지가 이미 있으면 새로 쓰지 않고 그 번호를 돌려준다 (워크플로를 다시 돌려도 알림이 두 번 가지 않게).
+     * 같은 제목의 공지가 이미 있으면 새로 쓰지 않고 본문만 바꾼 뒤 그 번호를 돌려준다.
+     * 워크플로를 다시 돌려도 알림이 두 번 가지 않고, 노트에 더한 내용은 공지에도 반영된다.
      */
     @Transactional
     public long publishRelease(String rawTitle, String rawContent) {
@@ -115,7 +136,11 @@ public class NoticeService {
         List<Long> existing = jdbc.queryForList("SELECT id FROM notices WHERE title = :title AND status = 'NORMAL'",
                 Map.of("title", title), Long.class);
         if (!existing.isEmpty()) {
-            return existing.get(0);
+            long id = existing.get(0);
+            jdbc.update("UPDATE notices SET content_md = :content, updated_at = :now WHERE id = :id",
+                    new MapSqlParameterSource("content", content(rawContent))
+                            .addValue("now", LocalDateTime.now(clock)).addValue("id", id));
+            return id;
         }
         Long adminId = jdbc.queryForObject("SELECT MIN(id) FROM admins", Map.of(), Long.class);
         if (adminId == null) {
@@ -170,6 +195,9 @@ public class NoticeService {
 
     private static ApiException notFound() {
         return new ApiException(HttpStatus.NOT_FOUND, "NOTICE_NOT_FOUND", "공지를 찾을 수 없습니다.");
+    }
+
+    public record Guide(long id, String title, String html) {
     }
 
     public record Item(long id, String title, String category, String createdAt) {

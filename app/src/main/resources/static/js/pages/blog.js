@@ -5,6 +5,8 @@ import { el, initLayout, renderNotFound, toast } from '../layout.js';
 import { initPostList, postUrl } from '../post-list.js';
 import { openReport } from '../report.js';
 import { FONTS, THEMES, applyBlogLook, isAccent } from '../theme.js';
+import { recordVisit } from '../visit.js';
+import { testBadge, withTestBadge } from '../test-badge.js';
 
 const me = await initLayout();
 
@@ -52,12 +54,14 @@ async function load() {
   }
   document.title = blog.name + ' - Creat_';
   $('blog-name').textContent = blog.name;
+  // 테스트 회원이 만든 블로그는 이름 옆과 블로그장 이름 옆에 "테스트" 표시 (D-113)
+  if (blog.ownerTest) $('blog-name').append(testBadge());
   $('blog-address').textContent = '/blog/' + blog.slug;
   $('blog-description').textContent = blog.description || '';
   $('blog-tags').replaceChildren(...blog.tags.map((t) => el('li', {}, '#' + t)));
   // 블로그장 닉네임을 누르면 프로필로 간다 (SOC-03).
   $('blog-meta').replaceChildren(document.createTextNode('블로그장 '),
-    el('a', { href: '/members/' + blog.ownerId, class: 'author-link' }, blog.ownerNickname),
+    withTestBadge(el('a', { href: '/members/' + blog.ownerId, class: 'author-link' }, blog.ownerNickname), blog.ownerTest),
     document.createTextNode(` · 멤버 ${blog.memberCount}명 · 구독 ${blog.subscribers}명 · `
       + `${VISIBILITY[blog.visibility]} · ${JOIN_POLICY[blog.joinPolicy]} · ${blog.createdAt} 개설`));
   if (blog.status === 'CLOSING') {
@@ -195,12 +199,11 @@ function renderLook(blog) {
 }
 
 /** 메뉴: 홈과 카테고리 몇 개. 누르면 그 카테고리의 글 목록으로 간다. */
-async function renderMenu(blog) {
+async function renderMenu(blog, categoriesReady) {
   const menu = $('blog-menu');
   const base = `/blog/${encodeURIComponent(blog.slug)}`;
   const keyQ = key ? { key } : {};
-  const categories = await api.get(`/api/blogs/${encodeURIComponent(blog.slug)}/categories?` + new URLSearchParams(keyQ))
-    .catch(() => []);
+  const categories = await categoriesReady.catch(() => []);
   const items = [el('a', { href: base + (key ? '?key=' + encodeURIComponent(key) : '') }, '홈')];
   categories.slice(0, 5).forEach((c) => {
     items.push(el('a', { href: `${base}?${new URLSearchParams({ ...keyQ, category: c.id })}#all-posts` }, c.name));
@@ -276,6 +279,8 @@ function renderActions(blog) {
     if (blog.myRole === 'OWNER' || blog.myRole === 'SUB_OWNER') {
       // 부블로그장은 받은 권한이 있을 때 관리 화면에서 그 부분만 보인다.
       actions.append(el('a', { class: 'button', href: `/blog/${encodeURIComponent(blog.slug)}/manage` }, '블로그 관리'));
+      // 블로그 통계 (D-112): 방문자·조회수·들어온 경로는 관리 화면 맨 위에 있다
+      actions.append(el('a', { class: 'button', href: `/blog/${encodeURIComponent(blog.slug)}/manage#stats` }, '통계'));
     }
     if (blog.myRole !== 'OWNER') {
       actions.append(button('블로그 나가기', async () => {
@@ -318,6 +323,11 @@ function renderActions(blog) {
 }
 
 const loaded = await load();
+// 블로그 통계: 블로그 홈을 연 것과 들어온 경로를 남긴다 (D-112). 테마 미리보기는 세지 않는다
+if (loaded && !new URLSearchParams(location.search).has('preview')) recordVisit(loaded.slug, { key });
 if (loaded) {
-  await Promise.all([renderMenu(loaded), renderFront(loaded), initPostList(loaded, key)]);
+  // 카테고리는 메뉴와 글 목록이 함께 쓴다. 한 번만 부른다
+  const categories = api.get(`/api/blogs/${encodeURIComponent(loaded.slug)}/categories?` + new URLSearchParams(key ? { key } : {}));
+  categories.catch(() => {});
+  await Promise.all([renderMenu(loaded, categories), renderFront(loaded), initPostList(loaded, key, categories)]);
 }

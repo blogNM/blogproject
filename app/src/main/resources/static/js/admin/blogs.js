@@ -61,7 +61,10 @@ export async function mount(panel) {
       if (b.hidden) state.append(badge('숨김', 'adm-warn'));
       if (b.status === 'CLOSING') state.append(badge(`${b.closeScheduledAt || ''} 폐쇄 예정`.trim(), 'adm-bad'));
       if (b.ownerWarnings > 0) state.append(badge(`경고 ${b.ownerWarnings}/3`, 'adm-warn'));
+      // 테스트 회원이 만든 블로그 (D-113)
+      if (b.ownerTest) state.append(badge('테스트', 'adm-test'));
       const owner = td(b.ownerNickname || '-', 'adm-nowrap');
+      if (b.ownerTest) owner.append(badge('테스트', 'adm-test'));
       tr.append(td('#' + b.id, 'adm-nowrap'), nameCell, state.childElementCount ? td(state) : td(''), owner,
         td(b.members, 'adm-num'), td(b.posts, 'adm-num'), td(b.createdAt, 'adm-nowrap'), td(actions(b)));
       return tr;

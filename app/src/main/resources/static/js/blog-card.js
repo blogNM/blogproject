@@ -1,5 +1,7 @@
 // 블로그 목록 카드. 사용자 입력(이름·소개·태그·닉네임)은 모두 textContent로 넣는다 (SEC-06).
 import { el } from './layout.js';
+import { withFrom } from './visit.js';
+import { testBadge } from './test-badge.js';
 
 const ROLE = { OWNER: '블로그장', SUB_OWNER: '부블로그장', MEMBER: '멤버' };
 export const VISIBILITY = { PUBLIC: '공개', LINK_ONLY: '일부 공개', PRIVATE: '비공개' };
@@ -13,7 +15,8 @@ export function blogUrl(slug) {
   return '/blog/' + encodeURIComponent(slug);
 }
 
-export function blogCard(b) {
+/** from: 어디서 눌렀는지 블로그 통계에 남길 표시, q: 검색어 (D-112). */
+export function blogCard(b, { from, q } = {}) {
   const li = el('li', { class: 'blog-card' });
   // 머리 사진이 없으면 블로그 강조 색으로 칠한다. 색은 서버가 #RRGGBB만 받는다 (D-89).
   const cover = el('div', { class: 'blog-card-cover' });
@@ -24,7 +27,7 @@ export function blogCard(b) {
   }
   const body = el('div', { class: 'blog-card-body' });
   li.append(cover, body);
-  const title = el('a', { href: blogUrl(b.slug), class: 'blog-card-title' }, b.name);
+  const title = el('a', { href: withFrom(blogUrl(b.slug), from, q), class: 'blog-card-title' }, b.name);
   body.append(title);
   const badges = el('div', { class: 'badges' });
   if (b.myRole) badges.append(el('span', { class: 'badge' }, roleName(b.myRole)));
@@ -37,8 +40,12 @@ export function blogCard(b) {
     b.tags.forEach((t) => tags.append(el('li', {}, '#' + t)));
     body.append(tags);
   }
-  body.append(el('p', { class: 'muted' },
-    `블로그장 ${b.ownerNickname} · 멤버 ${b.memberCount}명 · 구독 ${b.subscriberCount}명 · ${b.createdAt} 개설`));
+  // 블로그장이 테스트 회원이면 블로그장 이름 옆에 "테스트" 표시 (D-113)
+  const owner = el('p', { class: 'muted' }, `블로그장 ${b.ownerNickname}`);
+  if (b.ownerTest) owner.append(testBadge());
+  owner.append(document.createTextNode(` · 멤버 ${b.memberCount}명 · 구독 ${b.subscriberCount}명`
+    + (b.createdAt ? ` · ${b.createdAt} 개설` : '')));
+  body.append(owner);
   return li;
 }
 

@@ -95,6 +95,13 @@ erDiagram
         datetime expires_at "14일 또는 세션"
         datetime created_at
     }
+    social_accounts {
+        bigint id PK
+        bigint member_id FK
+        varchar provider "google (D-103)"
+        varchar provider_user_id "구글 sub"
+        datetime created_at
+    }
     login_failures {
         varchar email PK "소문자, 가입 안 된 이메일도 같게 셈"
         tinyint fail_count "3번부터 Turnstile, 5번이면 잠금"
@@ -104,6 +111,7 @@ erDiagram
 
     members ||--o{ refresh_tokens : "로그인"
     members ||--o{ email_find_tokens : "이메일 찾기"
+    members ||--o{ social_accounts : "구글 로그인"
     members }o--o| images : "프로필 사진"
 ```
 
@@ -114,6 +122,7 @@ erDiagram
 | `email_find_tokens` | 이메일 찾기 결과에서 [비밀번호 재설정]을 누를 때 쓰는 10분짜리 임시 토큰 | USR-08, D-26 |
 | `refresh_tokens` | 로그아웃·비밀번호 변경 때 폐기할 수 있게 DB에 저장 | SEC-04, D-53 |
 | `login_failures` | 계정별 잠금과 Turnstile 표시 기준 | SEC-03, SEC-13, D-79, D-80 |
+| `social_accounts` | 회원에 연결한 구글 계정. 이메일이 아니라 구글 사용자 번호(sub)로 찾고, 탈퇴하면 지움 | D-103 |
 
 ## 2. 블로그·멤버 (002, BLG)
 
@@ -291,7 +300,8 @@ erDiagram
     }
     images {
         bigint id PK
-        bigint uploader_id FK "members"
+        bigint uploader_id FK "members, 공지 사진은 NULL"
+        bigint admin_uploader_id FK "admins, 공지 사진 (D-102)"
         bigint post_id FK "글 이미지일 때"
         int sort_order "0번이 미리보기 이미지"
         char stored_name UK "UUID 파일 이름"

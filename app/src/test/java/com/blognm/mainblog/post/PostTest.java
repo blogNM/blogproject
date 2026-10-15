@@ -91,6 +91,78 @@ class PostTest extends IntegrationTest {
     }
 
     @Test
+    @DisplayName("보이는 그대로 편집기가 겹쳐 감싼 크기·형광펜·색 span은 그대로 남고, 표시는 글자 수에 넣지 않는다 (D-106)")
+    void nestedFormatSpans() throws Exception {
+        String nested = "<span class=\\\"ts-large\\\"><span class=\\\"hl-yellow\\\"><span class=\\\"tc-red\\\">크고 빨강</span></span></span>"
+                + " **<span class=\\\"tc-blue\\\">굵은 파랑</span>**";
+        long id = write(writer, "food", "겹친 서식", nested);
+        String html = JsonPath.read(getAs("/api/posts/" + id).andReturn().getResponse().getContentAsString(),
+                "$.contentHtml");
+        assertThat(html).contains(
+                "<span class=\"ts-large\"><span class=\"hl-yellow\"><span class=\"tc-red\">크고 빨강</span></span></span>",
+                "<strong><span class=\"tc-blue\">굵은 파랑</span></strong>");
+        assertThat(PostRules.contentLength(
+                "<span class=\"ts-xlarge\"><span class=\"hl-pink\">가나</span></span><span class=\"ts-small\">다</span>"))
+                .isEqualTo(3);
+        // 줄 하나 바꿈은 글 화면에서도 줄바꿈, 빈 줄은 문단 나눔 (D-106)
+        assertThat(new MarkdownRenderer().toSafeHtml("첫 줄\n둘째 줄\n\n새 문단"))
+                .isEqualTo("<p>첫 줄<br>\n둘째 줄</p>\n<p>새 문단</p>\n");
+        // 여러 class를 한 span에 넣으면 정해 둔 모양이 아니므로 글자만 남는다 (편집기는 하나씩 감싸서 저장한다)
+        assertThat(new MarkdownRenderer().toSafeHtml("<span class=\"tc-red ts-large\">둘</span>")).isEqualTo("<p>둘</p>\n");
+    }
+
+    @Test
+    @DisplayName("체크박스 목록은 누를 수 없는 checkbox로 보이고, 다른 input은 지워지고, 표시는 글자 수에 넣지 않는다 (D-110)")
+    void taskList() throws Exception {
+        MarkdownRenderer renderer = new MarkdownRenderer();
+        String md = "- 글머리\n- [ ] 할 일\n- [x] 한 일\n1. 번호";
+        assertThat(renderer.toSafeHtml(md)).isEqualTo("<ul>\n<li>글머리</li>\n"
+                + "<li class=\"task-list-item\"><input type=\"checkbox\" disabled> 할 일</li>\n"
+                + "<li class=\"task-list-item\"><input type=\"checkbox\" checked disabled> 한 일</li>\n</ul>\n"
+                + "<ol>\n<li>번호</li>\n</ol>\n");
+        // 직접 쓴 input은 checkbox가 아니거나 목록 줄 맨 앞이 아니면 지우고, 다른 속성은 남기지 않는다
+        String injected = renderer.toSafeHtml("<input type=\"text\" value=\"x\"> <input type=\"password\">\n\n"
+                + "<ul><li><input type=\"checkbox\" name=\"a\" onclick=\"alert(1)\" id=\"x\">직접</li>"
+                + "<li>뒤 <input type=\"checkbox\"></li></ul>\n\n<input type=\"checkbox\" checked>");
+        assertThat(injected).doesNotContain("text", "password", "onclick", "name=", "id=", "value=")
+                .contains("<li class=\"task-list-item\"><input type=\"checkbox\" disabled>직접</li><li>뒤 </li>");
+        assertThat(injected.split("<input", -1)).hasSize(2);
+        // 크기 class는 크기만, 굵게는 따로 (D-110)
+        assertThat(renderer.toSafeHtml("<span class=\"ts-xlarge\">큰 글자</span>"))
+                .isEqualTo("<p><span class=\"ts-xlarge\">큰 글자</span></p>\n");
+        // "- [ ] "는 "- "만 센다 (글머리 목록과 같게)
+        assertThat(PostRules.contentLength("- [ ] 가나\n- [x] 다\n* [X]\n- 라")).isEqualTo(
+                PostRules.contentLength("- 가나\n- 다\n* \n- 라"));
+        assertThat(PostRules.contentLength("[ ] 가")).isEqualTo(5);
+
+        // 글로 저장했다가 다시 불러오면 마크다운이 그대로, 글 화면에는 checkbox
+        String stored = "- [ ] 우유 사기\\n- [x] <span class=\\\"ts-large\\\">빵 사기</span>\\n- 글머리 하나";
+        long id = write(writer, "food", "할 일", stored);
+        getAs("/api/posts/" + id, writer)
+                .andExpect(jsonPath("$.contentMarkdown").value("- [ ] 우유 사기\n- [x] <span class=\"ts-large\">빵 사기</span>\n- 글머리 하나"))
+                .andExpect(jsonPath("$.contentHtml").value("<ul>\n"
+                        + "<li class=\"task-list-item\"><input type=\"checkbox\" disabled> 우유 사기</li>\n"
+                        + "<li class=\"task-list-item\"><input type=\"checkbox\" checked disabled> <span class=\"ts-large\">빵 사기</span></li>\n"
+                        + "<li>글머리 하나</li>\n</ul>\n"));
+    }
+
+    @Test
+    @DisplayName("사진 크기 표시는 #w=10~90(10 단위)만 남기고, 다른 # 뒤 글자는 지운다 (D-114)")
+    void imageWidthMark() {
+        MarkdownRenderer renderer = new MarkdownRenderer();
+        String id = "/uploads/3f2b9c4e-0d1a-4b8c-9e7f-1a2b3c4d5e6f";
+        assertThat(renderer.toSafeHtml("![카페](" + id + "#w=60)\n이어 쓴 글"))
+                .isEqualTo("<p><img src=\"" + id + "#w=60\" alt=\"카페\"><br>\n이어 쓴 글</p>\n");
+        assertThat(renderer.toSafeHtml("![a](" + id + ")")).contains("src=\"" + id + "\"");
+        // 정해 두지 않은 값·다른 표시는 지운다
+        for (String bad : new String[] {"#w=55", "#w=100", "#w=5", "#w=60x", "#x", "#w=60\"onerror=", "#"}) {
+            assertThat(MarkdownRenderer.keepOnlyWidthMark(id + bad)).as(bad).isEqualTo(id);
+        }
+        // 사진 문법은 크기 표시가 붙어도 글자 수에 넣지 않는다
+        assertThat(PostRules.contentLength("![a](" + id + "#w=30)가")).isEqualTo(1);
+    }
+
+    @Test
     @DisplayName("제목 1~30자, 본문 1000자(사진 문법은 빼고 셈), 태그 10개. 태그는 #·공백 정리 후 소문자 하나로")
     void inputRules() throws Exception {
         postAs("/api/blogs/food/posts", """

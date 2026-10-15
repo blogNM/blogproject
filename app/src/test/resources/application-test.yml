@@ -15,6 +15,17 @@ app:
     code-hash-secret: test-only-code-secret
     cookie-secure: true
   release-notice-token: test-release-token
+  # 구글(D-103)·네이버(D-107)·카카오(D-108) 로그인 주소를 켜고 시험한다. 바깥에 실제로 요청하지는 않는다.
+  social:
+    google:
+      client-id: test-google-client-id
+      client-secret: test-google-client-secret
+    naver:
+      client-id: test-naver-client-id
+      client-secret: test-naver-client-secret
+    kakao:
+      client-id: test-kakao-client-id
+      client-secret: test-kakao-client-secret
 
 upload:
   dir: ${java.io.tmpdir}/mainblog-test-uploads

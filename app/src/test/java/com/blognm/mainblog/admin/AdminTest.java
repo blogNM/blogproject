@@ -1,6 +1,7 @@
 package com.blognm.mainblog.admin;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -8,6 +9,7 @@ import java.time.Duration;
 
 import jakarta.servlet.http.Cookie;
 
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -82,6 +84,17 @@ class AdminTest extends IntegrationTest {
         Cookie admin = readyAdmin();
         postAs("/api/blogs/food/posts", """
                 {"title":"관리자 글","content":"본문","tags":[]}""", admin).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("관리자 화면은 공지 편집기 때문에 인라인 style만 허용하고, 로그인 화면은 그대로 막는다 (D-106)")
+    void adminEditorCsp() throws Exception {
+        Cookie admin = readyAdmin();
+        getAs("/admin/index.html", admin).andExpect(status().isOk())
+                .andExpect(header().string("Content-Security-Policy", Matchers.containsString("style-src 'self' 'unsafe-inline';")))
+                .andExpect(header().string("Content-Security-Policy", Matchers.containsString("script-src 'self' https://challenges.cloudflare.com;")));
+        getAs("/admin/login.html")
+                .andExpect(header().string("Content-Security-Policy", Matchers.containsString("style-src 'self';")));
     }
 
     @Test

@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.blognm.mainblog.auth.AdminTokenCheck;
 import com.blognm.mainblog.auth.JwtProvider;
+import com.blognm.mainblog.auth.LoginGuard;
 import com.blognm.mainblog.common.ApiException;
 import com.blognm.mainblog.member.MemberRules;
 import com.blognm.mainblog.ratelimit.RateLimiter;
@@ -39,16 +40,18 @@ public class AdminAccountService implements AdminTokenCheck, ApplicationRunner {
     private final PasswordEncoder encoder;
     private final JwtProvider jwt;
     private final RateLimiter rateLimiter;
+    private final LoginGuard guard;
     private final AdminProperties props;
     private final AdminLog adminLog;
     private final Clock clock;
 
     public AdminAccountService(JdbcTemplate jdbc, PasswordEncoder encoder, JwtProvider jwt, RateLimiter rateLimiter,
-            AdminProperties props, AdminLog adminLog, Clock clock) {
+            LoginGuard guard, AdminProperties props, AdminLog adminLog, Clock clock) {
         this.jdbc = jdbc;
         this.encoder = encoder;
         this.jwt = jwt;
         this.rateLimiter = rateLimiter;
+        this.guard = guard;
         this.props = props;
         this.adminLog = adminLog;
         this.clock = clock;
@@ -73,18 +76,25 @@ public class AdminAccountService implements AdminTokenCheck, ApplicationRunner {
         log.info("첫 관리자 '{}'를 만들었습니다. /admin/login.html 에서 로그인하면 비밀번호를 바꾸게 됩니다.", id);
     }
 
-    /** 로그인. 틀리면 어느 쪽이 틀렸는지 알리지 않고, IP마다 1분에 정해 둔 횟수까지만 받는다. */
-    @Transactional
-    public Login login(String rawId, String password, String clientIp) {
+    /**
+     * 로그인. 틀리면 어느 쪽이 틀렸는지 알리지 않고, IP마다 1분에 정해 둔 횟수까지만 받는다.
+     * 회원 로그인처럼 아이디마다 3번 틀리면 사람 확인, 5번이면 5분 잠금 (SEC-03, SEC-13, D-115).
+     */
+    @Transactional(noRollbackFor = ApiException.class)
+    public Login login(String rawId, String password, String turnstileToken, String clientIp) {
         if (!rateLimiter.tryAcquire("admin-login:" + clientIp, props.loginPerMinute(), Duration.ofMinutes(1))) {
             throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "TOO_MANY_REQUESTS", "로그인을 너무 자주 시도했습니다. 잠시 뒤에 다시 해 주세요.");
         }
         String id = rawId == null ? "" : rawId.strip().toLowerCase();
+        // 아이디는 30자까지라 그보다 긴 값은 잘라서 센다 (실패 표의 열 길이 안에 두기)
+        LoginGuard.Attempt attempt = guard.begin(LoginGuard.adminKey(id.length() > 60 ? id.substring(0, 60) : id),
+                clientIp, turnstileToken);
         List<Map<String, Object>> rows = jdbc.queryForList(
                 "SELECT id, password_hash, must_change_password FROM admins WHERE login_id = ?", id);
         if (rows.isEmpty() || password == null || !encoder.matches(password, (String) rows.get(0).get("password_hash"))) {
-            throw new ApiException(HttpStatus.UNAUTHORIZED, "LOGIN_FAILED", "아이디 또는 비밀번호가 맞지 않습니다.");
+            throw guard.fail(attempt, "아이디 또는 비밀번호가 맞지 않습니다.");
         }
+        guard.succeed(attempt);
         long adminId = ((Number) rows.get(0).get("id")).longValue();
         jdbc.update("UPDATE admins SET last_login_at = ? WHERE id = ?", LocalDateTime.now(clock), adminId);
         return new Login(jwt.createAdminToken(adminId, props.sessionTtl()), Boolean.TRUE.equals(rows.get(0).get("must_change_password")));

@@ -1,6 +1,8 @@
 import { api } from '../api.js';
 import { el, requireLogin } from '../layout.js';
 import { setupModeration } from './blog-moderation.js';
+import { setupStats } from './blog-stats.js';
+import { withTestBadge } from '../test-badge.js';
 import { IMAGE_EXTENSIONS, IMAGE_MAX_BYTES, parseTags } from '../rules.js';
 import { FONTS, SWATCHES, THEMES, isAccent } from '../theme.js';
 
@@ -61,7 +63,7 @@ async function loadRequests() {
         });
         return b;
       };
-      li.append(el('span', { class: 'strong' }, r.nickname), el('span', { class: 'muted' }, formatTime(r.requestedAt) + ' 신청'),
+      li.append(withTestBadge(el('span', { class: 'strong' }, r.nickname), r.test), el('span', { class: 'muted' }, formatTime(r.requestedAt) + ' 신청'),
         decide('approve', '승인', 'primary inline'), decide('reject', '거절', ''));
       return li;
     }));
@@ -265,7 +267,8 @@ if (blog) {
     setupTheme();
   }
   moderation = setupModeration({ blog, base, me, reloadBlog: () => api.get(base) });
-  await Promise.all([loadRequests(), moderation.ready, loadCategories()]);
+  // 블로그 통계 (D-112). 블로그장·부블로그장 모두 본다
+  await Promise.all([setupStats(base), loadRequests(), moderation.ready, loadCategories()]);
 
   $('category-form').addEventListener('submit', async (e) => {
     e.preventDefault();

@@ -19,8 +19,14 @@ public final class PostRules {
     /** 이미지 문법 ![설명](주소). 본문 글자 수에서 뺀다 (추천안 #14). */
     private static final Pattern IMAGE_SYNTAX = Pattern.compile("!\\[[^\\]\\n]*\\]\\([^)\\n]*\\)");
 
-    /** 글자 색 표시 <span class="tc-…">·</span>도 글자 수에 넣지 않는다. */
-    private static final Pattern COLOR_TAG = Pattern.compile("<span class=\"tc-[a-z]+\">|</span>");
+    /** 글자 색·크기·형광펜 표시 <span class="tc-…|ts-…|hl-…">·</span>도 글자 수에 넣지 않는다 (D-93, D-106). */
+    private static final Pattern COLOR_TAG = Pattern.compile("<span class=\"(?:tc|ts|hl)-[a-z]+\">|</span>");
+
+    /**
+     * 체크박스 목록 표시 "[ ] "·"[x] "도 글자 수에 넣지 않는다 (D-110). 화면에는 네모 칸으로 보이므로
+     * 글머리 목록과 같게 "- "까지만 센다. 목록 줄 맨 앞(- * + 또는 1.) 바로 뒤의 것만 뺀다.
+     */
+    private static final Pattern TASK_MARKER = Pattern.compile("(?m)^([ \\t]*(?:[-*+]|\\d{1,9}[.)])[ \\t]+)\\[[ xX]\\](?:[ \\t]|$)");
 
     private PostRules() {
     }
@@ -52,6 +58,7 @@ public final class PostRules {
 
     public static int contentLength(String content) {
         String text = COLOR_TAG.matcher(IMAGE_SYNTAX.matcher(content).replaceAll("")).replaceAll("");
+        text = TASK_MARKER.matcher(text).replaceAll("$1");
         return text.codePointCount(0, text.length());
     }
 

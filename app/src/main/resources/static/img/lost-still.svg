@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 170" role="img" aria-label="튀어나온 용수철 그림">
+<title>튀어나온 용수철</title>
+<!-- 동작 줄이기를 켠 사람에게 보여 주는 멈춘 그림 (D-105) -->
+<defs>
+  <linearGradient id="tube" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5720C3"/><stop offset=".55" stop-color="#7C0CB4"/><stop offset="1" stop-color="#925B8F"/></linearGradient>
+  <linearGradient id="tubeHi" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+  <linearGradient id="peach" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F2D3C0"/><stop offset="1" stop-color="#DFB79F"/></linearGradient>
+  <linearGradient id="violetTile" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8A5BE0"/><stop offset="1" stop-color="#5720C3"/></linearGradient>
+  <radialGradient id="ball" cx=".35" cy=".3" r=".75"><stop offset="0" stop-color="#F7E3D6"/><stop offset=".6" stop-color="#C39496"/><stop offset="1" stop-color="#925B8F"/></radialGradient>
+  <linearGradient id="siren" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FF6B7D"/><stop offset=".55" stop-color="#E0243E"/><stop offset="1" stop-color="#A3122B"/></linearGradient>
+  <linearGradient id="sirenDim" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#B8384A"/><stop offset="1" stop-color="#6E1424"/></linearGradient>
+  <radialGradient id="halo" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#FF4D63" stop-opacity=".55"/><stop offset="1" stop-color="#FF4D63" stop-opacity="0"/></radialGradient>
+  <radialGradient id="floorRed" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#FF4D63" stop-opacity=".75"/><stop offset="1" stop-color="#FF4D63" stop-opacity="0"/></radialGradient>
+  <radialGradient id="glow" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#E9DDF7"/><stop offset="1" stop-color="#E9DDF7" stop-opacity="0"/></radialGradient>
+  <filter id="soft" x="-60%" y="-60%" width="220%" height="240%"><feDropShadow dx="0" dy="14" stdDeviation="14" flood-color="#39385B" flood-opacity=".16"/></filter>
+</defs>
+<!-- 굴러다니며 통통 튀는 용수철 (D-105). 그림자와 바닥 빨간빛이 함께 따라다닌다 -->
+<g>
+  <ellipse cx="100" cy="150" rx="48" ry="7" fill="#39385B" opacity=".1"></ellipse>
+  <ellipse cx="100" cy="150" rx="58" ry="11" fill="url(#floorRed)"></ellipse>
+</g>
+<g filter="url(#soft)">
+<g>
+<g>
+<g transform="translate(100 116) scale(.68) translate(-100 -80)">
+<ellipse cx="70" cy="80" rx="7" ry="34" fill="none" stroke="#6B6880" stroke-width="5"/><path d="M70,46 A7,34 0 0 1 70,114" fill="none" stroke="#A7A3B8" stroke-width="5"/><ellipse cx="81" cy="80" rx="7" ry="34" fill="none" stroke="#6B6880" stroke-width="5"/><path d="M81,46 A7,34 0 0 1 81,114" fill="none" stroke="#A7A3B8" stroke-width="5"/><ellipse cx="92" cy="80" rx="7" ry="34" fill="none" stroke="#6B6880" stroke-width="5"/><path d="M92,46 A7,34 0 0 1 92,114" fill="none" stroke="#A7A3B8" stroke-width="5"/><ellipse cx="103" cy="80" rx="7" ry="34" fill="none" stroke="#6B6880" stroke-width="5"/><path d="M103,46 A7,34 0 0 1 103,114" fill="none" stroke="#A7A3B8" stroke-width="5"/><ellipse cx="114" cy="80" rx="7" ry="34" fill="none" stroke="#6B6880" stroke-width="5"/><path d="M114,46 A7,34 0 0 1 114,114" fill="none" stroke="#A7A3B8" stroke-width="5"/><ellipse cx="125" cy="80" rx="7" ry="34" fill="none" stroke="#6B6880" stroke-width="5"/><path d="M125,46 A7,34 0 0 1 125,114" fill="none" stroke="#A7A3B8" stroke-width="5"/><ellipse cx="136" cy="80" rx="7" ry="34" fill="none" stroke="#6B6880" stroke-width="5"/><path d="M136,46 A7,34 0 0 1 136,114" fill="none" stroke="#A7A3B8" stroke-width="5"/><ellipse cx="147" cy="80" rx="7" ry="34" fill="none" stroke="#6B6880" stroke-width="5"/><path d="M147,46 A7,34 0 0 1 147,114" fill="none" stroke="#A7A3B8" stroke-width="5"/><ellipse cx="158" cy="80" rx="7" ry="34" fill="none" stroke="#6B6880" stroke-width="5"/><path d="M158,46 A7,34 0 0 1 158,114" fill="none" stroke="#A7A3B8" stroke-width="5"/>
+<!-- 둥근 머리: 빨간 경고등처럼 깜빡임 -->
+<ellipse cx="44" cy="80" rx="46" ry="50" fill="url(#halo)"></ellipse>
+<path d="M70,44 H40 A30,36 0 0 0 40,116 H70 Z" fill="url(#sirenDim)"/>
+<path d="M70,44 H40 A30,36 0 0 0 40,116 H70 Z" fill="url(#siren)"></path>
+<path d="M44,54 A20,24 0 0 0 40,74" stroke="#fff" stroke-opacity=".6" stroke-width="6" fill="none" stroke-linecap="round"/>
+<rect x="64" y="42" width="10" height="76" rx="4" fill="#5720C3"/>
+</g>
+</g>
+</g>
+</g>
+<circle cx="168" cy="40" r="10" fill="url(#ball)"></circle>
+<circle cx="150" cy="22" r="5" fill="#DFB79F"></circle>
+</svg>

@@ -68,11 +68,13 @@ public abstract class IntegrationTest {
         jdbc.update("DELETE FROM notifications");
         jdbc.update("DELETE FROM notification_settings");
         jdbc.update("DELETE FROM reports");
+        jdbc.update("DELETE FROM images WHERE admin_uploader_id IS NOT NULL");
         jdbc.update("DELETE FROM admins");
         jdbc.update("DELETE FROM comments WHERE parent_id IS NOT NULL");
         jdbc.update("DELETE FROM comments");
         jdbc.update("DELETE FROM post_likes");
         jdbc.update("DELETE FROM post_views");
+        jdbc.update("DELETE FROM blog_visits");
         jdbc.update("DELETE FROM recent_searches");
         jdbc.update("DELETE FROM follows");
         jdbc.update("DELETE FROM blocks");
@@ -93,6 +95,7 @@ public abstract class IntegrationTest {
         jdbc.update("DELETE FROM refresh_tokens");
         jdbc.update("DELETE FROM login_failures");
         jdbc.update("DELETE FROM email_verifications");
+        jdbc.update("DELETE FROM social_accounts");
         jdbc.update("DELETE FROM members");
         rateLimiter.clear();
         mails.sent().clear();

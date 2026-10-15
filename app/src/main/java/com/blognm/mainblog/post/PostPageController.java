@@ -40,6 +40,12 @@ public class PostPageController {
         }
     }
 
+    /** 블로그를 정하지 않은 글쓰기. 화면에서 내가 속한 블로그 중 하나를 고른다 (D-101). */
+    @GetMapping("/write")
+    public String writeAny() {
+        return "forward:/post-edit.html";
+    }
+
     @GetMapping("/blog/{slug}/write")
     public String write(@PathVariable String slug) {
         return "forward:/post-edit.html";
@@ -58,7 +64,10 @@ public class PostPageController {
         return ResponseEntity.ok().contentType(new MediaType(MediaType.TEXT_HTML, StandardCharsets.UTF_8)).body(html);
     }
 
-    /** 미리보기에는 주소 → 제목 → 이미지 순서로 보인다 (D-59). 값은 모두 HTML로 이스케이프한다. */
+    /**
+     * 미리보기에는 주소 → 글 제목 → 그림 순서로 보인다 (D-59). 그림은 글의 첫 사진, 없으면 블로그 머리 사진,
+     * 그것도 없으면 블로그 머리 배경 그림이라 늘 있다 (D-100). 값은 모두 HTML로 이스케이프한다.
+     */
     private String ogTags(PostService.OgInfo og, String slug, long id, String key) {
         String base = props.baseUrl().replaceAll("/+$", "");
         UriComponentsBuilder url = UriComponentsBuilder.fromUriString(base).path("/blog/{slug}/posts/{id}");
@@ -71,13 +80,10 @@ public class PostPageController {
         tags.append(meta("og:type", "article"));
         tags.append(meta("og:site_name", "Creat_"));
         tags.append(meta("og:url", pageUrl));
-        tags.append(meta("og:title", og.title() + " - " + og.blogName()));
+        tags.append(meta("og:title", og.title()));
         tags.append(meta("og:description", og.description()));
-        if (og.imagePath() != null) {
-            tags.append(meta("og:image", base + og.imagePath()));
-        }
-        tags.append("<meta name=\"twitter:card\" content=\"")
-                .append(og.imagePath() != null ? "summary_large_image" : "summary").append("\">\n");
+        tags.append(meta("og:image", base + og.imagePath()));
+        tags.append("<meta name=\"twitter:card\" content=\"summary_large_image\">\n");
         tags.append("<meta name=\"description\" content=\"").append(HtmlUtils.htmlEscape(og.description()))
                 .append("\">\n");
         return tags.toString();

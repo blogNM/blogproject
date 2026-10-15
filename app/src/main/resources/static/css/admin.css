@@ -151,6 +151,8 @@ button.adm-go:hover:not(:disabled) { background: var(--adm-purple-dark); }
 }
 .adm-badge.adm-grey { background: var(--adm-soft); color: var(--adm-muted); }
 .adm-badge.adm-warn { background: var(--adm-warn-bg); color: var(--adm-warn); }
+/* 테스트 회원·테스트 블로그 (D-113). 사이트 화면의 .test-badge와 같은 색 */
+.adm-badge.adm-test { background: #FFF6E5; color: #8A5A00; border: 1px solid #E3C79A; margin-left: 4px; }
 .adm-badge.adm-bad { background: #FBE5EA; color: var(--adm-error); }
 .adm-badge.adm-ok { background: var(--adm-ok-bg); color: var(--adm-ok); }
 .adm-badges { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
@@ -217,6 +219,8 @@ a.adm-stat.adm-alert .adm-stat-value { color: var(--adm-purple); }
 .adm-form button.adm-go { margin-top: 14px; padding: 10px 20px; }
 .adm-form .adm-textarea { width: 100%; padding: 10px 14px; font: inherit; font-size: 0.93rem; line-height: 1.6; resize: vertical; }
 .adm-form .adm-actions { align-items: center; }
+/* 공지 편집 도구 (D-102, D-106): 보이는 그대로 쓰는 편집기는 common.css의 .rich-editor */
+.adm-form .rich-editor button { margin: 0; }
 .adm-form .adm-actions button:not(.adm-go) { margin-top: 14px; }
 .adm-error { color: var(--adm-error); font-size: 0.88rem; min-height: 1.2em; margin: 8px 0 0; }
 .adm-ok-text { color: var(--adm-ok); font-size: 0.88rem; margin: 8px 0 0; }

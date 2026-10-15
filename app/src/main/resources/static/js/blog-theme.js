@@ -1,5 +1,6 @@
 // 블로그 첫 화면의 테마 틀별 칸 (D-89). 글 제목·요약·카테고리 같은 사용자 입력은 모두 textContent로 넣는다 (SEC-06).
 import { el } from './layout.js';
+import { testBadge } from './test-badge.js';
 
 /** 글 사진. 사진이 없는 글은 강조 색 그라데이션 칸으로 채운다. */
 function thumb(p, cls = 'thumb') {
@@ -19,11 +20,19 @@ function section(title, cls, more) {
 }
 
 function meta(p, withAuthor = false) {
-  const parts = [];
-  if (p.categoryName) parts.push(p.categoryName);
-  if (withAuthor) parts.push(p.authorName);
-  parts.push(p.createdAt.slice(0, 10));
-  return el('p', { class: 'sc-meta' }, parts.join(' · '));
+  const before = [];
+  if (p.categoryName) before.push(p.categoryName);
+  const node = el('p', { class: 'sc-meta' });
+  if (withAuthor) {
+    before.push(p.authorName);
+    node.textContent = before.join(' · ');
+    // 테스트 회원이 쓴 글은 작성자 이름 옆에 "테스트" 표시 (D-113)
+    if (p.authorTest) node.append(testBadge());
+    node.append(document.createTextNode(' · ' + p.createdAt.slice(0, 10)));
+  } else {
+    node.textContent = [...before, p.createdAt.slice(0, 10)].join(' · ');
+  }
+  return node;
 }
 
 function card(p, href, { image = true, excerpt = true, author = false, cls = 'sc-card', button } = {}) {

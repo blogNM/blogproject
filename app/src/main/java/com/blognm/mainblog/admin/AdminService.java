@@ -43,18 +43,33 @@ public class AdminService {
 
     // ----- 회원 (ADM-01) -----
 
+    /** 회원 목록 필터 (D-113). ALL 전체, REAL 실제 회원, TEST 테스트 회원. */
+    public enum MemberKind { ALL, REAL, TEST }
+
     @Transactional(readOnly = true)
-    public Page<MemberItem> members(String q, int page) {
+    public MemberPage members(String q, MemberKind kind, int page) {
         MapSqlParameterSource p = new MapSqlParameterSource("q", like(q));
-        String where = q == null || q.isBlank() ? "" : " WHERE m.nickname LIKE :q OR m.email LIKE :q OR m.name LIKE :q";
-        return page("SELECT COUNT(*) FROM members m" + where, """
-                SELECT m.id, m.nickname, m.email, m.status, m.created_at,
+        String search = q == null || q.isBlank() ? "TRUE" : "(m.nickname LIKE :q OR m.email LIKE :q OR m.name LIKE :q)";
+        String where = " WHERE " + search + switch (kind == null ? MemberKind.ALL : kind) {
+            case ALL -> "";
+            case REAL -> " AND m.is_test = FALSE";
+            case TEST -> " AND m.is_test = TRUE";
+        };
+        // 필터 단추에 붙이는 수. 찾는 말은 같이 적용하고, 탈퇴한 회원도 센다 (목록과 같은 기준)
+        Map<String, Object> counts = jdbc.queryForMap("SELECT COUNT(*) AS total, COALESCE(SUM(m.is_test), 0) AS test"
+                + " FROM members m WHERE " + search, p);
+        long total = ((Number) counts.get("total")).longValue();
+        long test = ((Number) counts.get("test")).longValue();
+        Page<MemberItem> list = page("SELECT COUNT(*) FROM members m" + where, """
+                SELECT m.id, m.nickname, m.email, m.status, m.created_at, m.is_test,
                        (SELECT COUNT(*) FROM blog_memberships bm WHERE bm.member_id = m.id AND bm.status = 'ACTIVE') AS blogs,
                        (SELECT COUNT(*) FROM posts x WHERE x.author_id = m.id AND x.status = 'NORMAL') AS posts
                 FROM members m""" + where + " ORDER BY m.id DESC", p, page,
                 (rs, i) -> new MemberItem(rs.getLong("id"), shownNickname(rs.getString("nickname"), rs.getString("status")),
                         Masking.email(rs.getString("email")), rs.getString("status"), time(rs.getObject("created_at", LocalDateTime.class)),
-                        rs.getInt("blogs"), rs.getInt("posts")));
+                        rs.getInt("blogs"), rs.getInt("posts"), rs.getBoolean("is_test")));
+        return new MemberPage(list.items(), list.page(), list.totalPages(), list.total(),
+                new MemberCounts(total, total - test, test));
     }
 
     /** 회원 상세. 이름·이메일·전화번호는 가려서 보여준다 (4.4). */
@@ -75,7 +90,8 @@ public class AdminService {
                         time(rs.getObject("suspended_until", LocalDateTime.class)), rs.getInt("warnings"), rs.getInt("suspensions")));
         return new MemberDetail(id, shownNickname((String) m.get("nickname"), (String) m.get("status")),
                 maskName((String) m.get("name")), Masking.email((String) m.get("email")), Masking.phone((String) m.get("phone")),
-                (String) m.get("status"), time((LocalDateTime) m.get("created_at")), time((LocalDateTime) m.get("withdrawn_at")), blogs);
+                (String) m.get("status"), time((LocalDateTime) m.get("created_at")), time((LocalDateTime) m.get("withdrawn_at")), blogs,
+                Boolean.TRUE.equals(m.get("is_test")));
     }
 
     /** "전체 보기". 누가 언제 봤는지 남긴다 (ADM-06). */
@@ -87,7 +103,7 @@ public class AdminService {
     }
 
     private Map<String, Object> memberRow(long id) {
-        return jdbc.queryForList("SELECT nickname, name, email, phone, status, created_at, withdrawn_at FROM members WHERE id = :id",
+        return jdbc.queryForList("SELECT nickname, name, email, phone, status, created_at, withdrawn_at, is_test FROM members WHERE id = :id",
                 Map.of("id", id)).stream().findFirst()
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "MEMBER_NOT_FOUND", "회원을 찾을 수 없습니다."));
     }
@@ -100,7 +116,7 @@ public class AdminService {
         String where = " WHERE b.status <> 'CLOSED'" + (q == null || q.isBlank() ? "" : " AND (b.slug LIKE :q OR b.name LIKE :q)");
         return page("SELECT COUNT(*) FROM blogs b" + where, """
                 SELECT b.id, b.slug, b.name, b.visibility, b.status, b.is_hidden, b.close_scheduled_at, b.close_requested_by,
-                       b.created_at, m.nickname AS owner, m.id AS owner_id,
+                       b.created_at, m.nickname AS owner, m.id AS owner_id, m.is_test AS owner_test,
                        (SELECT COUNT(*) FROM blog_memberships bm WHERE bm.blog_id = b.id AND bm.status = 'ACTIVE') AS members,
                        (SELECT COUNT(*) FROM posts x WHERE x.blog_id = b.id AND x.status = 'NORMAL') AS posts,
                        (SELECT COUNT(*) FROM owner_warnings w WHERE w.blog_id = b.id AND w.member_id = b.owner_id
@@ -109,7 +125,8 @@ public class AdminService {
                 (rs, i) -> new BlogItem(rs.getLong("id"), rs.getString("slug"), rs.getString("name"), rs.getString("visibility"),
                         rs.getString("status"), rs.getBoolean("is_hidden"), time(rs.getObject("close_scheduled_at", LocalDateTime.class)),
                         rs.getString("close_requested_by"), time(rs.getObject("created_at", LocalDateTime.class)),
-                        rs.getLong("owner_id"), rs.getString("owner"), rs.getInt("members"), rs.getInt("posts"), rs.getInt("warnings")));
+                        rs.getLong("owner_id"), rs.getString("owner"), rs.getInt("members"), rs.getInt("posts"), rs.getInt("warnings"),
+                        rs.getBoolean("owner_test")));
     }
 
     // ----- 글·댓글 (ADM-03) -----
@@ -128,12 +145,12 @@ public class AdminService {
         String from = " FROM posts p JOIN blogs b ON b.id = p.blog_id JOIN members m ON m.id = p.author_id";
         return page("SELECT COUNT(*)" + from + where, """
                 SELECT p.id, p.title, p.status, p.deleted_by, p.deleted_at, p.created_at, b.slug, b.name AS blog_name,
-                       m.nickname, m.status AS member_status""" + from + where + " ORDER BY p.id DESC", p, page,
+                       m.nickname, m.status AS member_status, m.is_test""" + from + where + " ORDER BY p.id DESC", p, page,
                 (rs, i) -> new PostItem(rs.getLong("id"), rs.getString("title"), rs.getString("status"), rs.getString("deleted_by"),
                         time(rs.getObject("deleted_at", LocalDateTime.class)), time(rs.getObject("created_at", LocalDateTime.class)),
                         rs.getString("slug"), rs.getString("blog_name"),
                         shownNickname(rs.getString("nickname"), rs.getString("member_status")),
-                        "/blog/" + rs.getString("slug") + "/posts/" + rs.getLong("id")));
+                        "/blog/" + rs.getString("slug") + "/posts/" + rs.getLong("id"), rs.getBoolean("is_test")));
     }
 
     @Transactional(readOnly = true)
@@ -150,11 +167,12 @@ public class AdminService {
         String from = " FROM comments c JOIN posts p ON p.id = c.post_id JOIN blogs b ON b.id = p.blog_id JOIN members m ON m.id = c.author_id";
         return page("SELECT COUNT(*)" + from + where, """
                 SELECT c.id, LEFT(c.content, 100) AS content, c.status, c.created_at, p.id AS post_id, p.title, b.slug,
-                       m.nickname, m.status AS member_status""" + from + where + " ORDER BY c.id DESC", p, page,
+                       m.nickname, m.status AS member_status, m.is_test""" + from + where + " ORDER BY c.id DESC", p, page,
                 (rs, i) -> new CommentItem(rs.getLong("id"), rs.getString("content"), rs.getString("status"),
                         time(rs.getObject("created_at", LocalDateTime.class)), rs.getString("title"), rs.getString("slug"),
                         shownNickname(rs.getString("nickname"), rs.getString("member_status")),
-                        "/blog/" + rs.getString("slug") + "/posts/" + rs.getLong("post_id") + "#comment-" + rs.getLong("id")));
+                        "/blog/" + rs.getString("slug") + "/posts/" + rs.getLong("post_id") + "#comment-" + rs.getLong("id"),
+                        rs.getBoolean("is_test")));
     }
 
     public enum ContentAction { HIDE, UNHIDE, DELETE, RESTORE }
@@ -328,7 +346,16 @@ public class AdminService {
     public record Page<T>(List<T> items, int page, int totalPages, long total) {
     }
 
-    public record MemberItem(long id, String nickname, String email, String status, String createdAt, int blogs, int posts) {
+    /** test: 테스트 회원 (D-113). */
+    public record MemberItem(long id, String nickname, String email, String status, String createdAt, int blogs, int posts,
+            boolean test) {
+    }
+
+    /** 회원 목록 필터 단추에 붙이는 수 (D-113). */
+    public record MemberCounts(long all, long real, long test) {
+    }
+
+    public record MemberPage(List<MemberItem> items, int page, int totalPages, long total, MemberCounts counts) {
     }
 
     public record MemberBlog(String slug, String name, String role, String status, String suspendedUntil, int warnings,
@@ -336,7 +363,7 @@ public class AdminService {
     }
 
     public record MemberDetail(long id, String nickname, String name, String email, String phone, String status,
-            String createdAt, String withdrawnAt, List<MemberBlog> blogs) {
+            String createdAt, String withdrawnAt, List<MemberBlog> blogs, boolean test) {
     }
 
     public record Pii(String name, String email, String phone) {
@@ -344,15 +371,15 @@ public class AdminService {
 
     public record BlogItem(long id, String slug, String name, String visibility, String status, boolean hidden,
             String closeScheduledAt, String closeRequestedBy, String createdAt, long ownerId, String ownerNickname,
-            int members, int posts, int ownerWarnings) {
+            int members, int posts, int ownerWarnings, boolean ownerTest) {
     }
 
     public record PostItem(long id, String title, String status, String deletedBy, String deletedAt, String createdAt,
-            String blogSlug, String blogName, String author, String link) {
+            String blogSlug, String blogName, String author, String link, boolean authorTest) {
     }
 
     public record CommentItem(long id, String content, String status, String createdAt, String postTitle, String blogSlug,
-            String author, String link) {
+            String author, String link, boolean authorTest) {
     }
 
     public record Day(String date, int signups, int posts) {

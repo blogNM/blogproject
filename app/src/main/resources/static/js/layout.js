@@ -18,6 +18,16 @@ export function el(tag, attrs = {}, text) {
   return node;
 }
 
+/**
+ * 움직이는 그림(/img의 정적 SVG). 동작 줄이기를 켠 사람에게는 멈춘 그림을 보여 준다 (D-105).
+ */
+export function motionImage(src, stillSrc, attrs = {}) {
+  const picture = el('picture');
+  picture.append(el('source', { srcset: stillSrc, media: '(prefers-reduced-motion: reduce)' }),
+    el('img', { src, alt: '', ...attrs }));
+  return picture;
+}
+
 /** 사이트 이름 Creat_ 워드마크. 밑줄만 복숭아색으로 깜빡인다. */
 export function wordmark(light = false) {
   const a = el('a', { href: '/', class: light ? 'wordmark light' : 'wordmark', 'aria-label': 'Creat_ 메인으로' });
@@ -34,6 +44,51 @@ function headerSearch() {
   return form;
 }
 
+const MODE_KEY = 'creat-color-mode';
+const MOON = 'M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z';
+const SUN = 'M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm0-5v3m0 14v3M4.2 4.2l2.1 2.1m11.4 11.4 2.1 2.1M2 12h3m14 0h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1';
+
+function modeIcon(dark) {
+  const ns = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.setAttribute('focusable', 'false');
+  const path = document.createElementNS(ns, 'path');
+  path.setAttribute('d', dark ? SUN : MOON);
+  path.setAttribute('fill', dark ? 'none' : 'currentColor');
+  path.setAttribute('stroke', 'currentColor');
+  path.setAttribute('stroke-width', dark ? '2' : '0');
+  path.setAttribute('stroke-linecap', 'round');
+  svg.append(path);
+  return svg;
+}
+
+/**
+ * 다크모드 켜고 끄기 (D-116). 값은 이 브라우저에만 남긴다.
+ * dark.css를 읽는 화면(color-mode.js가 data-mode-ready를 붙임)에만 버튼을 둔다. 블로그 홈·글쓰기·관리자 화면은 늘 밝다.
+ */
+function modeToggle() {
+  const root = document.documentElement;
+  if (!root.hasAttribute('data-mode-ready')) return null;
+  const button = el('button', { type: 'button', class: 'mode-toggle' });
+  const paint = () => {
+    const dark = root.getAttribute('data-mode') === 'dark';
+    button.setAttribute('aria-pressed', String(dark));
+    button.setAttribute('aria-label', dark ? '다크모드 끄기' : '다크모드 켜기');
+    button.title = dark ? '다크모드 끄기' : '다크모드 켜기';
+    button.replaceChildren(modeIcon(dark));
+  };
+  button.addEventListener('click', () => {
+    const dark = root.getAttribute('data-mode') !== 'dark';
+    if (dark) root.setAttribute('data-mode', 'dark'); else root.removeAttribute('data-mode');
+    try { localStorage.setItem(MODE_KEY, dark ? 'dark' : 'light'); } catch { /* 이번 화면에만 적용 */ }
+    paint();
+  });
+  paint();
+  return button;
+}
+
 function renderHeader(me) {
   const header = document.querySelector('header.site-header');
   if (!header) return;
@@ -42,11 +97,16 @@ function renderHeader(me) {
   const logo = wordmark();
   const nav = el('nav', { class: 'site-nav' });
   if (!document.body.classList.contains('no-header-search')) nav.append(headerSearch());
+  const toggle = modeToggle();
+  if (toggle) nav.append(toggle);
 
   if (me) {
     nav.append(el('a', { href: '/my-blogs.html' }, '내 블로그'));
     nav.append(el('a', { href: '/members/' + me.id }, '내 활동'));
-    nav.append(el('a', { href: '/me.html', class: 'nickname' }, me.nickname + '님'));
+    const nick = el('a', { href: '/me.html', class: 'nickname' }, me.nickname + '님');
+    // 테스트 회원으로 들어왔으면 닉네임 옆에 "테스트" 표시 (D-113). 표시 모듈이 이 파일을 쓰므로 여기서 직접 만든다
+    if (me.test) nick.append(el('span', { class: 'test-badge', title: '기능을 확인하려고 만든 테스트 계정이에요' }, '테스트'));
+    nav.append(nick);
     const logout = el('button', { type: 'button', class: 'link-button' }, '로그아웃');
     logout.addEventListener('click', async () => {
       try {
@@ -87,7 +147,7 @@ function renderFooter(me) {
     footerColumn('둘러보기', [['/', '메인 피드'], ['/search.html', '통합 검색'], ['/blog-new.html', '블로그 만들기']]),
     footerColumn('내 활동', [['/my-blogs.html', '내 블로그'], ...(me ? [['/members/' + me.id, '내 활동']] : []),
       ['/me.html', '내 정보']]),
-    footerColumn('도움말', [['/find-email.html', '이메일 찾기'], ['/forgot-password.html', '비밀번호 찾기']]));
+    footerColumn('도움말', [['/guides', '사용 방법'], ['/find-email.html', '이메일 찾기'], ['/forgot-password.html', '비밀번호 찾기']]));
   const bottom = el('div', { class: 'footer-bottom' });
   bottom.append(el('span', {}, '© Creat_'), el('a', { href: '/terms.html' }, '이용약관'),
     el('a', { href: '/privacy.html', class: 'strong' }, '개인정보 처리방침'));
@@ -108,7 +168,7 @@ export function toast(message) {
 export function renderNotFound(message) {
   const main = document.querySelector('main');
   const page = el('section', { class: 'error-page' });
-  page.append(el('img', { src: '/img/lost.svg', alt: '', width: '180', height: '160' }),
+  page.append(motionImage('/img/lost.svg', '/img/lost-still.svg', { width: '180', height: '160' }),
     el('p', { class: 'code' }, '404'),
     el('h1', {}, '앗, 길이 막혔어요!'),
     el('p', {}, message || '찾는 페이지가 없거나 볼 수 없는 페이지예요.'));

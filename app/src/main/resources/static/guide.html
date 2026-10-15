@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>사용 방법 - Creat_</title>
+  <link rel="icon" href="/img/creat-mark.svg" type="image/svg+xml">
+  <script src="/js/color-mode.js"></script>
+  <link rel="stylesheet" href="/css/common.css">
+  <link rel="stylesheet" href="/css/dark.css">
+  <script type="module" src="/js/pages/guide.js"></script>
+  <link rel="modulepreload" href="/js/api.js">
+  <link rel="modulepreload" href="/js/layout.js">
+  <link rel="modulepreload" href="/js/notifications.js">
+  <link rel="modulepreload" href="/js/visit.js">
+</head>
+<body>
+  <header class="site-header"></header>
+  <main class="container guide-main">
+    <div class="guide-head">
+      <span class="eyebrow">How to</span>
+      <h1>사용 방법</h1>
+      <p class="muted">옆으로 넘기거나 화살표를 눌러 다른 사용 방법을 볼 수 있어요.</p>
+    </div>
+    <p id="error" class="notice" hidden></p>
+    <section id="empty" class="card empty" hidden>
+      <p>아직 사용 방법 안내가 없어요.</p>
+      <p><a href="/notices?category=NOTICE">공지사항 보기</a></p>
+    </section>
+    <section id="guide" class="guide" aria-roledescription="carousel" aria-label="사용 방법" hidden>
+      <nav id="guide-tabs" class="tabs guide-tabs" aria-label="사용 방법 목록"></nav>
+      <div class="guide-bar">
+        <button id="guide-prev" type="button" class="guide-arrow" aria-label="이전 사용 방법">‹</button>
+        <div id="guide-dots" class="guide-dots" role="group" aria-label="사용 방법 고르기"></div>
+        <span id="guide-count" class="guide-count muted" aria-live="polite"></span>
+        <button id="guide-next" type="button" class="guide-arrow" aria-label="다음 사용 방법">›</button>
+      </div>
+      <!-- 휴대폰은 손가락으로, 컴퓨터는 마우스로 끌어서 옆으로 넘긴다 (CSS scroll-snap) -->
+      <div id="guide-track" class="guide-track"></div>
+      <div class="guide-foot">
+        <button id="guide-prev-foot" type="button" class="guide-step prev"></button>
+        <button id="guide-next-foot" type="button" class="guide-step next"></button>
+      </div>
+    </section>
+  </main>
+  <footer class="site-footer"></footer>
+</body>
+</html>

@@ -53,6 +53,25 @@ class ThemeTest extends IntegrationTest {
     }
 
     @Test
+    @DisplayName("블로그를 만들 때 테마를 함께 고른다. 잘못된 색이면 블로그를 만들지 않는다 (D-101)")
+    void themeOnCreate() throws Exception {
+        postAs("/api/blogs", """
+                {"slug":"film","name":"영화","visibility":"PUBLIC","joinPolicy":"FREE",
+                 "theme":{"theme":"MAGAZINE","accent":"#d93a49","font":"MONO","heroTitle":"이번 주 영화"}}""", owner)
+                .andExpect(status().isOk());
+        getAs("/api/blogs/film")
+                .andExpect(jsonPath("$.theme.theme").value("MAGAZINE"))
+                .andExpect(jsonPath("$.theme.accent").value("#D93A49"))
+                .andExpect(jsonPath("$.theme.font").value("MONO"))
+                .andExpect(jsonPath("$.theme.heroTitle").value("이번 주 영화"));
+        postAs("/api/blogs", """
+                {"slug":"bad-color","name":"색","visibility":"PUBLIC","joinPolicy":"FREE",
+                 "theme":{"theme":"LETTER","accent":"red"}}""", owner)
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("INVALID_ACCENT"));
+        getAs("/api/blogs/bad-color").andExpect(status().isNotFound());
+    }
+
+    @Test
     @DisplayName("색은 #RRGGBB만, 없는 틀은 거절. 일반 멤버는 테마를 못 바꾼다")
     void validation() throws Exception {
         sendAs(HttpMethod.PUT, "/api/blogs/trip/theme", """

@@ -2,7 +2,9 @@
 // 30초마다 읽지 않은 알림 수를 묻는다. 자동 요청이라 30분 무활동 시간을 늘리지 않는다 (D-62).
 // 문구는 서버가 만들고, 화면은 textContent로만 넣는다 (SEC-06).
 import { api } from './api.js';
-import { el, toast } from './layout.js';
+import { el, motionImage, toast } from './layout.js';
+import { withFrom } from './visit.js';
+import { testBadge } from './test-badge.js';
 
 const POLL_MS = 30 * 1000;
 const TABS = [['ALL', '전체'], ['COMMENT', '댓글'], ['LIKE', '좋아요'], ['FOLLOW', '팔로우·구독'], ['BLOG', '블로그'], ['ADMIN', '운영']];
@@ -116,7 +118,13 @@ function buildPanel() {
     try {
       const res = await api.get('/api/notifications?' + new URLSearchParams({ tab: state.tab, page: state.page }));
       if (!append) list.replaceChildren();
-      if (!res.items.length && !append) list.append(el('li', { class: 'notice-empty' }, '새 알림이 없어요.'));
+      if (!res.items.length && !append) {
+        // 알림이 없을 때: 새싹 화분 그림 (D-105)
+        const empty = el('li', { class: 'notice-empty' });
+        empty.append(motionImage('/img/empty-sprout.svg', '/img/empty-sprout-still.svg', { width: '112', height: '105', class: 'empty-art' }),
+          el('span', {}, '새 알림이 없어요.'));
+        list.append(empty);
+      }
       res.items.forEach((n) => list.append(item(n)));
       more.hidden = res.page >= res.totalPages;
       panel.onCounts(res.unread);
@@ -127,18 +135,23 @@ function buildPanel() {
 
   function item(n) {
     const li = el('li', { class: n.read ? 'notice-item' : 'notice-item unread' });
-    const body = n.link ? el('a', { href: n.link }) : el('div');
-    body.append(el('p', { class: 'notice-text' }, n.message), el('span', { class: 'muted' }, n.createdAt));
+    // 블로그·글로 가는 알림은 블로그 통계에 "알림"으로 남긴다 (D-112)
+    const link = n.link && n.link.startsWith('/blog/') ? withFrom(n.link, 'notification') : n.link;
+    const body = link ? el('a', { href: link }) : el('div');
+    const text = el('p', { class: 'notice-text' }, n.message);
+    // 테스트 회원이 한 일이면 "테스트" 표시 (D-113)
+    if (n.actorTest) text.append(testBadge());
+    body.append(text, el('span', { class: 'muted' }, n.createdAt));
     body.addEventListener('click', async (e) => {
       if (n.read) return;
-      if (n.link) e.preventDefault();
+      if (link) e.preventDefault();
       try {
         await api.post(`/api/notifications/${n.id}/read`);
       } catch {
         // 읽음 표시가 실패해도 이동은 한다.
       }
-      if (n.link) {
-        location.href = n.link;
+      if (link) {
+        location.href = link;
       } else {
         n.read = true;
         li.classList.remove('unread');

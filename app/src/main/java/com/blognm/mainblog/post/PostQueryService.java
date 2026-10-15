@@ -12,6 +12,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import com.blognm.mainblog.blog.Blog;
+import com.blognm.mainblog.board.PostCards;
 import com.blognm.mainblog.blog.BlogRules;
 import com.blognm.mainblog.blog.BlogService;
 
@@ -86,7 +87,7 @@ public class PostQueryService {
     private List<PostSummary> query(String where, MapSqlParameterSource params, String limit) {
         List<PostSummary> items = jdbc.query("""
                 SELECT p.id, p.title, p.content_md, p.is_notice, p.author_left, p.created_at, p.view_count, p.like_count,
-                       p.comment_count, c.name AS category_name, m.nickname, m.status AS member_status,
+                       p.comment_count, c.name AS category_name, m.nickname, m.status AS member_status, m.is_test,
                        (SELECT i.stored_name FROM images i WHERE i.post_id = p.id
                         ORDER BY i.sort_order, i.id LIMIT 1) AS first_image
                 FROM posts p
@@ -104,7 +105,8 @@ public class PostQueryService {
                 rs.getObject("created_at", LocalDateTime.class).format(PostService.DATE_TIME),
                 rs.getLong("view_count"), rs.getLong("like_count"), rs.getLong("comment_count"),
                 rs.getString("first_image") == null ? null : "/uploads/" + rs.getString("first_image"),
-                new ArrayList<>()));
+                new ArrayList<>(), PostCards.shownTest(rs.getBoolean("author_left"), rs.getString("member_status"),
+                        rs.getBoolean("is_test"))));
         attachTags(items);
         return items;
     }
@@ -125,7 +127,8 @@ public class PostQueryService {
 
     /** 요약(excerpt)은 HTML을 걷어 낸 글자라 화면은 textContent로 넣는다. 테마 틀이 카드에 쓴다 (D-89). */
     public record PostSummary(long id, String title, String excerpt, boolean notice, String authorName, String categoryName,
-            String createdAt, long views, long likes, long comments, String imageUrl, List<String> tags) {
+            String createdAt, long views, long likes, long comments, String imageUrl, List<String> tags,
+            boolean authorTest) {
     }
 
     public record PostPage(List<PostSummary> notices, List<PostSummary> items, int page, int size, int totalPages,

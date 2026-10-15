@@ -5,14 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>요청을 처리할 수 없음 - Creat_</title>
   <link rel="icon" href="/img/creat-mark.svg" type="image/svg+xml">
+  <script src="/js/color-mode.js"></script>
   <link rel="stylesheet" href="/css/common.css">
+  <link rel="stylesheet" href="/css/dark.css">
   <script type="module" src="/js/pages/static.js"></script>
+  <link rel="modulepreload" href="/js/api.js">
+  <link rel="modulepreload" href="/js/layout.js">
+  <link rel="modulepreload" href="/js/notifications.js">
 </head>
 <body>
   <header class="site-header"></header>
   <main class="error-main">
     <section class="error-page">
-      <img src="/img/lost.svg" alt="" width="180" height="160">
+      <!-- 움직이는 그림. 동작 줄이기를 켜면 멈춘 그림 (D-105) -->
+      <picture><source srcset="/img/lost-still.svg" media="(prefers-reduced-motion: reduce)"><img src="/img/lost.svg" alt="" width="180" height="160"></picture>
       <p class="code">ERROR</p>
       <h1>이 길로는 갈 수 없어요</h1>
       <p>요청을 처리하지 못했어요. 주소를 다시 확인해 주세요.</p>

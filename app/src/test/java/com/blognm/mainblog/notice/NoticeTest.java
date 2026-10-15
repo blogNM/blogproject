@@ -1,8 +1,14 @@
 package com.blognm.mainblog.notice;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
+
+import javax.imageio.ImageIO;
 
 import jakarta.servlet.http.Cookie;
 
@@ -11,8 +17,11 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpMethod;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 import com.blognm.mainblog.admin.AdminAccountService;
+import com.blognm.mainblog.post.PostCleanupJob;
 import com.blognm.mainblog.support.IntegrationTest;
 import com.jayway.jsonpath.JsonPath;
 
@@ -21,6 +30,9 @@ class NoticeTest extends IntegrationTest {
 
     @Autowired
     AdminAccountService accounts;
+
+    @Autowired
+    PostCleanupJob cleanupJob;
 
     private Cookie admin;
 
@@ -89,5 +101,36 @@ class NoticeTest extends IntegrationTest {
         sendAs(HttpMethod.DELETE, "/api/admin/notices/" + id, null, admin).andExpect(status().isOk());
         getAs("/api/notices/" + id).andExpect(status().isNotFound());
         getAs("/api/notices/all").andExpect(jsonPath("$.total").value(0));
+    }
+
+    @Test
+    @DisplayName("관리자는 공지에 사진을 올리고, 글자 크기·색·형광펜을 넣고, 미리보기로 본다. 공지 사진은 정리 작업이 지우지 않는다 (D-102)")
+    void editorTools() throws Exception {
+        ByteArrayOutputStream png = new ByteArrayOutputStream();
+        ImageIO.write(new BufferedImage(4, 2, BufferedImage.TYPE_INT_RGB), "png", png);
+        MockMultipartFile file = new MockMultipartFile("file", "event.png", "image/png", png.toByteArray());
+        Cookie[] member = member("a@example.com", "회원에이");
+        mvc.perform(MockMvcRequestBuilders.multipart("/api/admin/notices/images").file(file).with(csrf().asHeader())
+                .cookie(member)).andExpect(status().is4xxClientError());
+        String body = mvc.perform(MockMvcRequestBuilders.multipart("/api/admin/notices/images").file(file)
+                .with(csrf().asHeader()).cookie(admin)).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        String url = JsonPath.read(body, "$.url");
+        assertThat(url).startsWith("/uploads/");
+
+        String md = "<span class=\\\"ts-xlarge\\\">큰 글자</span> <span class=\\\"hl-yellow\\\">강조</span> "
+                + "<span class=\\\"tc-red\\\">빨강</span> <span class=\\\"evil\\\">다른</span>\\n\\n![행사](" + url + ")";
+        String html = JsonPath.read(postAs("/api/admin/notices/preview", "{\"content\":\"" + md + "\"}", admin)
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(), "$.html");
+        assertThat(html).contains("<span class=\"ts-xlarge\">큰 글자</span>", "<span class=\"hl-yellow\">강조</span>",
+                "<span class=\"tc-red\">빨강</span>", "<img src=\"" + url + "\"").doesNotContain("evil");
+        postAs("/api/admin/notices/preview", "{\"content\":\"x\"}", member).andExpect(status().is4xxClientError());
+
+        postAs("/api/admin/notices", "{\"title\":\"행사 안내\",\"content\":\"" + md + "\"}", admin)
+                .andExpect(status().isOk());
+        jdbc.update("UPDATE images SET created_at = created_at - INTERVAL 3 DAY");
+        cleanupJob.cleanup();
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM images", Integer.class)).isEqualTo(1);
+        mvc.perform(MockMvcRequestBuilders.get(url)).andExpect(status().isOk());
     }
 }

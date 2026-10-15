@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.blognm.mainblog.blog.Blog;
 import com.blognm.mainblog.blog.BlogMembership;
 import com.blognm.mainblog.blog.BlogMembershipRepository;
+import com.blognm.mainblog.blog.BlogOgImage;
 import com.blognm.mainblog.blog.BlogRepository;
 import com.blognm.mainblog.blog.BlogService;
 import com.blognm.mainblog.blog.Tag;
@@ -49,6 +50,7 @@ public class PostService {
     private final CategoryRepository categories;
     private final BlogRepository blogs;
     private final BlogService blogService;
+    private final BlogOgImage ogImage;
     private final BlogMembershipRepository memberships;
     private final TagRepository tags;
     private final ImageRepository images;
@@ -62,7 +64,8 @@ public class PostService {
     public PostService(PostRepository posts, CategoryRepository categories, BlogRepository blogs,
             BlogService blogService, BlogMembershipRepository memberships, TagRepository tags, ImageRepository images,
             MemberRepository members, MarkdownRenderer markdown, NotificationWriter notifications,
-            UploadProperties uploadProps, LinkPreviewService linkPreviews, Clock clock) {
+            UploadProperties uploadProps, LinkPreviewService linkPreviews, BlogOgImage ogImage, Clock clock) {
+        this.ogImage = ogImage;
         this.linkPreviews = linkPreviews;
         this.posts = posts;
         this.categories = categories;
@@ -157,7 +160,14 @@ public class PostService {
                 post.getCreatedAt().format(DATE_TIME),
                 post.getUpdatedAt().isAfter(post.getCreatedAt()) ? post.getUpdatedAt().format(DATE_TIME) : null,
                 new Counts(post.getViewCount(), post.getLikeCount(), post.getCommentCount()), author, author || me.filter(BlogMembership::canManagePosts).isPresent(),
-                me.filter(BlogMembership::canManagePosts).isPresent(), false, viewerId != null, authorLink(post));
+                me.filter(BlogMembership::canManagePosts).isPresent(), false, viewerId != null, authorLink(post),
+                authorTest(post));
+    }
+
+    /** 작성자 이름 옆 "테스트" 표시 (D-113). 이름이 보이는 작성자만. */
+    private boolean authorTest(Post post) {
+        return !post.isAuthorLeft()
+                && members.findById(post.getAuthorId()).filter(Member::isActive).map(Member::isTest).orElse(false);
     }
 
     /** 프로필로 갈 작성자 번호. 블로그를 나간 작성자(탈퇴한 계정)나 탈퇴한 회원이면 null. */
@@ -188,7 +198,7 @@ public class PostService {
             return Optional.empty();
         }
         String image = images.findFirstByPostIdOrderBySortOrderAscIdAsc(post.getId()).map(Image::url)
-                .orElse(coverImage(blog).orElse(null));
+                .orElseGet(() -> ogImage.path(blog, key));
         return Optional.of(new OgInfo(post.getTitle(), blog.getName(), markdown.toPlainText(post.getContentMd(), 100),
                 image));
     }
@@ -238,7 +248,7 @@ public class PostService {
         }
         Map<String, Image> found = images.findByStoredNameIn(refs.isEmpty() ? List.of("") : refs).stream()
                 .filter(img -> post.getId().equals(img.getPostId())
-                        || (img.getPostId() == null && img.getUploaderId() == actorId))
+                        || (img.getPostId() == null && Long.valueOf(actorId).equals(img.getUploaderId())))
                 .collect(Collectors.toMap(Image::getStoredName, Function.identity()));
         List<Image> ordered = refs.stream().map(found::get).filter(i -> i != null).toList();
         if (ordered.size() > uploadProps.maxImagesPerPost()) {
@@ -253,10 +263,6 @@ public class PostService {
         for (int i = 0; i < ordered.size(); i++) {
             ordered.get(i).attachTo(post.getId(), i);
         }
-    }
-
-    private Optional<String> coverImage(Blog blog) {
-        return blogs.coverImageName(blog.getId()).map(name -> "/uploads/" + name);
     }
 
     private Optional<BlogMembership> activeMembership(Blog blog, long memberId) {
@@ -306,12 +312,12 @@ public class PostService {
     public record PostView(long id, String blogSlug, String blogName, String title, String contentHtml,
             String contentMarkdown, String authorName, Long categoryId, String categoryName, List<String> tags,
             boolean notice, String createdAt, String updatedAt, Counts counts, boolean canEdit, boolean canDelete,
-            boolean canManagePosts, boolean liked, boolean loggedIn, Long authorId) {
+            boolean canManagePosts, boolean liked, boolean loggedIn, Long authorId, boolean authorTest) {
 
         PostView withLiked(boolean value) {
             return new PostView(id, blogSlug, blogName, title, contentHtml, contentMarkdown, authorName, categoryId,
                     categoryName, tags, notice, createdAt, updatedAt, counts, canEdit, canDelete, canManagePosts, value,
-                    loggedIn, authorId);
+                    loggedIn, authorId, authorTest);
         }
     }
 

@@ -35,6 +35,25 @@ public class ImageService {
 
     @Transactional
     public Image upload(long uploaderId, MultipartFile file) {
+        Checked c = check(file);
+        String storedName = UUID.randomUUID().toString();
+        storage.save(storedName, c.data());
+        return images.save(Image.uploaded(uploaderId, storedName, originalName(file.getOriginalFilename()),
+                c.type().mime(), c.data().length, LocalDateTime.now(clock)));
+    }
+
+    /** 관리자가 공지에 넣는 사진. 검사는 회원 사진과 같다 (SEC-08, D-102). */
+    @Transactional
+    public Image uploadByAdmin(long adminId, MultipartFile file) {
+        Checked c = check(file);
+        String storedName = UUID.randomUUID().toString();
+        storage.save(storedName, c.data());
+        return images.save(Image.uploadedByAdmin(adminId, storedName, originalName(file.getOriginalFilename()),
+                c.type().mime(), c.data().length, LocalDateTime.now(clock)));
+    }
+
+    /** 확장자·MIME·파일 시그니처가 같은 허용 형식인지 보고, 위치 정보를 지운 내용을 돌려준다. */
+    private Checked check(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw ApiException.badRequest("NO_FILE", "올릴 사진을 골라 주세요.");
         }
@@ -59,10 +78,10 @@ public class ImageService {
         } catch (IllegalArgumentException | IndexOutOfBoundsException e) {
             throw ApiException.badRequest("BROKEN_IMAGE", "사진 파일이 손상되어 올릴 수 없습니다.");
         }
-        String storedName = UUID.randomUUID().toString();
-        storage.save(storedName, clean);
-        return images.save(Image.uploaded(uploaderId, storedName, originalName(file.getOriginalFilename()),
-                bySignature.mime(), clean.length, LocalDateTime.now(clock)));
+        return new Checked(bySignature, clean);
+    }
+
+    private record Checked(ImageType type, byte[] data) {
     }
 
     /**

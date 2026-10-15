@@ -5,8 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>통합 검색 - Creat_</title>
   <link rel="icon" href="/img/creat-mark.svg" type="image/svg+xml">
+  <script src="/js/color-mode.js"></script>
   <link rel="stylesheet" href="/css/common.css">
+  <link rel="stylesheet" href="/css/dark.css">
   <script type="module" src="/js/pages/search.js"></script>
+  <link rel="modulepreload" href="/js/api.js">
+  <link rel="modulepreload" href="/js/layout.js">
+  <link rel="modulepreload" href="/js/notifications.js">
+  <link rel="modulepreload" href="/js/visit.js">
 </head>
 <body class="no-header-search">
   <header class="site-header"></header>
@@ -47,6 +53,7 @@
         </div>
       </div>
       <p id="summary" class="muted"></p>
+      <div id="search-empty" class="search-empty" hidden></div>
       <ul id="post-results" class="feed"></ul>
       <ul id="blog-results" class="blog-grid"></ul>
       <nav id="pager" class="pager" aria-label="검색 결과 페이지"></nav>

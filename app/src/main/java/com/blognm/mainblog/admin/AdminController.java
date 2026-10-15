@@ -50,7 +50,8 @@ public class AdminController {
 
     @PostMapping("/auth/login")
     public Map<String, Boolean> login(@RequestBody LoginBody body, HttpServletRequest request, HttpServletResponse response) {
-        AdminAccountService.Login login = accounts.login(body.loginId(), body.password(), ClientIp.of(request));
+        AdminAccountService.Login login = accounts.login(body.loginId(), body.password(), body.turnstileToken(),
+                ClientIp.of(request));
         cookies.writeAdmin(response, login.token());
         return Map.of("mustChangePassword", login.mustChangePassword());
     }
@@ -88,9 +89,15 @@ public class AdminController {
     // ----- 회원 (ADM-01) -----
 
     @GetMapping("/members")
-    public AdminService.Page<AdminService.MemberItem> members(@RequestParam(required = false) String q,
-            @RequestParam(defaultValue = "1") int page) {
-        return admin.members(q, page);
+    public AdminService.MemberPage members(@RequestParam(required = false) String q,
+            @RequestParam(defaultValue = "all") String kind, @RequestParam(defaultValue = "1") int page) {
+        AdminService.MemberKind k;
+        try {
+            k = AdminService.MemberKind.valueOf(kind.toUpperCase(java.util.Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            throw com.blognm.mainblog.common.ApiException.badRequest("INVALID_INPUT", "회원 종류를 확인해 주세요.");
+        }
+        return admin.members(q, k, page);
     }
 
     @GetMapping("/members/{id}")
@@ -235,7 +242,7 @@ public class AdminController {
         return s;
     }
 
-    public record LoginBody(String loginId, String password) {
+    public record LoginBody(String loginId, String password, String turnstileToken) {
     }
 
     public record PasswordBody(String currentPassword, String newPassword) {

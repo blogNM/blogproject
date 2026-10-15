@@ -5,8 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>블로그 관리 - Creat_</title>
   <link rel="icon" href="/img/creat-mark.svg" type="image/svg+xml">
+  <script src="/js/color-mode.js"></script>
   <link rel="stylesheet" href="/css/common.css">
+  <link rel="stylesheet" href="/css/dark.css">
   <script type="module" src="/js/pages/blog-manage.js"></script>
+  <link rel="modulepreload" href="/js/api.js">
+  <link rel="modulepreload" href="/js/layout.js">
+  <link rel="modulepreload" href="/js/notifications.js">
+  <link rel="modulepreload" href="/js/visit.js">
 </head>
 <body>
   <header class="site-header"></header>
@@ -15,6 +21,53 @@
     <div id="manage" hidden>
       <h1><span id="blog-name"></span> 관리</h1>
       <p><a id="back-link" href="/">블로그로 돌아가기</a></p>
+
+      <section class="card stats" id="stats" hidden>
+        <h2 class="section-title">블로그 통계</h2>
+        <p class="hint">방문자는 하루에 한 사람을 한 번으로, 조회수는 블로그 홈과 글을 연 횟수로 세요. 같은 화면을 30분 안에 다시 연 것, 블로그 멤버가 본 것, 검색 로봇은 세지 않아요.</p>
+        <div id="stat-tiles" class="stat-tiles"></div>
+        <div class="stats-bar">
+          <div id="stats-units" class="tabs" role="tablist" aria-label="통계 단위">
+            <button type="button" class="tab" role="tab" data-unit="hour">시간별</button>
+            <button type="button" class="tab active" role="tab" data-unit="day">일별</button>
+            <button type="button" class="tab" role="tab" data-unit="month">월별</button>
+          </div>
+          <div class="stats-range">
+            <select id="stats-days" aria-label="일별로 볼 기간">
+              <option value="7">최근 7일</option>
+              <option value="14">최근 14일</option>
+              <option value="30" selected>최근 30일</option>
+              <option value="90">최근 90일</option>
+            </select>
+            <input id="stats-date" type="date" aria-label="기준 날짜">
+          </div>
+        </div>
+        <p id="stats-caption" class="stats-caption"></p>
+        <div class="chart-legend" aria-hidden="true">
+          <span><i class="key visitors"></i>방문자</span>
+          <span><i class="key views"></i>조회수</span>
+        </div>
+        <div id="stats-chart" class="stats-chart"></div>
+        <details class="stats-table-box">
+          <summary>표로 보기</summary>
+          <div class="table-scroll"><table id="stats-table" class="stats-table"></table></div>
+        </details>
+        <div class="stats-grid">
+          <div>
+            <h3 class="sub-title">들어온 경로</h3>
+            <ul id="stats-sources" class="bar-list"></ul>
+            <p id="stats-inside" class="hint"></p>
+          </div>
+          <div>
+            <h3 class="sub-title">검색어</h3>
+            <ol id="stats-keywords" class="rank-list"></ol>
+            <h3 class="sub-title">다른 사이트</h3>
+            <ol id="stats-hosts" class="rank-list"></ol>
+          </div>
+        </div>
+        <h3 class="sub-title">많이 본 글</h3>
+        <ol id="stats-posts" class="rank-list posts"></ol>
+      </section>
 
       <section class="card" id="theme-section" hidden>
         <h2 class="section-title">테마 꾸미기</h2>

@@ -46,7 +46,7 @@ public class NotificationService {
         params.addValue("size", PAGE_SIZE).addValue("offset", (current - 1) * PAGE_SIZE);
         List<Item> items = jdbc.query("""
                 SELECT n.id, n.type, n.tab, n.target_type, n.target_id, n.detail, n.is_read, n.created_at,
-                       a.nickname AS actor, a.status AS actor_status, b.slug, b.name AS blog_name,
+                       a.nickname AS actor, a.status AS actor_status, a.is_test AS actor_test, b.slug, b.name AS blog_name,
                        CASE n.target_type
                          WHEN 'POST' THEN (SELECT p.title FROM posts p WHERE p.id = n.target_id)
                          WHEN 'COMMENT' THEN (SELECT p.title FROM comments c JOIN posts p ON p.id = c.post_id WHERE c.id = n.target_id)
@@ -67,7 +67,8 @@ public class NotificationService {
                             rs.getString("post_title"), postId, rs.getString("target_type"),
                             rs.getObject("target_id", Long.class), rs.getString("detail"));
                     return new Item(rs.getLong("id"), rs.getString("tab"), text.message(), text.link(),
-                            rs.getBoolean("is_read"), rs.getObject("created_at", LocalDateTime.class).format(DATE_TIME));
+                            rs.getBoolean("is_read"), rs.getObject("created_at", LocalDateTime.class).format(DATE_TIME),
+                            actor != null && "ACTIVE".equals(rs.getString("actor_status")) && rs.getBoolean("actor_test"));
                 });
         long count = total == null ? 0 : total;
         return new Page(items, current, (int) ((count + PAGE_SIZE - 1) / PAGE_SIZE), count, unread(memberId));
@@ -258,7 +259,9 @@ public class NotificationService {
     }
 
     /** link가 null이면 누를 곳이 없는 알림이다. */
-    public record Item(long id, String tab, String message, String link, boolean read, String createdAt) {
+    /** actorTest: 알림을 만든 회원이 테스트 회원이면 "테스트" 표시 (D-113). */
+    public record Item(long id, String tab, String message, String link, boolean read, String createdAt,
+            boolean actorTest) {
     }
 
     public record Page(List<Item> items, int page, int totalPages, long total, Map<String, Long> unread) {

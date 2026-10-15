@@ -55,4 +55,24 @@ class SecurityHeadersTest extends IntegrationTest {
                 .andExpect(status().isNotFound())
                 .andExpect(header().string("Content-Type", Matchers.containsString("text/html")));
     }
+
+    @Test
+    @DisplayName("정적 파일은 캐시한다: 글꼴·그림은 오래 두고, 화면·js·css는 쓸 때마다 바뀌었는지 묻는다. API는 그대로 no-store (D-109)")
+    void staticCache() throws Exception {
+        mvc.perform(get("/vendor/pretendard/PretendardVariable.woff2"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Cache-Control", Matchers.allOf(
+                        Matchers.containsString("max-age=2592000"), Matchers.not(Matchers.containsString("no-store")))));
+        mvc.perform(get("/img/creat-mark.svg"))
+                .andExpect(header().string("Cache-Control", Matchers.containsString("max-age=604800")));
+        for (String path : new String[] {"/js/api.js", "/css/common.css", "/search.html"}) {
+            mvc.perform(get(path))
+                    .andExpect(status().isOk())
+                    .andExpect(header().string("Cache-Control", "no-cache"))
+                    .andExpect(header().exists("Last-Modified"))
+                    .andExpect(header().string("Content-Security-Policy", Matchers.containsString("default-src 'self'")));
+        }
+        mvc.perform(get("/api/me"))
+                .andExpect(header().string("Cache-Control", Matchers.containsString("no-store")));
+    }
 }

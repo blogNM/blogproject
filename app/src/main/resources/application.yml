@@ -28,17 +28,46 @@ spring:
       mail.smtp.timeout: 5000
       mail.smtp.writetimeout: 5000
 
+  web:
+    resources:
+      cache:
+        # 화면·js·css: 브라우저가 가지고 있다가 쓸 때마다 바뀌었는지 묻는다(304). /vendor·/img는 StaticCacheConfig (D-109)
+        cachecontrol:
+          no-cache: true
+
   servlet:
     multipart:
       # 사진 한 장 3MB, 한 번에 10MB (6.3)
       max-file-size: ${UPLOAD_MAX_FILE_SIZE:3MB}
       max-request-size: ${UPLOAD_MAX_REQUEST_SIZE:10MB}
 
+  # 컨테이너를 멈출 때(docker stop) 받던 요청(글 저장·사진 올리기)은 끝까지 처리하고 내려간다 (D-111).
+  # deploy.sh가 SHUTDOWN_TIMEOUT=20s를 넘기고 docker stop은 30초 기다린다 (이 값보다 길어야 처리 중인 요청이 잘리지 않음)
+  lifecycle:
+    timeout-per-shutdown-phase: ${SHUTDOWN_TIMEOUT:20s}
+
 server:
   forward-headers-strategy: ${FORWARD_HEADERS_STRATEGY:none}
+  # 새 연결은 받지 않고(우리 Nginx가 다른 한 대로 보냄), 처리 중인 요청을 마친 뒤 내려간다 (D-111)
+  shutdown: graceful
+  # 화면·js·css·API 응답을 gzip으로 줄여 보낸다 (D-109). 글꼴(woff2)·사진은 이미 압축돼 있어 빼고, 1KB보다 작은 응답도 그대로 보낸다
+  compression:
+    enabled: ${SERVER_COMPRESSION:true}
+    mime-types: text/html,text/css,text/javascript,application/javascript,application/json,image/svg+xml,text/plain
+    min-response-size: 1KB
+
+# 정적 파일을 브라우저에 둘 기간 (D-109, StaticCacheConfig). 글꼴·에디터와 그림
+static-cache:
+  vendor-max-age: ${STATIC_VENDOR_MAX_AGE:30d}
+  image-max-age: ${STATIC_IMAGE_MAX_AGE:7d}
 
 app:
   time-zone: Asia/Seoul
+  # 서버 두 대 중 어느 것인지 (app-a, app-b). 응답 헤더 X-Instance와 /api/health에 보인다 (D-111)
+  instance-id: ${INSTANCE_ID:}
+  jobs:
+    # 새벽 정리 작업(@Scheduled)을 이 서버에서 돌릴지. 두 대 중 app-a만 true (D-111). ShedLock이 있어 둘 다 켜져도 한 번만 돈다
+    enabled: ${APP_JOBS_ENABLED:true}
   base-url: ${APP_BASE_URL:http://localhost:8080}
   # 깃허브 릴리스를 공지로 올릴 때 확인하는 값 (D-97). 서버의 secrets.env에서 만든다. 비어 있으면 그 주소를 닫는다.
   release-notice-token: ${RELEASE_NOTICE_TOKEN:}
@@ -58,6 +87,19 @@ app:
     cookie-secure: ${COOKIE_SECURE:true}
     # 인증번호를 해시할 때 쓰는 비밀 키 (USR-02)
     code-hash-secret: ${CODE_HASH_SECRET:}
+  social:
+    # 구글 로그인 (D-103). Google Cloud 콘솔의 OAuth 클라이언트 값. 비워 두면 구글 버튼을 숨긴다.
+    google:
+      client-id: ${GOOGLE_CLIENT_ID:}
+      client-secret: ${GOOGLE_CLIENT_SECRET:}
+    # 네이버 로그인 (D-107). 네이버 개발자센터 → 내 애플리케이션의 Client ID·Secret. 비워 두면 네이버 버튼을 숨긴다.
+    naver:
+      client-id: ${NAVER_CLIENT_ID:}
+      client-secret: ${NAVER_CLIENT_SECRET:}
+    # 카카오 로그인 (D-108). 카카오 개발자 콘솔 → 앱 → REST API 키와 그 키의 카카오 로그인 Client Secret. 비워 두면 카카오 버튼을 숨긴다.
+    kakao:
+      client-id: ${KAKAO_CLIENT_ID:}
+      client-secret: ${KAKAO_CLIENT_SECRET:}
   signup:
     code-ttl: ${SIGNUP_CODE_TTL:10m}
     # 인증을 마친 뒤 가입을 끝낼 때까지 기다리는 시간
@@ -77,6 +119,9 @@ app:
     captcha-after-failures: ${LOGIN_CAPTCHA_AFTER:3}
     lock-after-failures: ${LOGIN_LOCK_AFTER:5}
     lock-duration: ${LOGIN_LOCK_DURATION:5m}
+    # 같은 IP에서 계정을 바꿔 가며 틀려도 사람 확인을 띄운다. 잠금은 계정에만 건다 (D-115)
+    captcha-after-ip-failures: ${LOGIN_CAPTCHA_AFTER_IP:5}
+    ip-window: ${LOGIN_IP_WINDOW:1h}
   rate-limit:
     # IP별 요청 제한 (D-80). 수치는 추천안 #4 기본값, 1차는 서버 메모리에서 셈 (D-83 대기)
     login-per-minute: ${RATE_LOGIN_PER_MINUTE:20}
@@ -84,7 +129,8 @@ app:
     # 가입 화면 이메일 중복 확인 (D-99)
     email-check-per-minute: ${RATE_EMAIL_CHECK_PER_MINUTE:20}
   turnstile:
-    # Cloudflare Turnstile (D-79). 기본값은 Cloudflare가 제공하는 "항상 통과" 테스트 키
+    # Cloudflare Turnstile (D-79). 기본값은 Cloudflare가 제공하는 "항상 통과" 테스트 키.
+    # 실제 사이트는 GitHub Actions secrets의 TURNSTILE_SITE_KEY·TURNSTILE_SECRET_KEY로 실제 키를 넣는다 (D-115)
     site-key: ${TURNSTILE_SITE_KEY:1x00000000000000000000AA}
     secret-key: ${TURNSTILE_SECRET_KEY:1x0000000000000000000000000000000AA}
     verify-url: https://challenges.cloudflare.com/turnstile/v0/siteverify
@@ -99,6 +145,18 @@ blog:
   page-size: ${BLOG_PAGE_SIZE:12}
   # 참여 신청이 거절된 뒤 다시 신청할 수 있을 때까지 (BLG-04)
   rejoin-after-reject: ${BLOG_REJOIN_AFTER_REJECT:7d}
+  # 블로그 통계 (D-112). 블로그 홈·글을 연 기록을 남겨 시간별·일별·월별 방문자와 들어온 경로를 보여 준다
+  stats:
+    # 방문 기록 보관 날 수. 지나면 새벽 정리 작업(app-a)이 지운다. 1년 전 같은 달과 비교할 수 있게 400일
+    retention-days: ${BLOG_STATS_RETENTION_DAYS:400}
+    # 같은 사람이 같은 화면을 이 시간 안에 다시 열면(새로 고침 등) 한 번으로 센다
+    repeat-window: ${BLOG_STATS_REPEAT_WINDOW:30m}
+    # 검색어를 저장할 때 최대 글자 수 (50까지)
+    keyword-max: ${BLOG_STATS_KEYWORD_MAX:30}
+    # 일별 그래프에서 한 번에 고를 수 있는 날 수
+    max-day-range: ${BLOG_STATS_MAX_DAY_RANGE:92}
+    # 검색어·다른 사이트·많이 본 글 목록 개수
+    top-count: ${BLOG_STATS_TOP_COUNT:10}
 
 # 사진 올리기 (004 6.3, SEC-08, D-75)
 upload:
@@ -148,3 +206,13 @@ admin:
   session-ttl: ${ADMIN_SESSION_TTL:2h}
   # IP마다 1분에 받는 관리자 로그인 시도 수
   login-per-minute: ${ADMIN_LOGIN_PER_MINUTE:10}
+
+# 실제 사이트에 테스트 회원과 그 활동을 넣고 지운다 (D-113). 평소에는 비어 있어 아무 일도 하지 않는다.
+# .github/workflows/test-data.yml이 운영 중인 이미지로 컨테이너를 하나 더 띄워(웹 서버 없이) 이 값을 준다.
+test-data:
+  # load: 넣기(두 번 돌려도 더 생기지 않음), remove: 테스트 데이터만 모두 지우기
+  action: ${TEST_DATA_ACTION:}
+  # 테스트 회원 8명의 비밀번호. 저장소에 두지 않고 GitHub 시크릿 TEST_MEMBER_PASSWORD로만 받는다
+  password: ${TEST_MEMBER_PASSWORD:}
+  # 글에 넣은 영상·사이트 링크의 미리보기 카드를 바깥 사이트에서 받을지 (D-92)
+  link-previews: ${TEST_DATA_LINK_PREVIEWS:true}
