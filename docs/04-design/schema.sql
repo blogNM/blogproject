@@ -291,7 +291,7 @@ CREATE TABLE posts (
   author_id BIGINT NOT NULL COMMENT '작성자',
   category_id BIGINT NULL COMMENT '없을 수 있음',
   title VARCHAR(30) NOT NULL COMMENT '1~30자',
-  content_md TEXT NOT NULL COMMENT '마크다운 원문, 최대 1000자',
+  content_md TEXT NOT NULL COMMENT '마크다운 원문, 최대 3000자(공백 포함, D-121)',
   is_notice BOOLEAN NOT NULL DEFAULT FALSE COMMENT '블로그 공지',
   author_left BOOLEAN NOT NULL DEFAULT FALSE COMMENT '블로그 탈퇴·강퇴로 "탈퇴한 계정" 표시 (D-33)',
   status VARCHAR(20) NOT NULL DEFAULT 'NORMAL',

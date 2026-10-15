@@ -2,7 +2,7 @@ import { api } from '../api.js';
 import { requireLogin } from '../layout.js';
 import { createRichEditor } from '../rich-editor.js';
 import {
-  IMAGE_EXTENSIONS, IMAGE_MAX_BYTES, POST_CONTENT_MAX, POST_TAGS_MAX, POST_TITLE_MAX, contentLength, parseTags,
+  IMAGE_EXTENSIONS, IMAGE_MAX_BYTES, POST_CONTENT_MAX, POST_TAGS_MAX, POST_TITLE_MAX, contentLength, contentLengthNoSpaces, parseTags,
 } from '../rules.js';
 
 await requireLogin();
@@ -220,10 +220,13 @@ if (blog) {
     $('draft-message').hidden = false;
   }
 
+  // 공백 포함 글자 수로 최대 글자 수를 보고, 공백 제외 글자 수도 함께 보여 준다 (D-121)
   function updateLength() {
-    const n = contentLength(editor.getMarkdown());
-    $('length').textContent = String(n);
+    const markdown = editor.getMarkdown();
+    const n = contentLength(markdown);
+    $('length').textContent = n.toLocaleString('ko-KR');
     $('length').className = n > POST_CONTENT_MAX ? 'error' : '';
+    $('length-nospace').textContent = contentLengthNoSpaces(markdown).toLocaleString('ko-KR');
   }
   updateLength();
 
@@ -277,7 +280,7 @@ if (blog) {
       return;
     }
     if (contentLength(body.content) > POST_CONTENT_MAX) {
-      msg.textContent = `본문은 ${POST_CONTENT_MAX}자까지 쓸 수 있습니다.`;
+      msg.textContent = `본문은 공백 포함 ${POST_CONTENT_MAX.toLocaleString('ko-KR')}자까지 쓸 수 있습니다.`;
       return;
     }
     if (body.tags.length > POST_TAGS_MAX) {
