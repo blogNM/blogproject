@@ -7,6 +7,7 @@ import java.util.regex.Pattern;
 
 import com.blognm.mainblog.blog.BlogRules;
 import com.blognm.mainblog.common.ApiException;
+import com.blognm.mainblog.common.Profanity;
 
 /** 글·카테고리 입력 규칙 (004 6.6, 6.4). 서버가 최종으로 확인한다. */
 public final class PostRules {
@@ -38,10 +39,13 @@ public final class PostRules {
         if (length < 1 || length > TITLE_MAX || title.chars().anyMatch(Character::isISOControl)) {
             throw ApiException.badRequest("INVALID_TITLE", "제목은 1~%d자로 써 주세요.".formatted(TITLE_MAX));
         }
-        return title;
+        return Profanity.mask(title);
     }
 
-    /** 본문은 마크다운 원문 그대로 저장한다. 글자 수는 이미지 문법을 뺀 원문으로 센다 (추천안 #14). */
+    /**
+     * 본문은 마크다운 원문 그대로 저장한다. 글자 수는 이미지 문법을 뺀 원문으로 센다 (추천안 #14).
+     * 욕설은 저장할 때 *로 가린다 (D-125). 글자 수는 가리기 전 원문으로 센다.
+     */
     public static String checkContent(String raw) {
         String content = raw == null ? "" : raw.replace("\r\n", "\n");
         if (content.isBlank()) {
@@ -54,7 +58,7 @@ public final class PostRules {
         if (content.chars().anyMatch(c -> Character.isISOControl(c) && c != '\n' && c != '\t')) {
             throw ApiException.badRequest("INVALID_CONTENT", "본문에 쓸 수 없는 문자가 있습니다.");
         }
-        return content;
+        return Profanity.maskMarkdown(content);
     }
 
     public static int contentLength(String content) {
@@ -63,7 +67,7 @@ public final class PostRules {
         return text.codePointCount(0, text.length());
     }
 
-    /** 글 태그는 10개까지. 앞의 #·공백 정리, 소문자, 한 글 안의 중복은 하나로 (6.4). */
+    /** 글 태그는 10개까지. 앞의 #·공백 정리, 소문자, 한 글 안의 중복은 하나로 (6.4). 욕설 태그는 받지 않는다 (D-125). */
     public static List<String> normalizeTags(List<String> raw) {
         Set<String> tags = new LinkedHashSet<>();
         if (raw != null) {
@@ -74,6 +78,9 @@ public final class PostRules {
                 String tag = BlogRules.normalizeTag(t);
                 if (tag == null) {
                     throw ApiException.badRequest("INVALID_TAG", "태그는 한글·영문·숫자·_로 1~20자입니다.");
+                }
+                if (Profanity.contains(tag)) {
+                    throw ApiException.badRequest("PROFANE_TAG", "태그에 쓸 수 없는 말이 있습니다: #" + tag);
                 }
                 tags.add(tag);
             }

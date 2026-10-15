@@ -29,7 +29,7 @@ class MemberRulesTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"관리자", "Admin", "운영자123", "탈퇴한회원", "a", "닉네임이열세글자를넘어갑니다", "nick name", "nick!"})
+    @ValueSource(strings = {"관리자", "Admin", "운영자123", "탈퇴한회원", "a", "닉네임이열세글자를넘어갑니다", "nick name", "nick!", "시발왕", "Fuckboy"})
     void invalidNicknames(String nickname) {
         assertThatThrownBy(() -> MemberRules.checkNickname(nickname)).isInstanceOf(ApiException.class);
     }

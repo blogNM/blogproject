@@ -120,6 +120,14 @@ class CommentTest extends IntegrationTest {
     }
 
     @Test
+    @DisplayName("댓글의 욕설은 *로 가려서 저장한다 (D-125)")
+    void profanityIsMasked() throws Exception {
+        long id = comment(reader, "아 시발 맛있네", null);
+        String saved = jdbc.queryForObject("SELECT content FROM comments WHERE id = ?", String.class, id);
+        assertThat(saved).isEqualTo("아 ** 맛있네");
+    }
+
+    @Test
     @DisplayName("비공개 블로그 글에는 멤버가 아니면 댓글을 읽지도 달지도 못한다")
     void privateBlog() throws Exception {
         postAs("/api/blogs", """
