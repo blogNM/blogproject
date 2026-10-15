@@ -14,6 +14,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -24,6 +26,7 @@ import org.jsoup.nodes.Node;
 import org.jsoup.nodes.TextNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -58,16 +61,45 @@ public class LinkPreviewService {
     private final UploadProperties uploadProps;
     private final LinkPreviewProperties props;
     private final Clock clock;
+    private final Executor executor;
     private final ObjectMapper json = new ObjectMapper();
 
     public LinkPreviewService(NamedParameterJdbcTemplate jdbc, SafeFetcher fetcher, ImageService images,
-            UploadProperties uploadProps, LinkPreviewProperties props, Clock clock) {
+            UploadProperties uploadProps, LinkPreviewProperties props, Clock clock,
+            @Qualifier("applicationTaskExecutor") Executor executor) {
         this.jdbc = jdbc;
         this.fetcher = fetcher;
         this.images = images;
         this.uploadProps = uploadProps;
         this.props = props;
         this.clock = clock;
+        this.executor = executor;
+    }
+
+    /**
+     * 글 저장 API가 부른다. 바깥 사이트를 기다리면 저장이 링크 수 × 몇 초씩 늦어지므로 뒤에서 받는다 (D-124).
+     * 받는 동안 글을 열면 그 링크는 글자 링크로 보이고, 다 받은 뒤 다시 열면 카드로 보인다.
+     * 서버가 받는 도중 꺼지면 그 미리보기만 빠지고, 글을 다시 저장할 때 다시 받는다.
+     */
+    public void collectAfterSave(String safeHtml, long uploaderId) {
+        if (!props.enabled()) {
+            return;
+        }
+        if (!props.background()) {
+            collect(safeHtml, uploaderId);
+            return;
+        }
+        try {
+            executor.execute(() -> {
+                try {
+                    collect(safeHtml, uploaderId);
+                } catch (RuntimeException e) {
+                    log.warn("링크 미리보기를 받지 못함: {}", e.toString());
+                }
+            });
+        } catch (RejectedExecutionException e) {
+            log.warn("링크 미리보기 작업을 맡기지 못함: {}", e.toString());
+        }
     }
 
     /**

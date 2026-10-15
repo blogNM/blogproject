@@ -12,8 +12,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param maxLinksPerPost 글 하나를 저장할 때 미리보기를 받는 링크 수
  * @param refreshAfter 받아 둔 미리보기를 다시 받기까지
  * @param allowPrivateHosts 내부망 주소 허용. 테스트에서만 켠다 (SSRF 막기)
+ * @param background 글 저장을 기다리게 하지 않고 뒤에서 받는다 (D-124). 테스트는 끄고 바로 받는다
  */
 @ConfigurationProperties(prefix = "link-preview")
 public record LinkPreviewProperties(boolean enabled, Duration timeout, int maxLinksPerPost, Duration refreshAfter,
-        boolean allowPrivateHosts) {
+        boolean allowPrivateHosts, boolean background) {
 }

@@ -83,10 +83,10 @@ public class PostController {
         return Map.of("updated", true);
     }
 
-    /** 글이 저장된 뒤(트랜잭션 밖에서) 링크 미리보기를 받아 둔다 (D-92). */
+    /** 글이 저장된 뒤(트랜잭션 밖에서) 링크 미리보기를 뒤에서 받아 둔다. 저장 응답은 기다리지 않는다 (D-92, D-124). */
     private void collectPreviews(PostService.WriteRequest body, MemberPrincipal me) {
         if (body.content() != null) {
-            linkPreviews.collect(markdown.toSafeHtml(body.content()), me.memberId());
+            linkPreviews.collectAfterSave(markdown.toSafeHtml(body.content()), me.memberId());
         }
     }
 
