@@ -16,6 +16,10 @@
 - **문서** D-118, spec 001·005 Clarifications, CLAUDE.md·docs/README·specs/README 결정 번호와 목록, [도커-배포.md](docs/05-guides/도커-배포.md#로봇-확인-실제-키-넣기-d-118) 키 만드는 법, [로컬-실행.md](docs/05-guides/로컬-실행.md), 릴리스 노트 [v1.10.1](docs/releases/v1.10.1.md)
 - **설정** 테스트: `LoginTest`·`AdminTest`(로그인 화면 CSP)·`OgTagTest`를 새 이름과 CSP에 맞춤
 
+### 메일 로그인 실패 원인 기록
+
+- **수정** 메일 서버가 로그인을 거절하면 서버 기록에 메일 서버의 답(예: Gmail `535 5.7.8 Username and Password not accepted`)을 함께 남김. 받는 사람·인증번호는 그대로 남기지 않음
+
 ## 2026-10-14
 
 ### 코드 블럭 입력과 언어별 색 (v1.10.0, D-117)

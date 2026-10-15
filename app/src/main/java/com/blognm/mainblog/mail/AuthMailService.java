@@ -2,6 +2,7 @@ package com.blognm.mainblog.mail;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.mail.MailAuthenticationException;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -50,9 +51,25 @@ public class AuthMailService {
     private void send(String to, String subject, String body) {
         try {
             gateway.send(to, subject, body);
+        } catch (MailAuthenticationException e) {
+            // 메일 서버 로그인 실패는 서버 답(예: Gmail 535 5.7.8)을 남겨야 원인을 안다. 받는 사람·본문은 들어 있지 않다.
+            log.warn("인증 메일 발송 실패: 메일 서버 로그인 거절 - {}", firstLine(rootMessage(e)));
         } catch (Exception e) {
             // 받는 사람 주소와 본문(인증번호)은 로그에 남기지 않는다.
             log.warn("인증 메일 발송 실패: {}", e.getClass().getSimpleName());
         }
+    }
+
+    private static String rootMessage(Throwable e) {
+        Throwable t = e;
+        while (t.getCause() != null && t.getCause() != t) {
+            t = t.getCause();
+        }
+        return t.getMessage() == null ? t.getClass().getSimpleName() : t.getMessage();
+    }
+
+    private static String firstLine(String s) {
+        int nl = s.indexOf('\n');
+        return (nl < 0 ? s : s.substring(0, nl)).strip();
     }
 }
