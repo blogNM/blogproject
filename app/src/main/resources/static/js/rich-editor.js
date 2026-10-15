@@ -3,6 +3,8 @@
 // 저장 형식은 그대로 마크다운이고, 색·크기·형광펜은 정해 둔 class 하나씩의 <span>이다 (D-93, D-102).
 // HTML 구조는 [HTML 보기]를 누르면 옆 칸에 읽기 전용 글자로 보인다 (textContent만 쓴다).
 
+import { languageName } from './code-highlight.js';
+
 export const TEXT_COLORS = [['red', '빨강'], ['orange', '주황'], ['green', '초록'], ['blue', '파랑'], ['purple', '보라'],
   ['mauve', '자주'], ['gray', '회색']];
 export const HIGHLIGHTS = [['yellow', '노랑'], ['green', '연두'], ['pink', '분홍'], ['blue', '하늘']];
@@ -244,6 +246,28 @@ function prettyLines(html) {
 /** 코드 블록에서 고를 수 있는 언어 (D-117). 이 이름이 마크다운 ```이름 과 글 화면의 언어 표시가 된다. */
 const CODE_LANGUAGES = ['java', 'javascript', 'typescript', 'python', 'c', 'cpp', 'csharp', 'kotlin', 'go', 'rust',
   'swift', 'php', 'ruby', 'dart', 'r', 'sql', 'html', 'css', 'json', 'yaml', 'bash', 'markdown', 'diff', 'text'];
+/** ⋮ 메뉴의 언어 목록: 맨 위 "일반 텍스트"(언어 없음), 나머지는 보이는 이름 순서 (D-120) */
+const MENU_LANGUAGES = CODE_LANGUAGES.filter((l) => l !== 'text')
+  .sort((a, b) => languageName(a).localeCompare(languageName(b), 'en', { sensitivity: 'base' }));
+const DEFAULT_LANGUAGE_KEY = 'creat.codeBlockLanguage';
+
+/** [기본 언어]로 고른 언어. 이 브라우저에만 남는다. 없거나 못 읽으면 '' */
+function defaultCodeLanguage() {
+  try {
+    const v = localStorage.getItem(DEFAULT_LANGUAGE_KEY) || '';
+    return CODE_LANGUAGES.includes(v) && v !== 'text' ? v : '';
+  } catch {
+    return '';
+  }
+}
+function setDefaultCodeLanguage(lang) {
+  try {
+    if (lang) localStorage.setItem(DEFAULT_LANGUAGE_KEY, lang);
+    else localStorage.removeItem(DEFAULT_LANGUAGE_KEY);
+  } catch {
+    // 저장하지 못해도 이번 코드 블록에는 영향 없다
+  }
+}
 
 /**
  * 편집기를 만든다.
@@ -341,15 +365,33 @@ export function createRichEditor({ host, height, placeholder, uploadImage, withC
   /**
    * 빈 글에서 바로 코드 블록을 넣으면 Toast UI가 "빈 글" 안내 문구를 코드 블록 안에 그려, 그 문구에 막혀 글자가 들어가지 않았다.
    * 코드 블록만 있는 글이면 아래에 빈 문단을 하나 두어 빈 글로 보지 않게 한다. 빈 문단은 저장할 때 없어진다 (D-117).
+   * 새로 넣은 빈 코드 블록에는 [기본 언어]로 고른 언어를 붙인다 (D-120).
    */
   function codeBlockPlugin(context) {
+    const countBlocks = (doc) => {
+      let n = 0;
+      doc.descendants((node) => { if (node.type.name === 'codeBlock') n += 1; });
+      return n;
+    };
     return {
       wysiwygPlugins: [() => new context.pmState.Plugin({
-        appendTransaction(transactions, _old, state) {
+        appendTransaction(transactions, oldState, state) {
           if (!transactions.some((t) => t.docChanged)) return null;
-          const { doc, schema } = state;
-          if (doc.childCount !== 1 || doc.firstChild.type.name !== 'codeBlock') return null;
-          return state.tr.insert(doc.content.size, schema.nodes.paragraph.create());
+          let tr = null;
+          const lang = defaultCodeLanguage();
+          if (lang && countBlocks(state.doc) > countBlocks(oldState.doc)) {
+            state.doc.descendants((node, pos) => {
+              if (node.type.name !== 'codeBlock' || node.attrs.language || node.content.size) return;
+              tr = tr || state.tr;
+              tr.setNodeMarkup(pos, null, { ...node.attrs, language: lang });
+            });
+          }
+          const doc = tr ? tr.doc : state.doc;
+          if (doc.childCount === 1 && doc.firstChild.type.name === 'codeBlock') {
+            tr = tr || state.tr;
+            tr.insert(doc.content.size, state.schema.nodes.paragraph.create());
+          }
+          return tr;
         },
       })],
     };
@@ -588,6 +630,201 @@ export function createRichEditor({ host, height, placeholder, uploadImage, withC
   window.addEventListener('scroll', () => { if (!sizeBar.hidden) syncSizeBar(); }, { passive: true });
   window.addEventListener('resize', () => { if (!sizeBar.hidden) syncSizeBar(); });
   sizeBarReady = true;
+
+  // ----- 코드 블록 ⋮ 메뉴 (D-120) -----
+  // 코드 블록 위에 마우스를 올리거나 그 안에 커서가 있으면 오른쪽 위에 "언어 이름 ⋮" 버튼이 뜬다.
+  // 누르면 복사·잘라내기·삭제·언어 ▸·기본 언어 ▸ 메뉴가 열린다. Toast UI의 언어 입력 칸 대신 쓴다.
+  if (withCode) setupCodeMenu();
+
+  function setupCodeMenu() {
+    const button = make('button', { type: 'button', class: 'code-menu-button', 'aria-haspopup': 'menu', 'aria-expanded': 'false' });
+    const buttonLang = make('span', { class: 'code-menu-lang' });
+    button.append(buttonLang, make('span', { class: 'code-menu-dots', 'aria-hidden': 'true' }, '⋮'));
+    button.hidden = true;
+    const menu = make('div', { class: 'code-menu', role: 'menu', 'aria-label': '코드 블록' });
+    menu.hidden = true;
+    editorBox.append(button, menu);
+
+    // 코드 블록 바깥 div. 문법 강조 플러그인이 있으면 그 플러그인의 class가 붙는다
+    const CODE_BLOCK_DOM = '.toastui-editor-ww-code-block, .toastui-editor-ww-code-block-highlighting';
+    let target = null; // 지금 버튼이 붙은 코드 블록의 바깥 div
+    let hovered = null;
+
+    /** 코드 블록 바깥 div → { pos, node }. 블록이 지워졌으면 null */
+    function blockOf(dom) {
+      if (!dom || !dom.isConnected) return null;
+      const v = view();
+      let found = null;
+      v.state.doc.descendants((node, pos) => {
+        if (found) return false;
+        if (node.type.name === 'codeBlock' && v.nodeDOM(pos) === dom) found = { pos, node };
+        return !found;
+      });
+      return found;
+    }
+    /** 커서가 들어 있는 코드 블록의 바깥 div */
+    function cursorBlock() {
+      const v = view();
+      const { $from } = v.state.selection;
+      for (let d = $from.depth; d > 0; d -= 1) {
+        if ($from.node(d).type.name === 'codeBlock') return v.nodeDOM($from.before(d));
+      }
+      return null;
+    }
+
+    function place() {
+      if (!menu.hidden) return; // 메뉴가 열린 동안에는 그 블록에 붙어 있는다
+      if (hovered && !hovered.isConnected) hovered = null; // 언어를 바꾸면 Toast UI가 블록을 새로 그린다
+      const dom = hovered || cursorBlock();
+      const block = blockOf(dom);
+      if (!block) {
+        target = null;
+        button.hidden = true;
+        return;
+      }
+      target = dom;
+      const lang = block.node.attrs.language;
+      buttonLang.textContent = lang && lang !== 'text' ? languageName(lang) : '일반 텍스트';
+      button.setAttribute('aria-label', `코드 블록 메뉴 (${buttonLang.textContent})`);
+      button.hidden = false;
+      const box = editorBox.getBoundingClientRect();
+      const r = dom.getBoundingClientRect();
+      button.style.top = `${r.top - box.top + 6}px`;
+      button.style.left = `${r.right - box.left - button.offsetWidth - 6}px`;
+    }
+
+    wwRoot.addEventListener('mouseover', (e) => {
+      const dom = e.target.closest && e.target.closest(CODE_BLOCK_DOM);
+      if (dom === hovered) return;
+      hovered = dom;
+      place();
+    });
+    editorBox.addEventListener('mouseleave', () => { hovered = null; place(); });
+    editor.on('caretChange', place);
+    editor.on('change', place);
+    window.addEventListener('scroll', place, { passive: true });
+    window.addEventListener('resize', place);
+    // 버튼·메뉴를 누르는 동안 편집 칸이 커서를 잃지 않게 한다
+    button.addEventListener('mousedown', (e) => e.preventDefault());
+    menu.addEventListener('mousedown', (e) => e.preventDefault());
+
+    function item(label, onClick, extra = {}) {
+      const b = make('button', { type: 'button', role: 'menuitem', class: 'code-menu-item', ...extra });
+      b.append(make('span', {}, label));
+      b.addEventListener('click', onClick);
+      return b;
+    }
+    /** 언어 고르기 하위 메뉴. current는 체크 표시할 언어(없으면 ''). */
+    function languageList(current, pick) {
+      const list = make('div', { class: 'code-menu-sub', role: 'menu' });
+      const choices = [['', '일반 텍스트'], ...MENU_LANGUAGES.map((l) => [l, languageName(l)])];
+      choices.forEach(([lang, name]) => {
+        const b = make('button', { type: 'button', role: 'menuitemradio', class: 'code-menu-item', 'aria-checked': String(lang === current) });
+        b.append(make('span', { class: 'code-menu-check', 'aria-hidden': 'true' }, lang === current ? '✓' : ''), make('span', {}, name));
+        b.addEventListener('click', () => pick(lang));
+        list.append(b);
+      });
+      return list;
+    }
+    function submenu(label, list) {
+      const wrap = make('div', { class: 'code-menu-group' });
+      const open = item(label, () => {
+        const opened = !wrap.classList.contains('open');
+        menu.querySelectorAll('.code-menu-group.open').forEach((g) => g.classList.remove('open'));
+        wrap.classList.toggle('open', opened);
+        if (opened) placeSub(wrap, list);
+      }, { 'aria-haspopup': 'menu' });
+      open.classList.add('has-sub');
+      open.append(make('span', { class: 'code-menu-arrow', 'aria-hidden': 'true' }, '›'));
+      wrap.addEventListener('mouseenter', () => {
+        menu.querySelectorAll('.code-menu-group.open').forEach((g) => { if (g !== wrap) g.classList.remove('open'); });
+        wrap.classList.add('open');
+        placeSub(wrap, list);
+      });
+      wrap.append(open, list);
+      return wrap;
+    }
+    /** 하위 메뉴는 메뉴 오른쪽에, 자리가 없으면 왼쪽에 둔다. 화면 아래로 넘치면 그만큼 위로 올린다. */
+    function placeSub(wrap, list) {
+      list.classList.remove('left');
+      list.style.marginTop = '';
+      const r = list.getBoundingClientRect();
+      if (r.right > document.documentElement.clientWidth - 8) list.classList.add('left');
+      const overflow = r.bottom - (window.innerHeight - 8);
+      if (overflow > 0) list.style.marginTop = `${-Math.min(overflow, Math.max(0, r.top - 8))}px`;
+    }
+
+    async function copyText(text) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch {
+        return false;
+      }
+    }
+    function removeBlock(block) {
+      const v = view();
+      v.dispatch(v.state.tr.delete(block.pos, block.pos + block.node.nodeSize).scrollIntoView());
+      v.focus();
+    }
+
+    function openMenu(byKeyboard) {
+      const block = blockOf(target);
+      if (!block) return;
+      const current = block.node.attrs.language && block.node.attrs.language !== 'text' ? block.node.attrs.language : '';
+      menu.replaceChildren(
+        item('복사', async () => { await copyText(block.node.textContent); closeMenu(); }),
+        item('잘라내기', async () => {
+          await copyText(block.node.textContent);
+          const now = blockOf(target);
+          closeMenu();
+          if (now) removeBlock(now);
+        }),
+        item('삭제', () => {
+          const now = blockOf(target);
+          closeMenu();
+          if (now) removeBlock(now);
+        }),
+        make('hr', { class: 'code-menu-line' }),
+        submenu('언어', languageList(current, (lang) => {
+          const now = blockOf(target);
+          closeMenu();
+          if (!now) return;
+          const v = view();
+          v.dispatch(v.state.tr.setNodeMarkup(now.pos, null, { ...now.node.attrs, language: lang || null }));
+          v.focus();
+        })),
+        submenu('기본 언어', languageList(defaultCodeLanguage(), (lang) => {
+          setDefaultCodeLanguage(lang);
+          closeMenu();
+        })),
+      );
+      menu.hidden = false;
+      button.setAttribute('aria-expanded', 'true');
+      const box = editorBox.getBoundingClientRect();
+      const b = button.getBoundingClientRect();
+      menu.style.top = `${b.bottom - box.top + 4}px`;
+      menu.style.left = `${Math.max(8, b.right - box.left - menu.offsetWidth)}px`;
+      if (byKeyboard) menu.querySelector('button').focus();
+    }
+    function closeMenu() {
+      if (menu.hidden) return;
+      menu.hidden = true;
+      button.setAttribute('aria-expanded', 'false');
+      place();
+    }
+    button.addEventListener('click', (e) => (menu.hidden ? openMenu(e.detail === 0) : closeMenu()));
+    document.addEventListener('mousedown', (e) => {
+      if (!menu.hidden && !menu.contains(e.target) && !button.contains(e.target)) closeMenu();
+    });
+    menu.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        closeMenu();
+        button.focus();
+      }
+    });
+  }
 
   // ----- HTML 구조 칸 -----
   let timer = null;
