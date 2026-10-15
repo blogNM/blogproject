@@ -11,6 +11,11 @@ const NAMES = {
   markdown: 'Markdown', md: 'Markdown', diff: 'Diff', dart: 'Dart', r: 'R', text: 'Text', plain: 'Text',
 };
 
+/** 언어 이름(class의 language-뒤)을 사람이 읽는 이름으로. 편집기의 언어 메뉴도 이 이름을 쓴다 (D-120). */
+export function languageName(lang) {
+  return NAMES[lang] || lang;
+}
+
 let loading = null;
 function loadPrism() {
   if (window.Prism && window.Prism.highlightElement) return Promise.resolve(window.Prism);
@@ -33,7 +38,7 @@ export async function highlightCode(root) {
   blocks.forEach((code) => {
     const lang = code.className.slice('language-'.length);
     code.parentElement.classList.add('code-block');
-    code.parentElement.dataset.lang = NAMES[lang] || lang;
+    code.parentElement.dataset.lang = languageName(lang);
   });
   try {
     const Prism = await loadPrism();
