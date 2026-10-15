@@ -384,7 +384,7 @@ public class TestDataSeeder {
             write("cafe-rain", CAFE, 8, "비 오는 날의 창가 자리", """
                     비가 와서 <span class="tc-blue">창밖이 파랗게</span> 보였어요.
                     오늘은 따뜻한 라떼 한 잔.""", cafeReview, List.of("카페", "비"), false, 1);
-            write("cafe-long", CAFE, 6, "본문 1000자 꽉 채운 글", longBody(), homeCafe, List.of("최대글자", "테스트"),
+            write("cafe-long", CAFE, 6, "본문 3000자 꽉 채운 글", longBody(), homeCafe, List.of("최대글자", "테스트"),
                     false, 9);
 
             long domestic = category(TRIP, "국내");
@@ -501,7 +501,7 @@ public class TestDataSeeder {
             written.add(new Written(id, m(author), content, daysAgo));
         }
 
-        /** 글자 수를 세는 규칙(PostRules.contentLength)으로 딱 최대 글자 수(1000자)인 본문. */
+        /** 글자 수를 세는 규칙(PostRules.contentLength)으로 딱 최대 글자 수(공백 포함 3000자, D-121)인 본문. */
         String longBody() {
             String unit = "테스트 계정이 본문 글자 수 끝까지 써 보는 글입니다. 글자 수는 사진을 빼고 셉니다. ";
             StringBuilder sb = new StringBuilder("## 최대 글자 수 확인\n");
@@ -527,7 +527,7 @@ public class TestDataSeeder {
             long abusive = comment("cafe-latte", 8, "라떼보다 아메리카노가 낫던데요ㅋㅋ 별로예요", null, 1);
             comment("cafe-latte", 6, "@테스트하은 말이 좀 심해요.", abusive, 1);
             comment("cafe-drip", 1, "물 온도 참고할게요.", null, 1);
-            comment("cafe-long", 2, "정말 1000자 꽉 찼네요.", null, 8);
+            comment("cafe-long", 2, "정말 3000자 꽉 찼네요.", null, 8);
             long t1 = comment("trip-sea", 6, "세화 해변 정말 예쁘죠.", null, 5);
             long t2 = comment("trip-sea", 2, "다음엔 우도도 가 보려고요.", t1, 5);
             comment("trip-sea", 5, "우도 땅콩 아이스크림 꼭 드세요.", t2, 4);
