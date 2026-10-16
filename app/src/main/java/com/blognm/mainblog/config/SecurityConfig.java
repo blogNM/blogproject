@@ -18,6 +18,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
+import org.springframework.security.web.header.writers.CrossOriginOpenerPolicyHeaderWriter.CrossOriginOpenerPolicy;
 import org.springframework.security.web.header.writers.DelegatingRequestMatcherHeaderWriter;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 import org.springframework.security.web.header.writers.StaticHeadersWriter;
@@ -63,6 +64,14 @@ public class SecurityConfig {
             PathPatternRequestMatcher.withDefaults().matcher("/login.html"),
             PathPatternRequestMatcher.withDefaults().matcher("/admin/login.html"));
 
+    /**
+     * 이 사이트가 쓰지 않는 브라우저 기능(카메라·마이크·위치·결제 등)은 아예 끈다 (D-127).
+     * 글 본문이나 reCAPTCHA 틀 안에서도 이 기능을 부를 수 없다.
+     */
+    static final String PERMISSIONS_POLICY = String.join(", ", "camera=()", "microphone=()", "geolocation=()",
+            "payment=()", "usb=()", "serial=()", "bluetooth=()", "hid=()", "midi=()", "magnetometer=()",
+            "gyroscope=()", "accelerometer=()", "display-capture=()", "browsing-topics=()", "interest-cohort=()");
+
     private static String csp(String styleSrc) {
         return String.join("; ",
                 "default-src 'self'",
@@ -100,6 +109,11 @@ public class SecurityConfig {
                 .logout(l -> l.disable())
                 .headers(h -> h
                         .frameOptions(f -> f.deny())
+                        .permissionsPolicyHeader(p -> p.policy(PERMISSIONS_POLICY))
+                        // 다른 사이트가 새 창으로 우리 화면을 열어도 window.opener로 손대지 못하게 한다 (D-127).
+                        // 소셜 로그인은 팝업이 아니라 같은 창 이동이라 영향이 없다
+                        .crossOriginOpenerPolicy(c -> c.policy(
+                                CrossOriginOpenerPolicy.SAME_ORIGIN))
                         .contentTypeOptions(c -> {
                         })
                         .httpStrictTransportSecurity(hsts -> hsts.includeSubDomains(true).maxAgeInSeconds(31536000))

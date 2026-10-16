@@ -131,7 +131,8 @@ class LinkPreviewTest extends IntegrationTest {
                 new LinkPreviewProperties(true, Duration.ofSeconds(1), 5, Duration.ofDays(7), false));
         for (String url : new String[] {base + "/song", "http://localhost/", "http://10.0.0.1/", "http://169.254.169.254/",
                 "http://[::1]/", "http://192.168.0.1/", "file:///etc/passwd", "http://user@example.com/",
-                "http://example.com:8080/"}) {
+                "http://example.com:8080/", "http://[64:ff9b::a9fe:a9fe]/", "http://[64:ff9b::7f00:1]/",
+                "http://[2002:c0a8:0001::1]/", "http://[2002:0a00:0001::1]/"}) {
             assertThat(strict.allowed(URI.create(url))).as(url).isFalse();
         }
     }

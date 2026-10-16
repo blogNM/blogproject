@@ -74,6 +74,18 @@ class AccountTest extends IntegrationTest {
     }
 
     @Test
+    @DisplayName("로그인한 채로 지금 비밀번호를 계속 맞혀 보면 1시간 동안 막는다 (D-127)")
+    void currentPasswordGuessLimited() throws Exception {
+        for (int i = 0; i < 10; i++) {
+            postAs("/api/me/password", "{\"currentPassword\":\"Wrong123!\",\"newPassword\":\"Newpw123!\"}", me)
+                    .andExpect(status().isBadRequest());
+        }
+        postAs("/api/me/password", "{\"currentPassword\":\"" + PW + "\",\"newPassword\":\"Newpw123!\"}", me)
+                .andExpect(status().isTooManyRequests()).andExpect(jsonPath("$.code").value("TOO_MANY_REQUESTS"));
+        login(EMAIL, PW);
+    }
+
+    @Test
     @DisplayName("현재 비밀번호가 틀리면 바뀌지 않는다")
     void wrongCurrentPassword() throws Exception {
         postAs("/api/me/password", "{\"currentPassword\":\"Wrong123!\",\"newPassword\":\"Newpw123!\"}", me)
