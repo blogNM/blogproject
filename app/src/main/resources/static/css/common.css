@@ -478,6 +478,13 @@ select { padding: 10px 14px; border: 1px solid var(--line); border-radius: 999px
 .or::before, .or::after { content: ""; flex: 1; height: 1px; background: var(--line); }
 .auth-links { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 20px; font-size: 0.86rem; }
 .auth-links a { color: var(--navy); font-weight: 600; text-underline-offset: 3px; }
+/* 소셜 로그인으로 처음 왔을 때 먼저 고르는 두 칸 (D-126) */
+.social-choice { display: grid; gap: 12px; margin-top: 20px; }
+.choice-card { display: block; width: 100%; min-width: 0; white-space: normal; text-align: left; padding: 16px 18px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--card); color: var(--text); cursor: pointer; }
+.choice-card:hover, .choice-card:focus-visible { border-color: var(--primary); background: var(--soft); }
+.choice-card strong { display: block; font-size: 1rem; color: var(--ink); margin-bottom: 4px; }
+.choice-card > span { display: block; font-size: 0.86rem; font-weight: 500; color: var(--muted); line-height: 1.5; }
+.back-to-choice { display: block; margin: 14px auto 0; font-size: 0.86rem; color: var(--muted); }
 
 /* ----- 4단계: 에러 화면 ----- */
 .error-main { flex: 1; display: flex; }

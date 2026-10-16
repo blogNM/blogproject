@@ -16,9 +16,34 @@
     <section class="auth-form">
       <a class="wordmark" href="/" aria-label="Creat_ 메인으로"><span class="word">Creat</span><span class="cursor" aria-hidden="true">_</span></a>
       <h1>거의 다 됐어요!</h1>
-      <p class="sub"><span id="provider-name">소셜</span> 계정 <strong id="social-email"></strong>(으)로 가입해요. 닉네임만 정해 주세요.</p>
+      <p class="sub"><span class="provider-name">소셜</span> 계정 <strong id="social-email"></strong>(으)로 처음 오셨어요. 어떻게 할까요?</p>
 
-      <form id="social-signup" novalidate>
+      <!-- 먼저 고르기: 기존 계정에 연결하거나, 비밀번호를 정해 새로 가입 (D-126) -->
+      <div id="choice" class="social-choice">
+        <button id="choose-link" type="button" class="choice-card">
+          <strong>이미 Creat_ 계정이 있어요</strong>
+          <span>쓰던 계정의 이메일·비밀번호를 확인하고 <span class="provider-name">소셜</span> 계정을 연결해요. 다음부터는 둘 중 아무 방법으로나 로그인할 수 있어요.</span>
+        </button>
+        <button id="choose-signup" type="button" class="choice-card">
+          <strong>처음이에요, 새로 가입할게요</strong>
+          <span>닉네임과 비밀번호를 정해 가입해요. 비밀번호가 있으면 이메일로도 로그인하고, 잊었을 때 비밀번호 찾기도 쓸 수 있어요.</span>
+        </button>
+      </div>
+
+      <form id="social-link" novalidate hidden>
+        <p class="hint">연결할 Creat_ 계정으로 로그인해 주세요.</p>
+        <label for="link-email">이메일</label>
+        <input id="link-email" type="email" autocomplete="email">
+        <label for="link-password">비밀번호</label>
+        <input id="link-password" type="password" autocomplete="current-password" maxlength="15">
+        <p class="hint">비밀번호가 생각나지 않으면 <a href="/forgot-password.html" target="_blank" rel="noopener">비밀번호 찾기</a>로 새로 정한 뒤 다시 해 주세요.</p>
+        <div id="captcha" class="captcha" hidden></div>
+        <p id="link-error" class="error" role="alert"></p>
+        <button type="submit" class="primary">확인하고 연결하기</button>
+        <button type="button" class="link-button back-to-choice">← 다른 방법 고르기</button>
+      </form>
+
+      <form id="social-signup" novalidate hidden>
         <label for="nickname">닉네임</label>
         <div class="row">
           <input id="nickname" maxlength="12">
@@ -26,6 +51,12 @@
         </div>
         <p class="hint">2~12자, 한글·영문·숫자</p>
         <p id="nickname-message" class="info"></p>
+
+        <label for="password">비밀번호</label>
+        <input id="password" type="password" autocomplete="new-password" maxlength="15">
+        <p class="hint">8~15자, 영문·숫자·특수문자를 모두 넣어 주세요. 이메일로 로그인하거나 비밀번호 찾기를 쓸 때 필요해요.</p>
+        <label for="password2">비밀번호 확인</label>
+        <input id="password2" type="password" autocomplete="new-password" maxlength="15">
 
         <fieldset class="consents">
           <legend>약관 동의</legend>
@@ -36,7 +67,9 @@
         </fieldset>
         <p id="error" class="error" role="alert"></p>
         <button type="submit" class="primary">가입하기</button>
+        <button type="button" class="link-button back-to-choice">← 다른 방법 고르기</button>
       </form>
+      <p id="pending-error" class="error" role="alert"></p>
       <div class="auth-links">
         <span>이메일로 가입하려면 <a href="/signup.html">회원가입</a></span>
       </div>

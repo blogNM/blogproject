@@ -13,7 +13,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.blognm.mainblog.auth.JwtProvider.SocialSignup;
 import com.blognm.mainblog.common.ApiException;
-import com.blognm.mainblog.common.Hashing;
 import com.blognm.mainblog.member.Member;
 import com.blognm.mainblog.member.MemberRepository;
 import com.blognm.mainblog.member.MemberRules;
@@ -21,7 +20,8 @@ import com.blognm.mainblog.member.MemberRules;
 /**
  * 구글 로그인 (D-103)·네이버 로그인 (D-107)·카카오 로그인 (D-108). 세 회사 모두 같은 흐름이다.
  * ① 연결된 계정이면 그 회원으로 로그인 ② 그 회사가 확인한 이메일로 가입한 회원이면 연결하고 로그인
- * ③ 처음 온 사람은 닉네임·약관 동의를 받아 가입시킨다. 로그인 뒤에는 이메일 로그인과 같은 토큰 쿠키를 쓴다.
+ * ③ 처음 온 사람은 고르는 화면(D-126)에서 (가) 이메일·비밀번호로 기존 계정을 확인해 연결하거나
+ * (나) 닉네임·비밀번호·약관 동의를 받아 새로 가입한다. 로그인 뒤에는 이메일 로그인과 같은 토큰 쿠키를 쓴다.
  */
 @Service
 public class SocialLoginService {
@@ -86,7 +86,10 @@ public class SocialLoginService {
         return parse(signupToken);
     }
 
-    /** 닉네임과 약관 동의를 받아 가입을 마치고 로그인한다. 비밀번호는 없으므로 아무도 모르는 값을 넣어 둔다. */
+    /**
+     * 닉네임·비밀번호·약관 동의를 받아 가입을 마치고 로그인한다.
+     * 비밀번호를 함께 정해 두어 이메일로도 로그인하고 비밀번호 찾기도 쓸 수 있게 한다 (D-126).
+     */
     @Transactional
     public LoginService.Tokens completeSignup(String signupToken, SignupRequest req) {
         SocialSignup s = parse(signupToken);
@@ -95,6 +98,7 @@ public class SocialLoginService {
             throw ApiException.badRequest("CONSENT_REQUIRED", "필수 항목에 모두 동의해 주세요.");
         }
         String nickname = MemberRules.checkNickname(req.nickname());
+        MemberRules.checkPassword(req.password());
 
         // 두 번 눌렀거나 그사이 다른 창에서 끝낸 경우
         Optional<SocialAccount> linked = socialAccounts.findByProviderAndProviderUserId(s.provider(),
@@ -113,7 +117,7 @@ public class SocialLoginService {
         }
         Member member;
         try {
-            member = members.saveAndFlush(Member.join(s.email(), passwordEncoder.encode(Hashing.randomToken()),
+            member = members.saveAndFlush(Member.join(s.email(), passwordEncoder.encode(req.password()),
                     nameOrNull(s.name()), nickname, null, now));
             socialAccounts.saveAndFlush(SocialAccount.link(member.getId(), s.provider(), s.providerUserId(), now));
         } catch (DataIntegrityViolationException e) {
@@ -121,6 +125,40 @@ public class SocialLoginService {
                     "가입하지 못했습니다. 닉네임을 바꾸거나 " + label(s.provider()) + "로 로그인을 다시 눌러 주세요.");
         }
         return loginService.reissue(member, false);
+    }
+
+    /**
+     * 이미 있는 Creat_ 계정에 이 구글·네이버·카카오 계정을 연결하고 그 회원으로 로그인한다 (D-126).
+     * 남의 계정에 붙이지 못하게 그 계정의 이메일·비밀번호를 로그인과 똑같이 확인한다 (요청 수 제한·사람 확인·잠금 포함).
+     */
+    @Transactional(noRollbackFor = ApiException.class)
+    public LoginService.Tokens linkExisting(String signupToken, LinkRequest req, String clientIp) {
+        SocialSignup s = parse(signupToken);
+        LocalDateTime now = LocalDateTime.now(clock);
+        Member m = loginService.checkPassword(req.email(), req.password(), req.captchaToken(), clientIp);
+
+        Optional<SocialAccount> linked = socialAccounts.findByProviderAndProviderUserId(s.provider(),
+                s.providerUserId());
+        if (linked.isPresent()) {
+            // 두 번 눌렀으면 그대로 로그인. 그사이 다른 회원으로 가입·연결됐으면 덮어쓰지 않는다.
+            if (linked.get().getMemberId().equals(m.getId())) {
+                return loginService.reissue(m, false);
+            }
+            throw new ApiException(HttpStatus.CONFLICT, "SOCIAL_ALREADY_LINKED",
+                    "이 " + label(s.provider()) + " 계정은 이미 다른 회원과 연결돼 있어요.");
+        }
+        if (socialAccounts.existsByMemberIdAndProvider(m.getId(), s.provider())) {
+            throw new ApiException(HttpStatus.CONFLICT, "PROVIDER_TAKEN",
+                    "이 계정에는 이미 다른 " + label(s.provider()) + " 계정이 연결돼 있어요. 그 "
+                            + label(s.provider()) + " 계정으로 로그인해 주세요.");
+        }
+        try {
+            socialAccounts.saveAndFlush(SocialAccount.link(m.getId(), s.provider(), s.providerUserId(), now));
+        } catch (DataIntegrityViolationException e) {
+            throw new ApiException(HttpStatus.CONFLICT, "SOCIAL_ALREADY_LINKED",
+                    "연결하지 못했습니다. " + label(s.provider()) + "로 로그인을 다시 눌러 주세요.");
+        }
+        return loginService.reissue(m, false);
     }
 
     private SocialSignup parse(String signupToken) {
@@ -160,11 +198,16 @@ public class SocialLoginService {
         }
     }
 
-    public record SignupRequest(String nickname, Boolean agreeTerms, Boolean agreePrivacy, Boolean age14) {
+    public record SignupRequest(String nickname, String password, Boolean agreeTerms, Boolean agreePrivacy,
+            Boolean age14) {
 
         boolean agreedAll() {
             return Boolean.TRUE.equals(agreeTerms) && Boolean.TRUE.equals(agreePrivacy) && Boolean.TRUE.equals(age14);
         }
+    }
+
+    /** 기존 계정 연결: 그 계정의 이메일·비밀번호와, 여러 번 틀렸을 때의 사람 확인 토큰. */
+    public record LinkRequest(String email, String password, String captchaToken) {
     }
 
     /** tokens: 로그인됨, signupToken: 가입 화면으로, 둘 다 없으면 이메일 확인이 안 된 계정이라 거절. */

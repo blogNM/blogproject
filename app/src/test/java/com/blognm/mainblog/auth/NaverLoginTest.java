@@ -165,7 +165,7 @@ class NaverLoginTest extends IntegrationTest {
                 .andExpect(jsonPath("$.provider").value("naver"));
 
         MvcResult ok = finishSignup(pending, """
-                {"nickname":"네이버회원","agreeTerms":true,"agreePrivacy":true,"age14":true}""");
+                {"nickname":"네이버회원","password":"Abcd1234!","agreeTerms":true,"agreePrivacy":true,"age14":true}""");
         assertThat(ok.getResponse().getStatus()).isEqualTo(200);
         mvc.perform(get("/api/me").cookie(ok.getResponse().getCookie(AuthCookies.ACCESS)))
                 .andExpect(jsonPath("$.nickname").value("네이버회원"));

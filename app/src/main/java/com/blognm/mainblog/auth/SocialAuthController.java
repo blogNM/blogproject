@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.blognm.mainblog.common.ClientIp;
+
 /** 구글(D-103)·네이버(D-107)·카카오(D-108) 로그인 화면용 API. 바깥 로그인 화면으로 보내고 받는 주소는 스프링 시큐리티가 맡는다. */
 @RestController
 @RequestMapping("/api/auth/social")
@@ -52,6 +54,17 @@ public class SocialAuthController {
             HttpServletResponse response) {
         LoginService.Tokens tokens = socialLogin.completeSignup(
                 AuthCookies.read(request, AuthCookies.SOCIAL_SIGNUP).orElse(null), body);
+        cookies.clearSocialSignup(response);
+        cookies.write(response, tokens.accessToken(), tokens.refreshToken(), false);
+        return Map.of("nickname", tokens.nickname());
+    }
+
+    /** 이미 있는 계정의 이메일·비밀번호를 확인하고 이 소셜 계정을 연결한다 (D-126). */
+    @PostMapping("/link")
+    public Map<String, String> link(@RequestBody SocialLoginService.LinkRequest body, HttpServletRequest request,
+            HttpServletResponse response) {
+        LoginService.Tokens tokens = socialLogin.linkExisting(
+                AuthCookies.read(request, AuthCookies.SOCIAL_SIGNUP).orElse(null), body, ClientIp.of(request));
         cookies.clearSocialSignup(response);
         cookies.write(response, tokens.accessToken(), tokens.refreshToken(), false);
         return Map.of("nickname", tokens.nickname());
