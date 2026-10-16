@@ -179,7 +179,7 @@ class KakaoLoginTest extends IntegrationTest {
                 .andExpect(jsonPath("$.provider").value("kakao"));
 
         MvcResult ok = finishSignup(pending, """
-                {"nickname":"카카오회원","agreeTerms":true,"agreePrivacy":true,"age14":true}""");
+                {"nickname":"카카오회원","password":"Abcd1234!","agreeTerms":true,"agreePrivacy":true,"age14":true}""");
         assertThat(ok.getResponse().getStatus()).isEqualTo(200);
         mvc.perform(get("/api/me").cookie(ok.getResponse().getCookie(AuthCookies.ACCESS)))
                 .andExpect(jsonPath("$.nickname").value("카카오회원"));

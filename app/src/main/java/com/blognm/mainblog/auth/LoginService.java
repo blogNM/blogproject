@@ -52,22 +52,32 @@ public class LoginService {
 
     @Transactional(noRollbackFor = ApiException.class)
     public Tokens login(LoginRequest req, String clientIp) {
+        Member member = checkPassword(req.email(), req.password(), req.captchaToken(), clientIp);
+        return issue(member, req.remember(), LocalDateTime.now(clock));
+    }
+
+    /**
+     * 이메일·비밀번호가 맞는 회원을 돌려준다. 로그인과 같은 요청 수 제한·사람 확인·잠금을 쓴다 (SEC-03, SEC-13).
+     * 로그인 화면과 소셜 계정 연결 화면(D-126)이 함께 쓴다. 실패 수를 남기려면 noRollbackFor 트랜잭션 안에서 부른다.
+     */
+    @Transactional(noRollbackFor = ApiException.class)
+    public Member checkPassword(String rawEmail, String password, String captchaToken, String clientIp) {
         if (!rateLimiter.tryAcquire("login:" + clientIp, props.rateLimit().loginPerMinute(), Duration.ofMinutes(1))) {
             throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "TOO_MANY_REQUESTS",
                     "로그인 요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.");
         }
-        String email = normalizeOrFail(req.email());
-        LoginGuard.Attempt attempt = guard.begin(email, clientIp, req.captchaToken());
+        String email = normalizeOrFail(rawEmail);
+        LoginGuard.Attempt attempt = guard.begin(email, clientIp, captchaToken);
 
         Optional<Member> member = members.findByEmail(email).filter(Member::isActive);
         String hash = member.map(Member::getPasswordHash).orElse(dummyHash);
-        boolean matches = req.password() != null && passwordEncoder.matches(req.password(), hash);
+        boolean matches = password != null && passwordEncoder.matches(password, hash);
         if (member.isEmpty() || !matches) {
             throw guard.fail(attempt, "이메일 또는 비밀번호가 맞지 않습니다.");
         }
 
         guard.succeed(attempt);
-        return issue(member.get(), req.remember(), attempt.now());
+        return member.get();
     }
 
     /**
