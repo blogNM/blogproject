@@ -43,7 +43,14 @@ public class BlogLifecycleJob {
         int reminded = lifecycle.sendReminders();
         int expired = lifecycle.expireTransfers();
         List<String> files = lifecycle.purgeClosed();
-        files.forEach(storage::delete);
+        // 파일 하나를 못 지워도 나머지 파일과 아래 기록 정리는 계속한다
+        for (String file : files) {
+            try {
+                storage.delete(file);
+            } catch (RuntimeException e) {
+                log.warn("닫힌 블로그 사진 파일을 지우지 못함: {}", e.toString());
+            }
+        }
         LocalDateTime yearAgo = LocalDateTime.now(clock).minusYears(1);
         jdbc.update("DELETE FROM admin_action_logs WHERE created_at < ?", yearAgo);
         jdbc.update("DELETE FROM member_sanctions WHERE created_at < ?", yearAgo);

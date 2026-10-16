@@ -169,6 +169,8 @@ upload:
   max-file-size: ${UPLOAD_MAX_FILE_SIZE:3MB}
   # 글 하나에 넣을 수 있는 사진 수
   max-images-per-post: ${UPLOAD_MAX_IMAGES_PER_POST:10}
+  # 사진 한 장의 가로×세로 상한 (기본 5000만 화소, 예: 10000×5000). 3MB짜리 30000×30000 같은 사진을 막는다
+  max-pixels: ${UPLOAD_MAX_PIXELS:50000000}
 
 # 글 속 링크 미리보기 카드 (D-92). 글을 저장할 때 서버가 한 번 받아 둔다
 link-preview:
@@ -180,6 +182,8 @@ link-preview:
   refresh-after: ${LINK_PREVIEW_REFRESH_AFTER:7d}
   # 내부망 주소는 받지 않는다 (SSRF). 테스트에서만 켠다
   allow-private-hosts: false
+  # 글 하나를 저장할 때 미리보기 받기에 쓰는 시간 상한. 넘으면 남은 링크는 카드 없이 두고 다음 저장 때 받는다
+  collect-budget: ${LINK_PREVIEW_COLLECT_BUDGET:8s}
 
 # 댓글·좋아요·검색·피드 (004 4단계)
 board:

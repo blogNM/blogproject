@@ -13,7 +13,9 @@ import java.util.Set;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.blognm.mainblog.common.ApiException;
 import com.blognm.mainblog.notification.NotificationWriter;
@@ -26,6 +28,8 @@ import com.blognm.mainblog.notification.NotificationWriter.Type;
 @Service
 public class BlogLifecycleService {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(BlogLifecycleService.class);
+
     /** 위임 요청은 7일 동안 답이 없으면 자동 취소 (D-31). */
     static final int TRANSFER_DAYS = 7;
     static final int CLOSE_DAYS = 7;
@@ -37,13 +41,15 @@ public class BlogLifecycleService {
     private final BlogService blogService;
     private final NotificationWriter notifications;
     private final Clock clock;
+    private final TransactionTemplate tx;
 
     public BlogLifecycleService(JdbcTemplate jdbc, BlogService blogService, NotificationWriter notifications,
-            Clock clock) {
+            Clock clock, PlatformTransactionManager txManager) {
         this.jdbc = jdbc;
         this.blogService = blogService;
         this.notifications = notifications;
         this.clock = clock;
+        this.tx = new TransactionTemplate(txManager);
     }
 
     // ----- 위임 (BLG-08) -----
@@ -262,9 +268,10 @@ public class BlogLifecycleService {
      * 닫힌 지 30일 지난 블로그의 글·댓글·사진·카테고리를 지우고 주소를 풀어 준다 (D-35, 4.5).
      * 블로그 행은 신고·제재 기록이 가리키므로 남기고, 주소만 쓸 수 없는 값으로 바꾼다.
      *
+     * 블로그 하나씩 따로 저장한다. 정리할 블로그가 많아도 표를 오래 잠그지 않고, 하나가 실패해도 나머지는 정리된다.
+     *
      * @return 지운 사진 파일 이름 (DB 커밋 뒤에 파일을 지운다)
      */
-    @Transactional
     public List<String> purgeClosed() {
         LocalDateTime now = LocalDateTime.now(clock);
         List<Long> ids = jdbc.queryForList(
@@ -272,27 +279,36 @@ public class BlogLifecycleService {
                 now.minusDays(30));
         List<String> files = new java.util.ArrayList<>();
         for (long id : ids) {
-            files.addAll(jdbc.queryForList("""
-                    SELECT i.stored_name FROM images i JOIN posts p ON p.id = i.post_id WHERE p.blog_id = ?
-                    UNION SELECT i.stored_name FROM images i JOIN blogs b ON b.cover_image_id = i.id WHERE b.id = ?
-                    """, String.class, id, id));
-            jdbc.update("UPDATE blogs SET cover_image_id = NULL WHERE id = ?", id);
-            jdbc.update("DELETE i FROM images i JOIN posts p ON p.id = i.post_id WHERE p.blog_id = ?", id);
-            jdbc.update("DELETE c FROM comments c JOIN posts p ON p.id = c.post_id WHERE p.blog_id = ? AND c.parent_id IS NOT NULL", id);
-            jdbc.update("DELETE c FROM comments c JOIN posts p ON p.id = c.post_id WHERE p.blog_id = ?", id);
-            jdbc.update("DELETE l FROM post_likes l JOIN posts p ON p.id = l.post_id WHERE p.blog_id = ?", id);
-            jdbc.update("DELETE v FROM post_views v JOIN posts p ON p.id = v.post_id WHERE p.blog_id = ?", id);
-            jdbc.update("DELETE t FROM post_tags t JOIN posts p ON p.id = t.post_id WHERE p.blog_id = ?", id);
-            jdbc.update("DELETE FROM posts WHERE blog_id = ?", id);
-            jdbc.update("DELETE FROM categories WHERE blog_id = ?", id);
-            jdbc.update("DELETE FROM blog_tags WHERE blog_id = ?", id);
-            jdbc.update("DELETE FROM subscriptions WHERE blog_id = ?", id);
-            jdbc.update("DELETE FROM join_requests WHERE blog_id = ?", id);
-            jdbc.update("DELETE FROM blog_visits WHERE blog_id = ?", id);
-            // 주소 규칙(영문 소문자 시작)에 맞지 않는 값이라 다시 만들 수 없고, 원래 주소는 풀린다
-            jdbc.update("UPDATE blogs SET slug = CONCAT('_closed-', id), share_token = NULL, purged_at = ? WHERE id = ?",
-                    now, id);
+            try {
+                files.addAll(tx.execute(status -> purgeOne(id, now)));
+            } catch (RuntimeException e) {
+                log.warn("닫힌 블로그 정리 실패: blog {} - {}", id, e.toString());
+            }
         }
+        return files;
+    }
+
+    private List<String> purgeOne(long id, LocalDateTime now) {
+        List<String> files = new java.util.ArrayList<>(jdbc.queryForList("""
+                SELECT i.stored_name FROM images i JOIN posts p ON p.id = i.post_id WHERE p.blog_id = ?
+                UNION SELECT i.stored_name FROM images i JOIN blogs b ON b.cover_image_id = i.id WHERE b.id = ?
+                """, String.class, id, id));
+        jdbc.update("UPDATE blogs SET cover_image_id = NULL WHERE id = ?", id);
+        jdbc.update("DELETE i FROM images i JOIN posts p ON p.id = i.post_id WHERE p.blog_id = ?", id);
+        jdbc.update("DELETE c FROM comments c JOIN posts p ON p.id = c.post_id WHERE p.blog_id = ? AND c.parent_id IS NOT NULL", id);
+        jdbc.update("DELETE c FROM comments c JOIN posts p ON p.id = c.post_id WHERE p.blog_id = ?", id);
+        jdbc.update("DELETE l FROM post_likes l JOIN posts p ON p.id = l.post_id WHERE p.blog_id = ?", id);
+        jdbc.update("DELETE v FROM post_views v JOIN posts p ON p.id = v.post_id WHERE p.blog_id = ?", id);
+        jdbc.update("DELETE t FROM post_tags t JOIN posts p ON p.id = t.post_id WHERE p.blog_id = ?", id);
+        jdbc.update("DELETE FROM posts WHERE blog_id = ?", id);
+        jdbc.update("DELETE FROM categories WHERE blog_id = ?", id);
+        jdbc.update("DELETE FROM blog_tags WHERE blog_id = ?", id);
+        jdbc.update("DELETE FROM subscriptions WHERE blog_id = ?", id);
+        jdbc.update("DELETE FROM join_requests WHERE blog_id = ?", id);
+        jdbc.update("DELETE FROM blog_visits WHERE blog_id = ?", id);
+        // 주소 규칙(영문 소문자 시작)에 맞지 않는 값이라 다시 만들 수 없고, 원래 주소는 풀린다
+        jdbc.update("UPDATE blogs SET slug = CONCAT('_closed-', id), share_token = NULL, purged_at = ? WHERE id = ?",
+                now, id);
         return files;
     }
 

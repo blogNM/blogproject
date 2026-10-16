@@ -81,9 +81,15 @@ public class LinkPreviewService {
         List<String> urls = standaloneLinks(Jsoup.parseBodyFragment(safeHtml)).stream()
                 .map(a -> a.attr("href")).distinct().limit(props.maxLinksPerPost()).toList();
         LocalDateTime now = LocalDateTime.now(clock);
+        // 링크마다 시간 제한이 있어도 여러 개면 길어진다. 모두 합쳐 정해 둔 시간을 넘으면 남은 링크는 다음 저장 때 받는다
+        long deadline = System.nanoTime() + props.collectBudget().toNanos();
         for (String url : urls) {
             if (fresh(url, now)) {
                 continue;
+            }
+            if (System.nanoTime() > deadline) {
+                log.info("링크 미리보기: 시간 상한을 넘어 남은 링크는 다음에 받음");
+                return;
             }
             try {
                 save(url, fetch(url, uploaderId), now);

@@ -85,8 +85,11 @@ public class PostCards {
         Long total = knownTotal != null ? knownTotal
                 : jdbc.queryForObject("SELECT COUNT(*)" + countFrom + " WHERE " + where, params, Long.class);
         String from = postsAndBlogs + " JOIN members m ON m.id = p.author_id WHERE ";
-        params.addValue("size", pageSize).addValue("offset", (long) (current - 1) * pageSize);
-        List<Card> items = jdbc.query("""
+        long offset = (long) (current - 1) * pageSize;
+        params.addValue("size", pageSize).addValue("offset", offset);
+        // 글보다 뒤쪽 쪽(?page=1000000)은 읽을 것이 없으니 DB에 묻지 않는다 (큰 OFFSET으로 표를 훑게 하지 않기)
+        long known = total == null ? 0 : total;
+        List<Card> items = offset >= known ? new ArrayList<>() : jdbc.query("""
                 SELECT p.id, p.title, p.content_md, p.created_at, p.view_count, p.like_count, p.comment_count,
                        p.author_left, p.author_id, b.slug, b.name AS blog_name, b.theme_accent, m.nickname, m.status AS member_status, m.is_test,
                        (SELECT i.stored_name FROM images i WHERE i.post_id = p.id ORDER BY i.sort_order, i.id LIMIT 1) AS first_image
@@ -104,8 +107,7 @@ public class PostCards {
                                 : rs.getLong("author_id"),
                         shownTest(rs.getBoolean("author_left"), rs.getString("member_status"), rs.getBoolean("is_test"))));
         attachTags(items);
-        long count = total == null ? 0 : total;
-        return new Page(items, current, pageSize, (int) ((count + pageSize - 1) / pageSize), count);
+        return new Page(items, current, pageSize, (int) ((known + pageSize - 1) / pageSize), known);
     }
 
     private void attachTags(List<Card> items) {

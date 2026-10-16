@@ -94,6 +94,39 @@ class SignupTest extends IntegrationTest {
     }
 
     @Test
+    @DisplayName("틀린 번호를 한꺼번에 많이 보내도 5번 넘게 맞혀 볼 수 없다 (동시 요청)")
+    void concurrentWrongCodes() throws Exception {
+        postJson("/api/auth/signup/code", "{\"email\":\"burst@example.com\"}");
+        String code = waitForCode("burst@example.com");
+        String wrong = code.equals("000000") ? "111111" : "000000";
+        var pool = java.util.concurrent.Executors.newFixedThreadPool(20);
+        var mismatches = new java.util.concurrent.atomic.AtomicInteger();
+        try {
+            var tasks = new java.util.ArrayList<java.util.concurrent.Callable<Void>>();
+            for (int i = 0; i < 40; i++) {
+                tasks.add(() -> {
+                    String body = postJson("/api/auth/signup/verify",
+                            "{\"email\":\"burst@example.com\",\"code\":\"%s\"}".formatted(wrong))
+                            .andReturn().getResponse().getContentAsString();
+                    if (body.contains("CODE_MISMATCH")) {
+                        mismatches.incrementAndGet();
+                    }
+                    return null;
+                });
+            }
+            for (var f : pool.invokeAll(tasks)) {
+                f.get();
+            }
+        } finally {
+            pool.shutdown();
+        }
+        // 1~4번째 틀림만 "맞지 않습니다"이고, 5번째에 번호가 무효가 된다
+        assertThat(mismatches.get()).isEqualTo(4);
+        postJson("/api/auth/signup/verify", "{\"email\":\"burst@example.com\",\"code\":\"%s\"}".formatted(code))
+                .andExpect(jsonPath("$.code").value("CODE_INVALID"));
+    }
+
+    @Test
     @DisplayName("10분이 지나면 인증번호가 무효가 된다")
     void codeExpires() throws Exception {
         postJson("/api/auth/signup/code", "{\"email\":\"late@example.com\"}");

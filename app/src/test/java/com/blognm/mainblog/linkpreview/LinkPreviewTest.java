@@ -128,7 +128,8 @@ class LinkPreviewTest extends IntegrationTest {
     @DisplayName("내부망 주소는 받지 않는다 (SSRF)")
     void privateHostsBlocked() {
         SafeFetcher strict = new SafeFetcher(
-                new LinkPreviewProperties(true, Duration.ofSeconds(1), 5, Duration.ofDays(7), false));
+                new LinkPreviewProperties(true, Duration.ofSeconds(1), 5, Duration.ofDays(7), false,
+                        Duration.ofSeconds(8)));
         for (String url : new String[] {base + "/song", "http://localhost/", "http://10.0.0.1/", "http://169.254.169.254/",
                 "http://[::1]/", "http://192.168.0.1/", "file:///etc/passwd", "http://user@example.com/",
                 "http://example.com:8080/", "http://[64:ff9b::a9fe:a9fe]/", "http://[64:ff9b::7f00:1]/",

@@ -115,9 +115,40 @@ else
   echo "경고: 서버에서도 DB 포트에 접속되지 않습니다. DB_ADDRESS, DB_PORT 시크릿을 확인하세요." >&2
 fi
 
+# 컨테이너 로그가 끝없이 커져 디스크를 채우지 않게 20MB씩 5개까지만 둔다
+LOG_OPTS=(--log-opt max-size=20m --log-opt max-file=5)
+
+# DB 백업: APP_HOME/backups/<이름>-<시각>.sql.gz. 최근 BACKUP_KEEP(기본 14)개만 남긴다.
+# 배포할 때마다(DB 구조가 바뀌기 전) 한 번, DB를 지우기 전에 한 번 뜬다. 서버 디스크가 망가지면 같이 사라지므로
+# 중요한 때에는 backups 폴더와 data/uploads 를 서버 밖으로도 옮겨 둔다.
+backup_db() {
+  local dir="$APP_HOME/backups" file
+  mkdir -p "$dir"
+  file="$dir/$1-$(date +%Y%m%d-%H%M%S).sql.gz"
+  if $DOCKER run --rm --network host -e MYSQL_PWD="$DB_PASSWORD" "${MYSQL_CLIENT_IMAGE:-mysql:8.0}" \
+       mysqldump -h"$DB_HOST" -P"$DB_PORT" -u"$DB_USERNAME" --protocol=TCP --single-transaction \
+       --no-tablespaces --set-gtid-purged=OFF "$DB_NAME" | gzip > "$file" && [ "$(gzip -dc "$file" | head -c 1 | wc -c)" = "1" ]; then
+    chmod 600 "$file"
+    echo "DB 백업: $file ($(du -h "$file" | cut -f1))"
+    ls -1t "$dir"/*.sql.gz 2>/dev/null | tail -n +"$(( ${BACKUP_KEEP:-14} + 1 ))" | xargs -r rm -f
+    return 0
+  fi
+  rm -f "$file"
+  return 1
+}
+
+if ! backup_db before-deploy; then
+  echo "경고: 배포 전 DB 백업을 하지 못했습니다. 배포는 계속합니다." >&2
+fi
+
 # 손으로 돌린 배포에서 reset_db 에 reset 이라고 적었을 때만: DB의 테이블을 모두 지운다 (되돌릴 수 없음).
 # 앱(Flyway)은 빈 DB에서 테이블을 처음부터 만든다. 다른 도구로 만든 테이블이 있으면 앱이 뜨지 않는다.
 if [ "${RESET_DB:-}" = "reset" ]; then
+  # 지우기 전에 반드시 백업한다. 백업이 안 되면 지우지 않고 멈춘다
+  if ! backup_db before-reset; then
+    echo "DB를 백업하지 못해 지우지 않고 멈춥니다. 지금 서버는 그대로 둡니다." >&2
+    exit 1
+  fi
   echo "DB의 테이블을 모두 지웁니다."
   $DOCKER run --rm --network host -e MYSQL_PWD="$DB_PASSWORD" "${MYSQL_CLIENT_IMAGE:-mysql:8.0}" sh -c '
     set -e
@@ -311,7 +342,7 @@ run_app() {
   local bind=()
   [ -n "${6-$APP_BIND}" ] && bind=(-e "SERVER_ADDRESS=${6-$APP_BIND}")
   $DOCKER run -d --name "$1" --restart unless-stopped --stop-timeout "$STOP_TIMEOUT" \
-    --network host -e "SERVER_PORT=$2" ${bind[@]+"${bind[@]}"} -e "INSTANCE_ID=$3" -e "APP_JOBS_ENABLED=$4" \
+    "${LOG_OPTS[@]}" --network host -e "SERVER_PORT=$2" ${bind[@]+"${bind[@]}"} -e "INSTANCE_ID=$3" -e "APP_JOBS_ENABLED=$4" \
     -e "SHUTDOWN_TIMEOUT=${SHUTDOWN_SECONDS}s" \
     --env-file "$APP_HOME/secrets.env" --env-file "$APP_HOME/runtime.env" \
     -v "$APP_HOME/data/uploads:/app/data/uploads" \
@@ -404,7 +435,7 @@ write_conf() {
 
 # 이름 설정폴더: 만들기만 한다 (docker start로 바로 띄우려고)
 create_lb() {
-  $DOCKER create --name "$1" --restart unless-stopped --network host \
+  $DOCKER create --name "$1" --restart unless-stopped "${LOG_OPTS[@]}" --network host \
     -e NGINX_ENTRYPOINT_QUIET_LOGS=1 \
     -v "$2:/etc/nginx/conf.d:ro" "$LB_IMAGE" >/dev/null
 }

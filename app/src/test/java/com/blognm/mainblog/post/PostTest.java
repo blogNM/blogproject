@@ -183,6 +183,15 @@ class PostTest extends IntegrationTest {
         for (String bad : new String[] {"#w=55", "#w=100", "#w=5", "#w=60x", "#x", "#w=60\"onerror=", "#"}) {
             assertThat(MarkdownRenderer.keepOnlyWidthMark(id + bad)).as(bad).isEqualTo(id);
         }
+        // 이 사이트 사진 주소 모양이 아니면 지운다. "/uploads/../api/..."처럼 다른 주소를 읽는 사람마다 부르게 하지 못한다
+        for (String bad : new String[] {"/uploads/../api/posts/1", "/uploads/%2e%2e/api/search?q=x",
+                "/uploads/" + id.substring(9) + "?x=1", "/img/guides/../../api/me", "/img/releases/v1.0.0/a.png?q"}) {
+            assertThat(renderer.toSafeHtml("![a](" + bad + ")")).as(bad).doesNotContain("<img");
+        }
+        assertThat(renderer.toSafeHtml("![a](/img/releases/v1.15.0/link.png)"))
+                .contains("src=\"/img/releases/v1.15.0/link.png\"");
+        assertThat(renderer.toSafeHtml("![a](/img/guides/theme-new.png#w=50)"))
+                .contains("src=\"/img/guides/theme-new.png#w=50\"");
         // 사진 문법은 크기 표시가 붙어도 글자 수에 넣지 않는다
         assertThat(PostRules.contentLength("![a](" + id + "#w=30)가")).isEqualTo(1);
     }

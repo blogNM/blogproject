@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.blognm.mainblog.auth.EmailVerification.Purpose;
+import com.blognm.mainblog.common.AfterCommit;
 import com.blognm.mainblog.common.ApiException;
 import com.blognm.mainblog.common.Hashing;
 import com.blognm.mainblog.config.AppProperties;
@@ -111,7 +112,7 @@ public class SignupService {
         String code = Hashing.sixDigitCode();
         verifications.save(EmailVerification.issue(email, Purpose.SIGNUP, hashCode(email, code), now,
                 now.plus(cfg.codeTtl())));
-        mail.sendSignupCode(email, code, cfg.codeTtl().toMinutes());
+        AfterCommit.run(() -> mail.sendSignupCode(email, code, cfg.codeTtl().toMinutes()));
     }
 
     private static ApiException emailTaken(String provider) {
@@ -131,7 +132,7 @@ public class SignupService {
         LocalDateTime now = LocalDateTime.now(clock);
         AppProperties.Signup cfg = props.signup();
 
-        EmailVerification v = verifications.findFirstByEmailAndPurposeOrderByIdDesc(email, Purpose.SIGNUP)
+        EmailVerification v = verifications.findTopByEmailAndPurposeOrderByIdDesc(email, Purpose.SIGNUP)
                 .filter(x -> !x.isExpired(now))
                 .orElseThrow(SignupService::codeInvalid);
         if (v.isVerified()) {
