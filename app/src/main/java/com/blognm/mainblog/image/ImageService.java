@@ -3,6 +3,7 @@ package com.blognm.mainblog.image;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
@@ -13,6 +14,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.blognm.mainblog.common.ApiException;
+import com.blognm.mainblog.config.AppProperties;
+import com.blognm.mainblog.ratelimit.RateLimiter;
 
 /**
  * 이미지 올리기 (BRD-05, SEC-08). 확장자·MIME·파일 시그니처가 모두 같은 허용 형식이어야 받는다.
@@ -24,17 +27,27 @@ public class ImageService {
     private final ImageRepository images;
     private final FileStorage storage;
     private final UploadProperties props;
+    private final RateLimiter rateLimiter;
+    private final AppProperties app;
     private final Clock clock;
 
-    public ImageService(ImageRepository images, FileStorage storage, UploadProperties props, Clock clock) {
+    public ImageService(ImageRepository images, FileStorage storage, UploadProperties props, RateLimiter rateLimiter,
+            AppProperties app, Clock clock) {
         this.images = images;
         this.storage = storage;
         this.props = props;
+        this.rateLimiter = rateLimiter;
+        this.app = app;
         this.clock = clock;
     }
 
     @Transactional
     public Image upload(long uploaderId, MultipartFile file) {
+        // 사진을 쉬지 않고 올려 서버 디스크를 채우지 못하게 회원마다 1분에 정해 둔 장수까지 (D-127)
+        if (!rateLimiter.tryAcquire("upload:" + uploaderId, app.rateLimit().uploadPerMinute(), Duration.ofMinutes(1))) {
+            throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "TOO_MANY_REQUESTS",
+                    "사진을 너무 많이 올렸습니다. 잠시 후 다시 시도해 주세요.");
+        }
         Checked c = check(file);
         String storedName = UUID.randomUUID().toString();
         storage.save(storedName, c.data());

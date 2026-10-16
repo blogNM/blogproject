@@ -6,9 +6,18 @@ import { createCaptcha } from '../captcha.js';
 if (matchMedia('(prefers-reduced-motion: reduce)').matches) document.querySelectorAll('svg.art').forEach((svg) => svg.pauseAnimations());
 
 // 로그인 뒤 돌아갈 화면. 다른 사이트로 보내지 않도록 이 사이트 안의 주소만 받는다.
-const nextParam = new URLSearchParams(location.search).get('next');
-const next = nextParam && nextParam.startsWith('/') && !nextParam.startsWith('//') && !nextParam.startsWith('/\\')
-  ? nextParam : '/';
+// 브라우저는 주소 속 탭·줄바꿈을 지우므로("/\t/evil.com" → "//evil.com") 글자 검사 대신 실제로 풀어 본 주소의 출처를 비교한다 (D-127).
+const next = sameSitePath(new URLSearchParams(location.search).get('next'));
+
+function sameSitePath(value) {
+  if (!value || !value.startsWith('/')) return '/';
+  try {
+    const url = new URL(value, location.origin);
+    return url.origin === location.origin ? url.pathname + url.search + url.hash : '/';
+  } catch {
+    return '/';
+  }
+}
 
 const me = await initLayout();
 if (me) {

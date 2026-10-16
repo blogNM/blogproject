@@ -81,6 +81,16 @@ class ImageTest extends IntegrationTest {
     }
 
     @Test
+    @DisplayName("한 회원이 1분에 올릴 수 있는 사진 수를 넘으면 막는다 (D-127)")
+    void uploadRateLimited() throws Exception {
+        byte[] png = image("png");
+        for (int i = 0; i < 30; i++) {
+            upload(owner, "photo.png", "image/png", png).andExpect(status().isOk());
+        }
+        upload(owner, "photo.png", "image/png", png).andExpect(status().isTooManyRequests());
+    }
+
+    @Test
     @DisplayName("정상 사진은 UUID 이름으로 저장되고, 원래 이름은 DB에만 남는다")
     void uploadAndServe() throws Exception {
         byte[] png = image("png");

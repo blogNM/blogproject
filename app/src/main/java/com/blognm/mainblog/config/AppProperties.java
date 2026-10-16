@@ -48,7 +48,12 @@ public record AppProperties(
             int captchaAfterIpFailures, Duration ipWindow) {
     }
 
-    public record RateLimit(int loginPerMinute, int mailPerHour, int emailCheckPerMinute) {
+    /**
+     * IP·회원별 요청 제한 (D-80). passwordCheckPerHour: 로그인한 회원·관리자가 "지금 비밀번호"를 확인받는 횟수(비밀번호 변경·탈퇴),
+     * uploadPerMinute: 회원 한 명이 1분에 올리는 사진 수 (D-127).
+     */
+    public record RateLimit(int loginPerMinute, int mailPerHour, int emailCheckPerMinute, int passwordCheckPerHour,
+            int uploadPerMinute) {
     }
 
     public record Recaptcha(String siteKey, String secretKey, String verifyUrl) {

@@ -114,12 +114,42 @@ public class SafeFetcher {
         byte[] b = a.getAddress();
         if (a instanceof Inet6Address) {
             // fc00::/7 고유 로컬, IPv4를 품은 주소(::ffff:10.0.0.1 등)는 거절
-            return (b[0] & 0xFE) == 0xFC || isMappedV4(b);
+            // NAT64(64:ff9b::/96)·6to4(2002::/16)는 안에 든 IPv4 주소로 다시 판단한다 (D-127)
+            if ((b[0] & 0xFE) == 0xFC || isMappedV4(b)) {
+                return true;
+            }
+            if (isNat64(b)) {
+                return isPrivate(v4(b, 12));
+            }
+            if ((b[0] & 0xFF) == 0x20 && (b[1] & 0xFF) == 0x02) {
+                return isPrivate(v4(b, 2));
+            }
+            return false;
         }
         int first = b[0] & 0xFF;
         int second = b[1] & 0xFF;
         return first == 0 || first >= 224 || (first == 100 && second >= 64 && second <= 127) // 100.64/10
                 || (first == 192 && second == 0 && (b[2] & 0xFF) == 0) || (first == 198 && (second == 18 || second == 19));
+    }
+
+    private static boolean isNat64(byte[] b) {
+        if ((b[0] & 0xFF) != 0x00 || (b[1] & 0xFF) != 0x64 || (b[2] & 0xFF) != 0xFF || (b[3] & 0xFF) != 0x9B) {
+            return false;
+        }
+        for (int i = 4; i < 12; i++) {
+            if (b[i] != 0) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static InetAddress v4(byte[] b, int from) {
+        try {
+            return InetAddress.getByAddress(new byte[] {b[from], b[from + 1], b[from + 2], b[from + 3]});
+        } catch (UnknownHostException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     private static boolean isMappedV4(byte[] b) {

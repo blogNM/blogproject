@@ -1,6 +1,7 @@
 package com.blognm.mainblog.member;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -24,6 +25,8 @@ import com.blognm.mainblog.blog.JoinRequestRepository;
 import com.blognm.mainblog.common.ApiException;
 import com.blognm.mainblog.common.DetailedApiException;
 import com.blognm.mainblog.common.Hashing;
+import com.blognm.mainblog.config.AppProperties;
+import com.blognm.mainblog.ratelimit.RateLimiter;
 
 /** 내 정보 보기·수정 (USR-07)과 회원탈퇴 (USR-05). 모두 본인 것만 다룬다. */
 @Service
@@ -40,12 +43,14 @@ public class AccountService {
     private final LoginService loginService;
     private final SocialAccountRepository socialAccounts;
     private final PasswordEncoder passwordEncoder;
+    private final RateLimiter rateLimiter;
+    private final AppProperties props;
     private final Clock clock;
 
     public AccountService(MemberRepository members, RefreshTokenRepository refreshTokens,
             EmailFindTokenRepository findTokens, BlogRepository blogs, BlogMembershipRepository memberships,
             JoinRequestRepository joinRequests, LoginService loginService, SocialAccountRepository socialAccounts,
-            PasswordEncoder passwordEncoder, Clock clock) {
+            PasswordEncoder passwordEncoder, RateLimiter rateLimiter, AppProperties props, Clock clock) {
         this.members = members;
         this.refreshTokens = refreshTokens;
         this.findTokens = findTokens;
@@ -55,6 +60,8 @@ public class AccountService {
         this.loginService = loginService;
         this.socialAccounts = socialAccounts;
         this.passwordEncoder = passwordEncoder;
+        this.rateLimiter = rateLimiter;
+        this.props = props;
         this.clock = clock;
     }
 
@@ -134,7 +141,16 @@ public class AccountService {
                 .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "LOGIN_REQUIRED", "다시 로그인해 주세요."));
     }
 
+    /**
+     * 로그인한 채로 지금 비밀번호를 맞혀 보는 일을 회원마다 1시간에 정해 둔 횟수까지만 받는다 (D-127).
+     * 쿠키를 빼앗긴 경우에도 비밀번호를 알아내 계정을 가로채거나 탈퇴시키지 못하게 한다.
+     */
     private void checkPassword(Member m, String password) {
+        if (!rateLimiter.tryAcquire("password-check:" + m.getId(), props.rateLimit().passwordCheckPerHour(),
+                Duration.ofHours(1))) {
+            throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "TOO_MANY_REQUESTS",
+                    "비밀번호 확인을 너무 많이 시도했습니다. 1시간 뒤에 다시 시도해 주세요.");
+        }
         if (password == null || !passwordEncoder.matches(password, m.getPasswordHash())) {
             throw ApiException.badRequest("WRONG_PASSWORD", "현재 비밀번호가 맞지 않습니다.");
         }

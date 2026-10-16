@@ -28,7 +28,10 @@ class SecurityHeadersTest extends IntegrationTest {
                 .andExpect(header().string("X-Content-Type-Options", "nosniff"))
                 .andExpect(header().string("Referrer-Policy", "strict-origin-when-cross-origin"))
                 .andExpect(header().string("Content-Security-Policy", Matchers.containsString("default-src 'self'")))
-                .andExpect(header().string("Strict-Transport-Security", Matchers.containsString("max-age=")));
+                .andExpect(header().string("Strict-Transport-Security", Matchers.containsString("max-age=")))
+                .andExpect(header().string("Permissions-Policy", Matchers.allOf(
+                        Matchers.containsString("camera=()"), Matchers.containsString("geolocation=()"))))
+                .andExpect(header().string("Cross-Origin-Opener-Policy", "same-origin"));
     }
 
     @Test

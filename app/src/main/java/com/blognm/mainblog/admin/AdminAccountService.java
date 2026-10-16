@@ -22,6 +22,8 @@ import com.blognm.mainblog.auth.AdminTokenCheck;
 import com.blognm.mainblog.auth.JwtProvider;
 import com.blognm.mainblog.auth.LoginGuard;
 import com.blognm.mainblog.common.ApiException;
+import com.blognm.mainblog.common.Hashing;
+import com.blognm.mainblog.config.AppProperties;
 import com.blognm.mainblog.member.MemberRules;
 import com.blognm.mainblog.ratelimit.RateLimiter;
 
@@ -43,10 +45,13 @@ public class AdminAccountService implements AdminTokenCheck, ApplicationRunner {
     private final LoginGuard guard;
     private final AdminProperties props;
     private final AdminLog adminLog;
+    private final AppProperties appProps;
     private final Clock clock;
+    /** 없는 아이디에도 같은 bcrypt 비교를 해서, 응답 시간으로 아이디가 있는지 알아내지 못하게 한다 (D-127). */
+    private final String dummyHash;
 
     public AdminAccountService(JdbcTemplate jdbc, PasswordEncoder encoder, JwtProvider jwt, RateLimiter rateLimiter,
-            LoginGuard guard, AdminProperties props, AdminLog adminLog, Clock clock) {
+            LoginGuard guard, AdminProperties props, AdminLog adminLog, AppProperties appProps, Clock clock) {
         this.jdbc = jdbc;
         this.encoder = encoder;
         this.jwt = jwt;
@@ -54,7 +59,9 @@ public class AdminAccountService implements AdminTokenCheck, ApplicationRunner {
         this.guard = guard;
         this.props = props;
         this.adminLog = adminLog;
+        this.appProps = appProps;
         this.clock = clock;
+        this.dummyHash = encoder.encode(Hashing.randomToken());
     }
 
     /** 관리자가 한 명도 없고 환경변수가 있으면 첫 관리자를 만든다. 이미 있으면 아무것도 하지 않는다. */
@@ -91,7 +98,9 @@ public class AdminAccountService implements AdminTokenCheck, ApplicationRunner {
                 clientIp, captchaToken);
         List<Map<String, Object>> rows = jdbc.queryForList(
                 "SELECT id, password_hash, must_change_password FROM admins WHERE login_id = ?", id);
-        if (rows.isEmpty() || password == null || !encoder.matches(password, (String) rows.get(0).get("password_hash"))) {
+        String hash = rows.isEmpty() ? dummyHash : (String) rows.get(0).get("password_hash");
+        boolean matches = password != null && encoder.matches(password, hash);
+        if (rows.isEmpty() || !matches) {
             throw guard.fail(attempt, "아이디 또는 비밀번호가 맞지 않습니다.");
         }
         guard.succeed(attempt);
@@ -111,6 +120,12 @@ public class AdminAccountService implements AdminTokenCheck, ApplicationRunner {
     /** 비밀번호 바꾸기. 바꾸면 그 전에 받은 로그인은 모두 무효가 되고 새 토큰을 준다. */
     @Transactional
     public String changePassword(long adminId, String current, String next) {
+        // 지금 비밀번호 맞혀 보기는 관리자마다 1시간에 정해 둔 횟수까지 (D-127)
+        if (!rateLimiter.tryAcquire("admin-password-check:" + adminId, appProps.rateLimit().passwordCheckPerHour(),
+                Duration.ofHours(1))) {
+            throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "TOO_MANY_REQUESTS",
+                    "비밀번호 확인을 너무 많이 시도했습니다. 1시간 뒤에 다시 시도해 주세요.");
+        }
         String hash = jdbc.queryForObject("SELECT password_hash FROM admins WHERE id = ?", String.class, adminId);
         if (current == null || !encoder.matches(current, hash)) {
             throw ApiException.badRequest("WRONG_PASSWORD", "지금 비밀번호가 맞지 않습니다.");
