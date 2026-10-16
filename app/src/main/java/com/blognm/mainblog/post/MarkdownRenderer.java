@@ -139,7 +139,14 @@ public class MarkdownRenderer {
 
     private static final Pattern IMAGE_WIDTH_MARK = Pattern.compile("#w=[1-9]0");
 
-    private static boolean isAllowedImage(String src) {
-        return src.startsWith("/uploads/") || src.startsWith("/img/releases/") || src.startsWith("/img/guides/");
+    /**
+     * 이 사이트의 사진 주소만. 올린 사진은 /uploads/{UUID}, 릴리스 노트·사용 방법 사진은 /img/releases·/img/guides 아래 파일.
+     * 앞부분만 보면 "/uploads/../api/posts/1"처럼 다른 주소를 읽는 사람마다 부르게 할 수 있어서 모양 전체를 본다.
+     */
+    private static final Pattern ALLOWED_IMAGE = Pattern.compile(
+            "(/uploads/[0-9a-f-]{36}|/img/(releases|guides)/[A-Za-z0-9_-]+(\\.[A-Za-z0-9_-]+)*(/[A-Za-z0-9_-]+(\\.[A-Za-z0-9_-]+)*)*)(#[^/?]*)?");
+
+    static boolean isAllowedImage(String src) {
+        return ALLOWED_IMAGE.matcher(src).matches();
     }
 }

@@ -67,8 +67,10 @@ public class PostQueryService {
             where.append(" AND p.is_notice = FALSE");
         }
         long total = jdbc.queryForObject("SELECT COUNT(*) FROM posts p WHERE " + where, params, Long.class);
-        params.addValue("size", pageSize).addValue("offset", (long) (current - 1) * pageSize);
-        List<PostSummary> items = query(where.toString(), params, "LIMIT :size OFFSET :offset");
+        long offset = (long) (current - 1) * pageSize;
+        params.addValue("size", pageSize).addValue("offset", offset);
+        // 글보다 뒤쪽 쪽은 읽을 것이 없으니 DB에 묻지 않는다
+        List<PostSummary> items = offset >= total ? List.of() : query(where.toString(), params, "LIMIT :size OFFSET :offset");
         int totalPages = (int) ((total + pageSize - 1) / pageSize);
         return new PostPage(notices, items, current, pageSize, totalPages, total, tag);
     }

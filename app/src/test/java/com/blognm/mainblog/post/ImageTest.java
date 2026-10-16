@@ -50,6 +50,17 @@ class ImageTest extends IntegrationTest {
         return JsonPath.read(body, "$.url");
     }
 
+    @Test
+    @DisplayName("파일은 작아도 가로×세로가 너무 큰 사진(30000×30000)은 받지 않는다")
+    void tooManyPixels() throws Exception {
+        byte[] png = image("png");
+        // IHDR의 가로·세로(16~23번째 바이트)만 30000으로 바꾼다
+        java.nio.ByteBuffer.wrap(png).putInt(16, 30000).putInt(20, 30000);
+        upload(owner, "huge.png", "image/png", png).andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("IMAGE_TOO_BIG"));
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM images", Long.class)).isZero();
+    }
+
     private static byte[] image(String format) throws Exception {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         ImageIO.write(new BufferedImage(20, 10, BufferedImage.TYPE_INT_RGB), format, out);

@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.blognm.mainblog.auth.EmailVerification.Purpose;
+import com.blognm.mainblog.common.AfterCommit;
 import com.blognm.mainblog.common.ApiException;
 import com.blognm.mainblog.common.Hashing;
 import com.blognm.mainblog.common.Masking;
@@ -86,7 +87,7 @@ public class PasswordResetService {
         Duration ttl = props.passwordReset().codeTtl();
         verifications.save(EmailVerification.issue(email, Purpose.PASSWORD_RESET, codeHash, now, now.plus(ttl)));
         if (registered) {
-            mail.sendPasswordResetCode(email, code, ttl.toMinutes());
+            AfterCommit.run(() -> mail.sendPasswordResetCode(email, code, ttl.toMinutes()));
         }
         return maskEmail(email);
     }
@@ -99,7 +100,7 @@ public class PasswordResetService {
         int maxFailures = props.passwordReset().maxCodeFailures();
         MemberRules.checkPassword(newPassword);
 
-        EmailVerification v = verifications.findFirstByEmailAndPurposeOrderByIdDesc(email, Purpose.PASSWORD_RESET)
+        EmailVerification v = verifications.findTopByEmailAndPurposeOrderByIdDesc(email, Purpose.PASSWORD_RESET)
                 .filter(x -> !x.isExpired(now))
                 .orElseThrow(PasswordResetService::codeInvalid);
         if (code == null || !Hashing.constantTimeEquals(v.getCodeHash(), hashCode(email, code.trim()))) {

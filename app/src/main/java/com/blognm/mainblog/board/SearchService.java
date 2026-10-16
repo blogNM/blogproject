@@ -165,6 +165,9 @@ public class SearchService {
     private BlogPage blogs(String phrase, String tag, Sort sort, int page, long total, Long viewerId) {
         int size = 12;
         int current = Math.max(page, 1);
+        if ((long) (current - 1) * size >= total) {
+            return new BlogPage(List.of(), current, (int) ((total + size - 1) / size), total);
+        }
         String order = switch (sort) {
             case LATEST -> "b.id DESC";
             case POPULAR -> "subscriber_count DESC, b.id DESC";

@@ -238,6 +238,13 @@ class SocialTest extends IntegrationTest {
         postAs("/api/blogs/trip/mute", null, reader).andExpect(jsonPath("$.muted").value(false));
         getAs("/api/feed", reader).andExpect(jsonPath("$.total").value(2));
         postAs("/api/members/" + readerId + "/mute", null, reader).andExpect(status().isBadRequest());
+
+        // 비공개 블로그는 숨겨 볼 수 없다. 주소를 짐작해 있는지·이름을 알아내지 못하게 없는 블로그와 같이 답한다
+        postAs("/api/blogs", """
+                {"slug":"secret","name":"비밀 일기","visibility":"PRIVATE","joinPolicy":"APPROVAL"}""", other)
+                .andExpect(status().isOk());
+        postAs("/api/blogs/secret/mute", null, reader).andExpect(status().isNotFound());
+        getAs("/api/me/mutes", reader).andExpect(jsonPath("$.blogs").isEmpty());
     }
 
     @Test

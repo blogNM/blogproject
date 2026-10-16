@@ -1,7 +1,6 @@
 package com.blognm.mainblog.linkpreview;
 
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.ByteArrayOutputStream;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.URI;
@@ -9,7 +8,15 @@ import java.net.UnknownHostException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.ByteBuffer;
+import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Flow;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import org.springframework.stereotype.Component;
 
@@ -18,6 +25,9 @@ import org.springframework.stereotype.Component;
  * 서버가 대신 요청하는 기능이라 내부망을 엿보는 데 쓰이지 않게(SSRF) 막는다:
  * http·https와 기본 포트만, 주소를 미리 풀어 내부·루프백·링크 로컬·사설 IP면 거절, 넘겨주기(redirect)도 매번 다시 확인,
  * 받는 크기 제한. 쿠키·로그인 정보는 보내지 않는다.
+ * 바깥 주소는 https로만 받는다. 검사할 때와 실제로 접속할 때 DNS 답을 바꿔 내부망으로 돌리는 공격(DNS rebinding)이
+ * 와도, 공격자 도메인의 인증서가 내부 서버에 있을 수 없어 연결이 끊긴다. http 링크는 https로 바꿔 받아 본다.
+ * 한 번 요청은 응답 머리와 본문을 모두 합쳐 timeout 안에 끝나야 한다 (본문을 아주 천천히 보내도 서버가 붙잡히지 않게).
  */
 @Component
 public class SafeFetcher {
@@ -34,26 +44,29 @@ public class SafeFetcher {
                 .build();
     }
 
-    /** 성공(2xx)이면 본문 앞부분 maxBytes까지. 막힌 주소·실패·너무 큰 응답은 빈 값. */
+    /** 성공(2xx)이면 본문 앞부분 maxBytes까지. 막힌 주소·실패·너무 큰 응답·시간 초과는 빈 값. */
     public Optional<Fetched> get(String url, int maxBytes) {
         URI uri;
         try {
-            uri = URI.create(url);
+            uri = upgrade(URI.create(url));
         } catch (IllegalArgumentException e) {
             return Optional.empty();
         }
         for (int i = 0; i <= MAX_REDIRECTS; i++) {
-            if (!allowed(uri)) {
+            if (uri == null || !allowed(uri)) {
                 return Optional.empty();
             }
+            CompletableFuture<HttpResponse<Body>> pending = null;
             try {
                 HttpRequest req = HttpRequest.newBuilder(uri).timeout(props.timeout()).header("User-Agent", USER_AGENT)
                         .header("Accept", "text/html,application/json,image/*;q=0.8")
                         .header("Accept-Language", "ko,en;q=0.8").GET().build();
-                HttpResponse<InputStream> res = client.send(req, HttpResponse.BodyHandlers.ofInputStream());
+                pending = client.sendAsync(req, info -> info.statusCode() >= 200 && info.statusCode() < 300
+                        ? new LimitedBody(maxBytes)
+                        : HttpResponse.BodySubscribers.replacing(Body.EMPTY));
+                HttpResponse<Body> res = pending.get(props.timeout().toMillis(), TimeUnit.MILLISECONDS);
                 int status = res.statusCode();
                 if (status >= 300 && status < 400) {
-                    res.body().close();
                     Optional<String> location = res.headers().firstValue("Location");
                     if (location.isEmpty()) {
                         return Optional.empty();
@@ -61,17 +74,20 @@ public class SafeFetcher {
                     uri = uri.resolve(location.get());
                     continue;
                 }
-                try (InputStream body = res.body()) {
-                    if (status < 200 || status >= 300) {
-                        return Optional.empty();
-                    }
-                    byte[] bytes = body.readNBytes(maxBytes + 1);
-                    String type = res.headers().firstValue("Content-Type").orElse("");
-                    return Optional.of(new Fetched(uri.toString(), type, bytes, bytes.length > maxBytes));
+                if (status < 200 || status >= 300) {
+                    return Optional.empty();
                 }
-            } catch (IOException | IllegalArgumentException e) {
+                String type = res.headers().firstValue("Content-Type").orElse("");
+                return Optional.of(new Fetched(uri.toString(), type, res.body().bytes(), res.body().truncated()));
+            } catch (TimeoutException | ExecutionException | IllegalArgumentException e) {
+                if (pending != null) {
+                    pending.cancel(true);
+                }
                 return Optional.empty();
             } catch (InterruptedException e) {
+                if (pending != null) {
+                    pending.cancel(true);
+                }
                 Thread.currentThread().interrupt();
                 return Optional.empty();
             }
@@ -79,9 +95,23 @@ public class SafeFetcher {
         return Optional.empty();
     }
 
+    /** 바깥 주소는 https로만 받는다. 시험용(allowPrivateHosts)일 때만 http 그대로. */
+    private URI upgrade(URI uri) {
+        if (props.allowPrivateHosts() || uri.getScheme() == null || !uri.getScheme().equalsIgnoreCase("http")
+                || uri.getPort() != -1) {
+            return uri;
+        }
+        try {
+            return new URI("https", uri.getRawAuthority(), uri.getRawPath(), uri.getRawQuery(), uri.getRawFragment());
+        } catch (java.net.URISyntaxException e) {
+            return null;
+        }
+    }
+
     boolean allowed(URI uri) {
         String scheme = uri.getScheme();
-        if (scheme == null || !(scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https"))) {
+        if (scheme == null || !(scheme.equalsIgnoreCase("https")
+                || (scheme.equalsIgnoreCase("http") && props.allowPrivateHosts()))) {
             return false;
         }
         if (uri.getHost() == null || uri.getUserInfo() != null) {
@@ -159,6 +189,64 @@ public class SafeFetcher {
             }
         }
         return true;
+    }
+
+    /** 받은 본문. maxBytes를 넘으면 더 받지 않고 끊는다. */
+    record Body(byte[] bytes, boolean truncated) {
+
+        static final Body EMPTY = new Body(new byte[0], false);
+    }
+
+    /** 본문을 maxBytes까지만 모으고, 넘으면 바로 연결을 끊는다. */
+    private static final class LimitedBody implements HttpResponse.BodySubscriber<Body> {
+
+        private final int maxBytes;
+        private final ByteArrayOutputStream out = new ByteArrayOutputStream();
+        private final CompletableFuture<Body> result = new CompletableFuture<>();
+        private Flow.Subscription subscription;
+
+        LimitedBody(int maxBytes) {
+            this.maxBytes = maxBytes;
+        }
+
+        @Override
+        public CompletionStage<Body> getBody() {
+            return result;
+        }
+
+        @Override
+        public void onSubscribe(Flow.Subscription s) {
+            subscription = s;
+            s.request(Long.MAX_VALUE);
+        }
+
+        @Override
+        public void onNext(List<ByteBuffer> items) {
+            if (result.isDone()) {
+                return;
+            }
+            for (ByteBuffer b : items) {
+                int n = Math.min(b.remaining(), maxBytes + 1 - out.size());
+                byte[] chunk = new byte[n];
+                b.get(chunk);
+                out.write(chunk, 0, n);
+                if (out.size() > maxBytes) {
+                    result.complete(new Body(out.toByteArray(), true));
+                    subscription.cancel();
+                    return;
+                }
+            }
+        }
+
+        @Override
+        public void onError(Throwable t) {
+            result.completeExceptionally(t);
+        }
+
+        @Override
+        public void onComplete() {
+            result.complete(new Body(out.toByteArray(), false));
+        }
     }
 
     /** truncated면 maxBytes보다 커서 잘린 것. */

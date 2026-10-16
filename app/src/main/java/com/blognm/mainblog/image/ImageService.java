@@ -85,6 +85,10 @@ public class ImageService {
         if (byExtension != byMime || byMime != bySignature) {
             throw notAllowed();
         }
+        if (tooManyPixels(bySignature, data)) {
+            throw ApiException.badRequest("IMAGE_TOO_BIG",
+                    "사진의 가로×세로가 너무 큽니다. %,d만 화소 이하로 줄여 주세요.".formatted(props.maxPixels() / 10_000));
+        }
         byte[] clean;
         try {
             clean = MetadataStripper.strip(bySignature, data);
@@ -97,6 +101,12 @@ public class ImageService {
     private record Checked(ImageType type, byte[] data) {
     }
 
+    /** 머리에 적힌 가로×세로가 상한을 넘는지. 읽지 못하면 여기서는 막지 않는다 (형식 검사는 따로 함). */
+    private boolean tooManyPixels(ImageType type, byte[] data) {
+        return ImageSize.read(type, data)
+                .map(s -> s.width() <= 0 || s.height() <= 0 || s.pixels() > props.maxPixels()).orElse(false);
+    }
+
     /**
      * 서버가 바깥에서 받아 온 사진(링크 미리보기 썸네일, D-92)을 저장한다. 형식은 파일 시그니처로만 보고,
      * 허용 형식이 아니거나 너무 크거나 깨졌으면 저장하지 않는다.
@@ -106,8 +116,12 @@ public class ImageService {
         if (data.length == 0 || data.length > props.maxFileSize().toBytes()) {
             return Optional.empty();
         }
+        // 링크 미리보기 썸네일도 글쓴이가 올린 사진으로 센다. 넘으면 썸네일 없이 카드만 둔다 (D-127 올리기 제한 우회 막기)
+        if (!rateLimiter.tryAcquire("upload:" + uploaderId, app.rateLimit().uploadPerMinute(), Duration.ofMinutes(1))) {
+            return Optional.empty();
+        }
         Optional<ImageType> type = ImageType.fromSignature(data);
-        if (type.isEmpty()) {
+        if (type.isEmpty() || tooManyPixels(type.get(), data)) {
             return Optional.empty();
         }
         byte[] clean;

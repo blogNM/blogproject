@@ -384,8 +384,9 @@ CREATE TABLE post_views (
   viewer_key VARCHAR(100) NOT NULL COMMENT '회원 번호 또는 비회원 식별값',
   view_date DATE NOT NULL,
   PRIMARY KEY (post_id, viewer_key, view_date),
+  KEY idx_post_views_date (view_date),
   CONSTRAINT fk_post_views_post FOREIGN KEY (post_id) REFERENCES posts (id)
-) COMMENT '조회 기록. 같은 사람·같은 날·같은 글은 한 번 (BRD-11, D-77)';
+) COMMENT '조회 기록. 같은 사람·같은 날·같은 글은 한 번. 어제보다 오래된 것은 매일 지움 (BRD-11, D-77)';
 
 CREATE TABLE recent_searches (
   id BIGINT NOT NULL AUTO_INCREMENT,

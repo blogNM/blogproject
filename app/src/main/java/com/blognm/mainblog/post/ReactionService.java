@@ -56,12 +56,15 @@ public class ReactionService {
             liked = false;
         } else {
             blocks.requireNotBlocked(post.blog().getId(), actorId, post.post().getAuthorId(), "좋아요를 누를");
-            jdbc.update("INSERT IGNORE INTO post_likes (member_id, post_id, created_at) VALUES (?, ?, ?)", actorId,
-                    postId, LocalDateTime.now(clock));
-            jdbc.update("UPDATE posts SET like_count = like_count + 1 WHERE id = ?", postId);
+            // 동시에 여러 번 눌러 둘 다 "없음"으로 보더라도, 실제로 한 줄이 들어간 요청만 수를 올린다
+            int inserted = jdbc.update("INSERT IGNORE INTO post_likes (member_id, post_id, created_at) VALUES (?, ?, ?)",
+                    actorId, postId, LocalDateTime.now(clock));
+            if (inserted == 1) {
+                jdbc.update("UPDATE posts SET like_count = like_count + 1 WHERE id = ?", postId);
+            }
             liked = true;
             long author = post.post().getAuthorId();
-            if (author != actorId && !post.post().isAuthorLeft()) {
+            if (inserted == 1 && author != actorId && !post.post().isAuthorLeft()) {
                 notifications.like(author, post.blog().getId(), actorId, postId);
             }
         }
