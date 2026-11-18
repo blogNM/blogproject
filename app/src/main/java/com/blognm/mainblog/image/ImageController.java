@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.regex.Pattern;
 
+import org.springframework.core.io.Resource;
 import org.springframework.http.CacheControl;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -39,17 +40,22 @@ public class ImageController {
         return Map.of("id", image.getId(), "url", image.url());
     }
 
-    /** 이름이 추측할 수 없는 UUID라 따로 권한을 보지 않는다. 형식은 DB에 저장한 값으로 내려 보낸다. */
+    /**
+     * 이름이 추측할 수 없는 UUID라 따로 권한을 보지 않는다. 형식은 DB에 저장한 값으로 내려 보낸다.
+     * 파일은 통째로 읽지 않고 조금씩 흘려 보낸다(힙 512MB를 사진이 차지하지 않게). 같은 이름의 내용은 바뀌지 않으므로
+     * 브라우저가 1년 동안 다시 묻지 않게 하고(immutable), 다시 물으면 ETag로 304만 돌려준다 (D-132).
+     */
     @GetMapping("/uploads/{name}")
-    public ResponseEntity<byte[]> serve(@PathVariable String name) {
+    public ResponseEntity<Resource> serve(@PathVariable String name) {
         if (!UUID_NAME.matcher(name).matches()) {
             return ResponseEntity.notFound().build();
         }
         return images.read(name)
                 .map(s -> ResponseEntity.ok()
                         .contentType(MediaType.parseMediaType(s.mimeType()))
-                        .cacheControl(CacheControl.maxAge(Duration.ofDays(30)).cachePublic())
-                        .body(s.bytes()))
+                        .cacheControl(CacheControl.maxAge(Duration.ofDays(365)).cachePublic().immutable())
+                        .eTag(name)
+                        .body(s.file()))
                 .orElse(ResponseEntity.notFound().build());
     }
 }

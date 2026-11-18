@@ -37,6 +37,7 @@ class LinkPreviewTest extends IntegrationTest {
     private HttpServer site;
     private String base;
     private final AtomicInteger pageHits = new AtomicInteger();
+    private final AtomicInteger slowHits = new AtomicInteger();
     private Cookie[] owner;
 
     @BeforeEach
@@ -80,6 +81,21 @@ class LinkPreviewTest extends IntegrationTest {
             ex.getResponseBody().write(html);
             ex.close();
         });
+        // 머리는 바로 보내고 본문을 아주 천천히 보내는 사이트 (D-128 시간 상한 확인용)
+        site.createContext("/slow/", ex -> {
+            slowHits.incrementAndGet();
+            ex.getResponseHeaders().add("Content-Type", "text/html");
+            ex.sendResponseHeaders(200, 0);
+            try {
+                ex.getResponseBody().write("<html><head>".getBytes(StandardCharsets.UTF_8));
+                ex.getResponseBody().flush();
+                Thread.sleep(3000);
+            } catch (InterruptedException | java.io.IOException e) {
+                // 받는 쪽이 끊으면 여기로 온다
+            }
+            ex.close();
+        });
+        site.setExecutor(java.util.concurrent.Executors.newCachedThreadPool());
         site.start();
         base = "http://127.0.0.1:" + site.getAddress().getPort();
         owner = member("owner@example.com", "블로그장");
@@ -141,7 +157,7 @@ class LinkPreviewTest extends IntegrationTest {
     @DisplayName("저장 응답은 바깥 사이트를 기다리지 않고, 미리보기는 뒤에서 받는다 (D-131)")
     void background() {
         LinkPreviewProperties props = new LinkPreviewProperties(true, Duration.ofSeconds(1), 5, Duration.ofDays(7),
-                true, Duration.ofSeconds(8), true);
+                true, Duration.ofSeconds(8), true, Duration.ofDays(30));
         List<Runnable> queued = new ArrayList<>();
         LinkPreviewService service = new LinkPreviewService(named, new SafeFetcher(props), images, uploadProps, props,
                 clock, queued::add);
@@ -162,7 +178,7 @@ class LinkPreviewTest extends IntegrationTest {
     void privateHostsBlocked() {
         SafeFetcher strict = new SafeFetcher(
                 new LinkPreviewProperties(true, Duration.ofSeconds(1), 5, Duration.ofDays(7), false,
-                        Duration.ofSeconds(8), false));
+                        Duration.ofSeconds(8), false, Duration.ofDays(30)));
         for (String url : new String[] {base + "/song", "http://localhost/", "http://10.0.0.1/", "http://169.254.169.254/",
                 "http://[::1]/", "http://192.168.0.1/", "file:///etc/passwd", "http://user@example.com/",
                 "http://example.com:8080/", "http://[64:ff9b::a9fe:a9fe]/", "http://[64:ff9b::7f00:1]/",
@@ -176,4 +192,60 @@ class LinkPreviewTest extends IntegrationTest {
         ImageIO.write(new BufferedImage(20, 10, BufferedImage.TYPE_INT_RGB), "png", out);
         return out.toByteArray();
     }
+
+    @Autowired
+    com.blognm.mainblog.post.PostCleanupJob postCleanup;
+
+    @Test
+    @DisplayName("본문을 천천히 보내는 사이트는 한 번 1초, 글 하나 1.5초 상한에서 끊고 남은 링크는 받지 않는다 (D-128)")
+    void slowSiteIsCut() {
+        LinkPreviewProperties props = new LinkPreviewProperties(true, Duration.ofSeconds(1), 5, Duration.ofDays(7),
+                true, Duration.ofMillis(1500), false, Duration.ofDays(30));
+        LinkPreviewService service = new LinkPreviewService(named, new SafeFetcher(props), images, uploadProps, props,
+                clock, Runnable::run);
+        long ownerId = jdbc.queryForObject("SELECT id FROM members WHERE email = 'owner@example.com'", Long.class);
+        StringBuilder html = new StringBuilder();
+        for (int i = 1; i <= 3; i++) {
+            html.append("<p><a href=\"").append(base).append("/slow/").append(i).append("\">링크</a></p>");
+        }
+
+        long start = System.nanoTime();
+        service.collect(html.toString(), ownerId);
+        long millis = (System.nanoTime() - start) / 1_000_000;
+
+        // 1번은 1초에 끊기고, 1.5초 상한 안이라 2번을 받아 보다 또 1초에 끊기고, 3번은 상한을 넘어 받지 않는다
+        assertThat(millis).isLessThan(2900);
+        assertThat(slowHits.get()).isEqualTo(2);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM link_previews WHERE status = 'FAILED'", Long.class))
+                .isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("어느 글에도 없는 링크의 미리보기는 30일 뒤 새벽 정리에서 썸네일과 함께 지운다. 글에 남은 링크는 그대로 (D-132)")
+    void unusedPreviewsCleaned() throws Exception {
+        String body = postAs("/api/blogs/music/posts", """
+                {"title":"링크","content":"%s/song","tags":[]}""".formatted(base), owner)
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        long id = ((Number) JsonPath.read(body, "$.id")).longValue();
+        html(base + "/svg-page");
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM link_previews", Long.class)).isEqualTo(2);
+        String thumb = jdbc.queryForObject(
+                "SELECT i.stored_name FROM link_previews lp JOIN images i ON i.id = lp.image_id", String.class);
+
+        // 글에서 링크를 빼도 30일 안에는 남긴다
+        sendAs(org.springframework.http.HttpMethod.PUT, "/api/posts/" + id, """
+                {"title":"링크","content":"링크를 뺐어요","tags":[]}""", owner).andExpect(status().isOk());
+        clock.advance(Duration.ofDays(29));
+        postCleanup.cleanup();
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM link_previews", Long.class)).isEqualTo(2);
+
+        clock.advance(Duration.ofDays(2));
+        postCleanup.cleanup();
+        assertThat(jdbc.queryForList("SELECT url FROM link_previews", String.class))
+                .containsExactly(base + "/svg-page");
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM images WHERE stored_name = ?", Long.class, thumb))
+                .isZero();
+        assertThat(java.nio.file.Files.exists(java.nio.file.Path.of(uploadProps.dir(), thumb))).isFalse();
+    }
+
 }

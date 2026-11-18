@@ -173,4 +173,47 @@ class ModerationTest extends IntegrationTest {
         assertThat(lifecycle.purgeClosed()).isNotNull();
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM blogs WHERE slug = 'club'", Integer.class)).isZero();
     }
+
+    @Test
+    @DisplayName("닫힌 지 30일 지난 블로그를 완전히 지우면 글·댓글·좋아요·사진 행이 사라지고 지울 사진 파일 이름을 돌려준다")
+    void purgeRemovesRowsAndFiles() throws Exception {
+        String body = postAs("/api/blogs/club/posts", """
+                {"title":"남길 글","content":"본문","tags":["모임"]}""", member).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        long postId = ((Number) com.jayway.jsonpath.JsonPath.read(body, "$.id")).longValue();
+        postAs("/api/posts/" + postId + "/comments", """
+                {"content":"댓글"}""", owner).andExpect(status().isOk());
+        postAs("/api/posts/" + postId + "/like", null, owner).andExpect(status().isOk());
+        String stored = java.util.UUID.randomUUID().toString();
+        jdbc.update("""
+                INSERT INTO images (uploader_id, post_id, stored_name, original_name, mime_type, size_bytes)
+                VALUES (?, ?, ?, 'a.png', 'image/png', 10)""", memberId, postId, stored);
+        // 다른 블로그의 글은 건드리지 않는다
+        postAs("/api/blogs", """
+                {"slug":"other","name":"다른 곳","visibility":"PUBLIC","joinPolicy":"FREE"}""", sub).andExpect(status().isOk());
+        postAs("/api/blogs/other/posts", """
+                {"title":"다른 글","content":"본문","tags":[]}""", sub).andExpect(status().isOk());
+
+        postAs("/api/blogs/club/close", null, owner).andExpect(status().isOk());
+        clock.advance(Duration.ofDays(8));
+        lifecycle.closeDue();
+        clock.advance(Duration.ofDays(31));
+        java.util.List<String> files = lifecycle.purgeClosed();
+
+        assertThat(files).contains(stored);
+        long blogId = jdbc.queryForObject("SELECT id FROM blogs WHERE name = '모임'", Long.class);
+        for (String sql : new String[] {
+                "SELECT COUNT(*) FROM posts WHERE blog_id = ?",
+                "SELECT COUNT(*) FROM comments c WHERE c.post_id = " + postId + " AND ? > 0",
+                "SELECT COUNT(*) FROM post_likes WHERE post_id = " + postId + " AND ? > 0",
+                "SELECT COUNT(*) FROM images WHERE post_id = " + postId + " AND ? > 0",
+                "SELECT COUNT(*) FROM subscriptions WHERE blog_id = ?" }) {
+            assertThat(jdbc.queryForObject(sql, Integer.class, blogId)).as(sql).isZero();
+        }
+        assertThat(jdbc.queryForObject("SELECT slug FROM blogs WHERE id = ?", String.class, blogId))
+                .startsWith("_closed-");
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM posts WHERE title = '다른 글'", Integer.class)).isEqualTo(1);
+        // 두 번 돌려도 다시 지우지 않는다
+        assertThat(lifecycle.purgeClosed()).isEmpty();
+    }
 }

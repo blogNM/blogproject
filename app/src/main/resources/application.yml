@@ -188,6 +188,8 @@ link-preview:
   collect-budget: ${LINK_PREVIEW_COLLECT_BUDGET:8s}
   # 글 저장 응답은 바로 보내고 미리보기는 뒤에서 받는다. 받는 동안 글을 열면 글자 링크로 보인다 (D-131)
   background: ${LINK_PREVIEW_BACKGROUND:true}
+  # 어느 글에도 없는 링크의 미리보기와 썸네일은 받은 지 이만큼 지나면 새벽 정리 작업이 지운다 (D-132)
+  unused-keep: ${LINK_PREVIEW_UNUSED_KEEP:30d}
 
 # 댓글·좋아요·검색·피드 (004 4단계)
 board:

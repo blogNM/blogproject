@@ -34,7 +34,12 @@ public class InMemoryRateLimiter implements RateLimiter {
         return w.count <= limit;
     }
 
-    /** 테스트용: 모든 카운터를 지운다. */
+    /** 테스트용: 지금 들고 있는 키 수. */
+    int size() {
+        return windows.size();
+    }
+
+        /** 테스트용: 모든 카운터를 지운다. */
     public void clear() {
         windows.clear();
     }
