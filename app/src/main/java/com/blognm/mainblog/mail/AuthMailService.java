@@ -48,6 +48,17 @@ public class AuthMailService {
                 """.formatted(code, ttlMinutes));
     }
 
+    /** 같은 이메일의 구글·네이버·카카오 계정이 이 회원에 자동으로 연결됐을 때 (D-130). */
+    @Async
+    public void sendSocialLinked(String email, String providerLabel) {
+        send(email, "[Creat_] %s 계정이 연결되었습니다".formatted(providerLabel), """
+                Creat_ 계정에 같은 이메일의 %s 계정이 연결되었습니다.
+                이제 로그인 화면의 [%s로 로그인]으로도 들어올 수 있습니다.
+
+                본인이 한 일이 아니라면 바로 비밀번호를 바꾸고(비밀번호 찾기), %s 계정의 보안 설정도 확인해 주세요.
+                """.formatted(providerLabel, providerLabel, providerLabel));
+    }
+
     private void send(String to, String subject, String body) {
         try {
             gateway.send(to, subject, body);

@@ -176,4 +176,20 @@ class AdminTest extends IntegrationTest {
         assertThat(logs("DELETE")).isEqualTo(1);
         assertThat(logs("RESTORE")).isEqualTo(1);
     }
+
+    @Test
+    @DisplayName("관리자가 로그아웃하면 그 전에 받은 관리자 토큰은 2시간이 남았어도 쓰지 못한다 (D-130)")
+    void logoutRevokesToken() throws Exception {
+        Cookie ready = readyAdmin();
+        getAs("/api/admin/stats", ready).andExpect(status().isOk());
+        clock.advance(Duration.ofSeconds(2));
+        postAs("/api/admin/auth/logout", "{}", ready).andExpect(status().isOk());
+        getAs("/api/admin/stats", ready).andExpect(status().isUnauthorized());
+
+        // 다시 로그인하면 된다
+        clock.advance(Duration.ofSeconds(2));
+        Cookie again = adminLogin("Admin5678!");
+        getAs("/api/admin/stats", again).andExpect(status().isOk());
+    }
+
 }

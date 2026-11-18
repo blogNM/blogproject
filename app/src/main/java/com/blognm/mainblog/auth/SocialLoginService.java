@@ -12,7 +12,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.blognm.mainblog.auth.JwtProvider.SocialSignup;
+import com.blognm.mainblog.common.AfterCommit;
 import com.blognm.mainblog.common.ApiException;
+import com.blognm.mainblog.mail.AuthMailService;
 import com.blognm.mainblog.member.Member;
 import com.blognm.mainblog.member.MemberRepository;
 import com.blognm.mainblog.member.MemberRules;
@@ -34,15 +36,18 @@ public class SocialLoginService {
     private final LoginService loginService;
     private final JwtProvider jwtProvider;
     private final PasswordEncoder passwordEncoder;
+    private final AuthMailService mail;
     private final Clock clock;
 
     public SocialLoginService(SocialAccountRepository socialAccounts, MemberRepository members,
-            LoginService loginService, JwtProvider jwtProvider, PasswordEncoder passwordEncoder, Clock clock) {
+            LoginService loginService, JwtProvider jwtProvider, PasswordEncoder passwordEncoder, AuthMailService mail,
+            Clock clock) {
         this.socialAccounts = socialAccounts;
         this.members = members;
         this.loginService = loginService;
         this.jwtProvider = jwtProvider;
         this.passwordEncoder = passwordEncoder;
+        this.mail = mail;
         this.clock = clock;
     }
 
@@ -74,6 +79,9 @@ public class SocialLoginService {
                 return Outcome.rejected();
             }
             socialAccounts.save(SocialAccount.link(m.getId(), provider, providerUserId, now));
+            // 주인이 모르게 연결되지 않도록 알린다. 본인이 아니면 비밀번호를 바꾸라고 안내한다 (D-130)
+            String label = label(provider);
+            AfterCommit.run(() -> mail.sendSocialLinked(email, label));
             return Outcome.loggedIn(loginService.reissue(m, false));
         }
         String token = jwtProvider.createSocialSignupToken(

@@ -11,7 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.blognm.mainblog.member.MemberRepository;
 
-/** 만료된 인증번호·임시 토큰·Refresh Token, 오래된 로그인 실패 기록, 탈퇴 30일 지난 개인정보를 지운다 (4.5, SCL-03). */
+/** 만료된 인증번호·임시 토큰·Refresh Token, 오래된 로그인 실패 기록, 지난 날짜의 이메일별 발송 수(D-130), 탈퇴 30일 지난 개인정보를 지운다 (4.5, SCL-03). */
 @Component
 public class AuthCleanupJob {
 
@@ -20,16 +20,18 @@ public class AuthCleanupJob {
     private final LoginFailureRepository failures;
     private final EmailFindTokenRepository findTokens;
     private final MemberRepository members;
+    private final EmailDailyQuota dailyQuota;
     private final Clock clock;
 
     public AuthCleanupJob(EmailVerificationRepository verifications, RefreshTokenRepository refreshTokens,
             LoginFailureRepository failures, EmailFindTokenRepository findTokens, MemberRepository members,
-            Clock clock) {
+            EmailDailyQuota dailyQuota, Clock clock) {
         this.verifications = verifications;
         this.refreshTokens = refreshTokens;
         this.failures = failures;
         this.findTokens = findTokens;
         this.members = members;
+        this.dailyQuota = dailyQuota;
         this.clock = clock;
     }
 
@@ -42,6 +44,7 @@ public class AuthCleanupJob {
         refreshTokens.deleteExpired(now);
         failures.deleteStale(now.minusDays(1), now);
         findTokens.deleteExpired(now);
+        dailyQuota.deleteBefore(now.toLocalDate());
         // 탈퇴 30일 뒤 개인정보 삭제 (USR-05, 4.5)
         members.erasePersonalData(now.minusDays(30));
     }

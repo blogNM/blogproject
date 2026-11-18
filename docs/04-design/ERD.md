@@ -81,6 +81,12 @@ erDiagram
         datetime expires_at "가입 10분, 재설정 30분"
         datetime verified_at "가입: 인증 완료 표시"
     }
+    email_daily_sends {
+        varchar email PK "소문자"
+        varchar purpose PK "SIGNUP, PASSWORD_RESET"
+        date send_date PK "한국 날짜"
+        int sent_count "하루 10번까지 (D-130)"
+    }
     email_find_tokens {
         bigint id PK
         char token_hash UK
@@ -121,6 +127,7 @@ erDiagram
 |---|---|---|
 | `members` | 회원 계정. 탈퇴해도 행은 남겨 글의 작성자 연결을 유지하고, 개인정보 칸만 30일 뒤 비움 | USR-01·05·07, 4.5, 4.6 |
 | `email_verifications` | 가입·비밀번호 재설정 인증번호. 쓰거나 만료되면 바로 삭제 | USR-02·06, SEC-05 |
+| `email_daily_sends` | 이메일별 하루 인증번호 발송 수(하루 10번). 지난 날짜는 새벽에 삭제 | USR-02·06, D-130 |
 | `email_find_tokens` | 이메일 찾기 결과에서 [비밀번호 재설정]을 누를 때 쓰는 10분짜리 임시 토큰 | USR-08, D-26 |
 | `refresh_tokens` | 로그아웃·비밀번호 변경 때 폐기할 수 있게 DB에 저장 | SEC-04, D-53 |
 | `login_failures` | 계정별 잠금과 Turnstile 표시 기준 | SEC-03, SEC-13, D-79, D-80 |
@@ -485,6 +492,7 @@ erDiagram
         varchar name
         boolean must_change_password "임시 비밀번호면 TRUE (V7, 추천안 #16)"
         datetime password_changed_at "이전 로그인 무효 (V7)"
+        datetime tokens_revoked_at "로그아웃 시각, 이전 로그인 무효 (V22, D-130)"
         bigint created_by "만든 관리자 (V7)"
         datetime created_at
         datetime last_login_at

@@ -116,4 +116,28 @@ class PasswordResetTest extends IntegrationTest {
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM login_failures WHERE email = ?", Integer.class, EMAIL))
                 .isZero();
     }
+
+    @Test
+    @DisplayName("이메일 한 곳에 하루 10번까지만 인증번호를 보내고, 가입 안 된 이메일도 똑같이 막힌다. 다음 날에는 다시 된다 (D-130)")
+    void dailyLimitPerEmail() throws Exception {
+        for (String email : new String[] { EMAIL, "nobody@example.com" }) {
+            for (int i = 0; i < 10; i++) {
+                postJson("/api/auth/password/code", "{\"email\":\"%s\"}".formatted(email)).andExpect(status().isOk());
+                // 1분 다시 보내기 간격과 IP 1시간 10번 제한을 넘기려고 시간을 넉넉히 보낸다
+                clock.advance(java.time.Duration.ofMinutes(7));
+            }
+            postJson("/api/auth/password/code", "{\"email\":\"%s\"}".formatted(email))
+                    .andExpect(status().isTooManyRequests())
+                    .andExpect(jsonPath("$.code").value("MAIL_DAILY_LIMIT"));
+            // 다음 이메일은 IP 제한(1시간 10번)이 풀린 뒤에. 같은 날 안에서 센다
+            clock.advance(java.time.Duration.ofHours(1));
+        }
+        assertThat(jdbc.queryForObject(
+                "SELECT sent_count FROM email_daily_sends WHERE email = ? AND purpose = 'PASSWORD_RESET'",
+                Integer.class, EMAIL))
+                .isEqualTo(10);
+        clock.advance(java.time.Duration.ofDays(1));
+        requestCode(EMAIL);
+    }
+
 }
