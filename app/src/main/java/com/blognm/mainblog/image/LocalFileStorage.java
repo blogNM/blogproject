@@ -8,6 +8,8 @@ import java.nio.file.Path;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 
 /** 서버 디스크에 저장한다 (D-75). 폴더는 UPLOAD_DIR 환경변수로 바꾼다. */
@@ -47,6 +49,12 @@ public class LocalFileStorage implements FileStorage {
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
+    }
+
+    @Override
+    public Optional<Resource> open(String name) {
+        Path p = path(name);
+        return Files.isRegularFile(p) ? Optional.of(new FileSystemResource(p)) : Optional.empty();
     }
 
     @Override

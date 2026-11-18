@@ -165,7 +165,7 @@ class TestDataTest extends IntegrationTest {
                     .andExpect(jsonPath("$.items[?(@.slug == 'real-blog')].ownerTest").value(Matchers.contains(false)));
             getAs("/api/blogs/test-cafe-note", who).andExpect(status().isOk()).andExpect(jsonPath("$.ownerTest").value(true));
             getAs("/api/posts/" + testPost, who).andExpect(status().isOk()).andExpect(jsonPath("$.authorTest").value(true));
-            getAs("/api/posts/" + testPost + "/comments", who).andExpect(jsonPath("$[0].authorTest").value(true));
+            getAs("/api/posts/" + testPost + "/comments", who).andExpect(jsonPath("$.comments[0].authorTest").value(true));
             getAs("/api/members/" + test1, who).andExpect(status().isOk()).andExpect(jsonPath("$.test").value(true));
             getAs("/api/search?q=라떼&type=post", who).andExpect(jsonPath("$.posts.items[0].authorTest").value(true));
             getAs("/api/blogs/test-cafe-note/posts", who).andExpect(jsonPath("$.items[0].authorTest").value(true));

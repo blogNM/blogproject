@@ -14,6 +14,13 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -24,6 +31,7 @@ import org.jsoup.nodes.Node;
 import org.jsoup.nodes.TextNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -58,16 +66,62 @@ public class LinkPreviewService {
     private final UploadProperties uploadProps;
     private final LinkPreviewProperties props;
     private final Clock clock;
+    private final Executor executor;
     private final ObjectMapper json = new ObjectMapper();
 
+    @Autowired
     public LinkPreviewService(NamedParameterJdbcTemplate jdbc, SafeFetcher fetcher, ImageService images,
             UploadProperties uploadProps, LinkPreviewProperties props, Clock clock) {
+        this(jdbc, fetcher, images, uploadProps, props, clock, backgroundPool());
+    }
+
+    LinkPreviewService(NamedParameterJdbcTemplate jdbc, SafeFetcher fetcher, ImageService images,
+            UploadProperties uploadProps, LinkPreviewProperties props, Clock clock, Executor executor) {
         this.jdbc = jdbc;
         this.fetcher = fetcher;
         this.images = images;
         this.uploadProps = uploadProps;
         this.props = props;
         this.clock = clock;
+        this.executor = executor;
+    }
+
+    /**
+     * 미리보기만 받는 일꾼 2명과 대기 50개. 메일 보내기(@Async)와 일꾼을 나눠, 느린 사이트가 인증 메일을 늦추지 않게 한다.
+     * 대기가 꽉 차면 그 글은 카드 없이 두고 다음 저장 때 받는다. 서버가 꺼질 때 남은 일은 버린다(데몬 스레드).
+     */
+    private static ExecutorService backgroundPool() {
+        AtomicInteger n = new AtomicInteger();
+        return new ThreadPoolExecutor(2, 2, 0, TimeUnit.SECONDS, new ArrayBlockingQueue<>(50), r -> {
+            Thread t = new Thread(r, "link-preview-" + n.incrementAndGet());
+            t.setDaemon(true);
+            return t;
+        });
+    }
+
+    /**
+     * 글 저장 API가 부른다 (D-131). 바깥 사이트를 기다리면 저장이 링크 수 × 몇 초씩 늦어지므로 뒤에서 받는다.
+     * 받는 동안 글을 열면 그 링크는 글자 링크로 보이고, 다 받은 뒤 다시 열면 카드로 보인다.
+     */
+    public void collectAfterSave(String safeHtml, long uploaderId) {
+        if (!props.enabled()) {
+            return;
+        }
+        if (!props.background()) {
+            collect(safeHtml, uploaderId);
+            return;
+        }
+        try {
+            executor.execute(() -> {
+                try {
+                    collect(safeHtml, uploaderId);
+                } catch (RuntimeException e) {
+                    log.warn("링크 미리보기를 받지 못함: {}", e.toString());
+                }
+            });
+        } catch (RejectedExecutionException e) {
+            log.warn("링크 미리보기 대기가 꽉 차 이번에는 받지 않음");
+        }
     }
 
     /**

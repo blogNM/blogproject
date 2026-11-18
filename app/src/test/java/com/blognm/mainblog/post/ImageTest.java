@@ -2,6 +2,7 @@ package com.blognm.mainblog.post;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -110,7 +111,13 @@ class ImageTest extends IntegrationTest {
         assertThat(jdbc.queryForObject("SELECT original_name FROM images", String.class)).isEqualTo("photo.png");
         mvc.perform(MockMvcRequestBuilders.get(url)).andExpect(status().isOk())
                 .andExpect(header().string("Content-Type", "image/png"))
-                .andExpect(header().string("X-Content-Type-Options", "nosniff"));
+                .andExpect(header().string("X-Content-Type-Options", "nosniff"))
+                .andExpect(header().string("Cache-Control", org.hamcrest.Matchers.containsString("immutable")))
+                .andExpect(header().string("ETag", "\"" + url.substring("/uploads/".length()) + "\""))
+                .andExpect(content().bytes(png));
+        // 같은 사진을 다시 물으면 내용 없이 304 (D-132)
+        mvc.perform(MockMvcRequestBuilders.get(url).header("If-None-Match", "\"" + url.substring("/uploads/".length()) + "\""))
+                .andExpect(status().isNotModified());
         mvc.perform(MockMvcRequestBuilders.get("/uploads/../../etc/passwd")).andExpect(status().is4xxClientError());
     }
 

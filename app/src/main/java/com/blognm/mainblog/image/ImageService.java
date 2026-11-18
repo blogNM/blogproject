@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.springframework.core.io.Resource;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -139,7 +140,7 @@ public class ImageService {
     @Transactional(readOnly = true)
     public Optional<Served> read(String storedName) {
         return images.findByStoredName(storedName)
-                .flatMap(img -> storage.read(storedName).map(bytes -> new Served(img.getMimeType(), bytes)));
+                .flatMap(img -> storage.open(storedName).map(file -> new Served(img.getMimeType(), file)));
     }
 
     /** 경로를 빼고 이름만, 255자까지. */
@@ -161,6 +162,6 @@ public class ImageService {
                 "사진은 한 장에 %dMB까지 올릴 수 있습니다.".formatted(props.maxFileSize().toMegabytes()));
     }
 
-    public record Served(String mimeType, byte[] bytes) {
+    public record Served(String mimeType, Resource file) {
     }
 }

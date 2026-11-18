@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import com.blognm.mainblog.image.FileStorage;
+import com.blognm.mainblog.linkpreview.LinkPreviewProperties;
 
 /**
  * 매일 04:00. 지운 지 30일 지난 글을 완전히 지우고(US2-4), 하루 넘게 글에 붙지 않은 사진을 지운다.
@@ -24,12 +25,15 @@ public class PostCleanupJob {
     private final NamedParameterJdbcTemplate jdbc;
     private final TransactionTemplate tx;
     private final FileStorage storage;
+    private final LinkPreviewProperties linkPreviewProps;
     private final Clock clock;
 
-    public PostCleanupJob(NamedParameterJdbcTemplate jdbc, TransactionTemplate tx, FileStorage storage, Clock clock) {
+    public PostCleanupJob(NamedParameterJdbcTemplate jdbc, TransactionTemplate tx, FileStorage storage,
+            LinkPreviewProperties linkPreviewProps, Clock clock) {
         this.jdbc = jdbc;
         this.tx = tx;
         this.storage = storage;
+        this.linkPreviewProps = linkPreviewProps;
         this.clock = clock;
     }
 
@@ -54,6 +58,14 @@ public class PostCleanupJob {
                 jdbc.update("DELETE FROM comments WHERE post_id IN (:ids)", ids);
                 jdbc.update("DELETE FROM posts WHERE id IN (:ids)", ids);
             }
+            // 어느 글(지운 글 포함)에도 주소가 없는 링크 미리보기는 받은 지 오래되면 지운다. 그 썸네일은 아래에서
+            // 글에 붙지 않은 사진으로 함께 지워진다 (D-132). 한 번에 500개씩만 지워 표를 오래 잠그지 않는다
+            jdbc.update("""
+                    DELETE FROM link_previews
+                    WHERE fetched_at < :before
+                      AND NOT EXISTS (SELECT 1 FROM posts p WHERE LOCATE(link_previews.url, p.content_md) > 0)
+                    LIMIT 500
+                    """, Map.of("before", now.minus(linkPreviewProps.unusedKeep())));
             // 글에 붙지 않은 사진. 프로필·블로그 대표 사진, 링크 미리보기 썸네일(D-92), 관리자 공지 사진(D-102)은 남긴다.
             Map<String, Object> orphan = Map.of("before", now.minusDays(1));
             String where = """
