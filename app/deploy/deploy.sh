@@ -120,7 +120,7 @@ LOG_OPTS=(--log-opt max-size=20m --log-opt max-file=5)
 
 # DB 백업: APP_HOME/backups/<이름>-<시각>.sql.gz. 최근 BACKUP_KEEP(기본 14)개만 남긴다.
 # 배포할 때마다(DB 구조가 바뀌기 전) 한 번, DB를 지우기 전에 한 번 뜬다. 서버 디스크가 망가지면 같이 사라지므로
-# 중요한 때에는 backups 폴더와 data/uploads 를 서버 밖으로도 옮겨 둔다.
+# 매일 백업과 서버 밖 보관은 backup.sh·.github/workflows/backup.yml이 한다 (D-129).
 backup_db() {
   local dir="$APP_HOME/backups" file
   mkdir -p "$dir"
@@ -130,7 +130,8 @@ backup_db() {
        --no-tablespaces --set-gtid-purged=OFF "$DB_NAME" | gzip > "$file" && [ "$(gzip -dc "$file" | head -c 1 | wc -c)" = "1" ]; then
     chmod 600 "$file"
     echo "DB 백업: $file ($(du -h "$file" | cut -f1))"
-    ls -1t "$dir"/*.sql.gz 2>/dev/null | tail -n +"$(( ${BACKUP_KEEP:-14} + 1 ))" | xargs -r rm -f
+    # 매일 백업(daily-*, backup.sh가 따로 관리)은 세지 않고 배포 때 뜬 것(before-*)만 센다
+    ls -1t "$dir"/before-*.sql.gz 2>/dev/null | tail -n +"$(( ${BACKUP_KEEP:-14} + 1 ))" | xargs -r rm -f
     return 0
   fi
   rm -f "$file"
