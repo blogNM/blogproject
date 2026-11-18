@@ -1,0 +1,141 @@
+# 매일 백업 (D-129). 서버에서 DB를 뜨고, 받아 와서 이 저장소의 Actions 보관함(아티팩트)에 둔다.
+# 서버 디스크가 망가져도 Actions 쪽에 남는다. 받는 법·되돌리는 법은 docs/05-guides/백업-복구.md
+#
+# 언제: 매일 새벽 5:10 (한국 시간, 새벽 정리 작업 뒤). 올린 사진(data/uploads)은 일요일에만 함께 가져간다.
+#       Actions 탭에서 [Run workflow]로 언제든 돌릴 수 있고, 그때 사진도 가져갈지 고른다.
+# 시크릿: 배포와 같은 SSH_*, DB_* 를 쓴다.
+#   BACKUP_PASSWORD (선택): 넣으면 받아 온 파일을 이 비밀번호로 암호화(gpg AES256)해서 보관한다.
+#                          저장소를 볼 수 있는 사람도 비밀번호 없이는 열 수 없다. 잃어버리면 백업을 못 연다
+# 변수 (선택): BACKUP_RETENTION_DAYS 보관 일수. 없으면 14 (깃허브가 허용하는 1~90)
+name: 매일 백업
+
+on:
+  schedule:
+    - cron: '10 20 * * *'   # UTC 20:10 = 한국 05:10
+  workflow_dispatch:
+    inputs:
+      uploads:
+        description: '올린 사진도 함께 가져오기'
+        type: boolean
+        default: true
+
+concurrency:
+  group: backup
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    name: DB·사진 백업
+    runs-on: ubuntu-latest
+    env:
+      RETENTION: ${{ vars.BACKUP_RETENTION_DAYS || '14' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: app/deploy/backup.sh
+          sparse-checkout-cone-mode: false
+
+      - name: 사진도 가져갈지 정하기
+        id: plan
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            uploads="${{ inputs.uploads }}"
+          elif [ "$(TZ=Asia/Seoul date +%u)" = "7" ]; then
+            uploads=true
+          else
+            uploads=false
+          fi
+          echo "uploads=$uploads" >> "$GITHUB_OUTPUT"
+          echo "stamp=$(TZ=Asia/Seoul date +%Y%m%d-%H%M)" >> "$GITHUB_OUTPUT"
+          echo "사진도 가져가기: $uploads"
+
+      - name: 서버로 백업 스크립트 보내기
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_ADDRESS }}
+          port: ${{ secrets.SSH_PORT }}
+          username: ${{ secrets.SSH_ID }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          source: app/deploy/backup.sh
+          target: creat-blog/incoming
+          strip_components: 2
+
+      - name: 서버에서 백업 뜨기
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          DB_ADDRESS: ${{ secrets.DB_ADDRESS }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USERNAME: ${{ secrets.DB_USERNAME || secrets.SSH_ID }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          WITH_UPLOADS: ${{ steps.plan.outputs.uploads == 'true' && 'uploads' || '' }}
+        with:
+          host: ${{ secrets.SSH_ADDRESS }}
+          port: ${{ secrets.SSH_PORT }}
+          username: ${{ secrets.SSH_ID }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          command_timeout: 20m
+          envs: DB_ADDRESS,DB_PORT,DB_NAME,DB_USERNAME,DB_PASSWORD,WITH_UPLOADS
+          script: bash creat-blog/incoming/backup.sh "$WITH_UPLOADS"
+
+      - name: 서버에서 받아 오기
+        env:
+          SSHPASS: ${{ secrets.SSH_PASSWORD }}
+          SSH_ADDRESS: ${{ secrets.SSH_ADDRESS }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_ID: ${{ secrets.SSH_ID }}
+        run: |
+          sudo apt-get -qq update >/dev/null && sudo apt-get -qq install -y sshpass >/dev/null
+          mkdir -p backup
+          sshpass -e scp -P "$SSH_PORT" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR \
+            "$SSH_ID@$SSH_ADDRESS:creat-blog/backups/outgoing/*" backup/
+          gzip -t backup/db.sql.gz
+          if [ -f backup/uploads.tar.gz ]; then tar -tzf backup/uploads.tar.gz >/dev/null; fi
+          ls -lh backup
+
+      - name: 암호화 (BACKUP_PASSWORD가 있을 때)
+        env:
+          BACKUP_PASSWORD: ${{ secrets.BACKUP_PASSWORD }}
+        run: |
+          if [ -z "$BACKUP_PASSWORD" ]; then
+            echo "::notice::BACKUP_PASSWORD 시크릿이 없어 암호화하지 않고 보관합니다 (저장소를 볼 수 있는 사람만 받을 수 있음)."
+            exit 0
+          fi
+          for f in backup/*; do
+            printf '%s' "$BACKUP_PASSWORD" | gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 \
+              --symmetric --cipher-algo AES256 -o "$f.gpg" "$f"
+            rm -f "$f"
+          done
+          ls -lh backup
+
+      - name: Actions 보관함에 DB 올리기
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-${{ steps.plan.outputs.stamp }}
+          path: backup/db.sql.gz*
+          retention-days: ${{ env.RETENTION }}
+          compression-level: 0
+          if-no-files-found: error
+
+      - name: Actions 보관함에 사진 올리기
+        if: steps.plan.outputs.uploads == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: uploads-${{ steps.plan.outputs.stamp }}
+          path: backup/uploads.tar.gz*
+          retention-days: ${{ env.RETENTION }}
+          compression-level: 0
+          if-no-files-found: warn
+
+      - name: 서버의 보낼 파일 지우기
+        if: always()
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_ADDRESS }}
+          port: ${{ secrets.SSH_PORT }}
+          username: ${{ secrets.SSH_ID }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          script: rm -rf creat-blog/backups/outgoing
