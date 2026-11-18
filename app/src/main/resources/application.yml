@@ -132,6 +132,8 @@ app:
     password-check-per-hour: ${RATE_PASSWORD_CHECK_PER_HOUR:10}
     # 회원 한 명이 1분에 올릴 수 있는 사진 수. 글 하나에 10장이라 넉넉히 둔다 (D-127)
     upload-per-minute: ${RATE_UPLOAD_PER_MINUTE:30}
+    # 이메일 한 곳에 하루 보내는 인증번호 수 (가입·비밀번호 찾기 따로 셈). 서버 두 대가 같이 세도록 DB에 둔다 (D-130)
+    mail-per-email-per-day: ${RATE_MAIL_PER_EMAIL_PER_DAY:10}
   recaptcha:
     # Google reCAPTCHA v2 체크박스 (D-79, D-118). 기본값은 Google이 공개한 "늘 통과" 테스트 키.
     # 실제 사이트는 GitHub Actions secrets의 RECAPTCHA_SITE_KEY·RECAPTCHA_SECRET_KEY로 실제 키를 넣는다

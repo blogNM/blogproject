@@ -141,6 +141,17 @@ public class AdminAccountService implements AdminTokenCheck, ApplicationRunner {
         return jwt.createAdminToken(adminId, props.sessionTtl());
     }
 
+    /**
+     * 로그아웃: 지금까지 받은 이 관리자의 로그인을 모두 무효로 한다 (D-130). 토큰은 2시간짜리라 쿠키만 지우면
+     * 복사해 둔 토큰으로 계속 들어올 수 있었다. 다른 기기에서 열어 둔 관리자 화면도 함께 로그아웃된다.
+     */
+    @Transactional
+    public void logout(long adminId) {
+        // 토큰 발급 시각은 초 단위라 초 단위로 내려 둔다. 같은 초에 다시 로그인한 토큰은 쓸 수 있다
+        LocalDateTime now = LocalDateTime.now(clock).truncatedTo(ChronoUnit.SECONDS);
+        jdbc.update("UPDATE admins SET tokens_revoked_at = ? WHERE id = ?", now, adminId);
+    }
+
     /** 새 관리자. 임시 비밀번호를 받은 사람은 첫 로그인에서 바꾼다. */
     @Transactional
     public long create(long creatorId, String rawId, String name, String tempPassword) {
@@ -185,14 +196,22 @@ public class AdminAccountService implements AdminTokenCheck, ApplicationRunner {
 
     @Override
     public boolean isValid(JwtProvider.MemberToken token) {
-        List<LocalDateTime> changed = jdbc.query("SELECT password_changed_at FROM admins WHERE id = ?",
-                (rs, i) -> rs.getObject("password_changed_at", LocalDateTime.class), token.memberId());
-        if (changed.isEmpty()) {
+        // 비밀번호를 바꾼 시각과 로그아웃한 시각(D-130) 가운데 늦은 쪽보다 먼저 받은 토큰은 쓰지 못한다
+        List<LocalDateTime[]> rows = jdbc.query(
+                "SELECT password_changed_at, tokens_revoked_at FROM admins WHERE id = ?",
+                (rs, i) -> new LocalDateTime[] { rs.getObject("password_changed_at", LocalDateTime.class),
+                        rs.getObject("tokens_revoked_at", LocalDateTime.class) },
+                token.memberId());
+        if (rows.isEmpty()) {
             return false;
         }
-        LocalDateTime at = changed.get(0);
-        return at == null || !token.issuedAt().isBefore(at.atZone(clock.getZone() == null ? ZoneId.systemDefault()
-                : clock.getZone()).toInstant());
+        for (LocalDateTime at : rows.get(0)) {
+            if (at != null && token.issuedAt().isBefore(at.atZone(clock.getZone() == null ? ZoneId.systemDefault()
+                    : clock.getZone()).toInstant())) {
+                return false;
+            }
+        }
+        return true;
     }
 
     public record Login(String token, boolean mustChangePassword) {

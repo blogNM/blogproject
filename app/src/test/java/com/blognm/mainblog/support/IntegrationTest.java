@@ -95,6 +95,7 @@ public abstract class IntegrationTest {
         jdbc.update("DELETE FROM refresh_tokens");
         jdbc.update("DELETE FROM login_failures");
         jdbc.update("DELETE FROM email_verifications");
+        jdbc.update("DELETE FROM email_daily_sends");
         jdbc.update("DELETE FROM social_accounts");
         jdbc.update("DELETE FROM members");
         rateLimiter.clear();

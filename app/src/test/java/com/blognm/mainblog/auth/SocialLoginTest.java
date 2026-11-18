@@ -227,4 +227,22 @@ class SocialLoginTest extends IntegrationTest {
         assertThat(forged.getResponse().getStatus()).isEqualTo(400);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM members", Integer.class)).isZero();
     }
+
+    @Test
+    @DisplayName("같은 이메일 회원에 자동으로 연결되면 그 이메일로 알림 메일을 보낸다 (D-130)")
+    void autoLinkSendsMail() throws Exception {
+        signup("notify@example.com", "Abcd1234!", "알림회원");
+        mails.sent().clear();
+        expectLoggedInAs(googleReturns("g-9", "notify@example.com", true, "김구글"), "알림회원");
+        var mail = waitForMail("notify@example.com");
+        assertThat(mail.subject()).contains("구글 계정이 연결");
+        assertThat(mail.body()).contains("비밀번호를 바꾸고");
+
+        // 이미 연결된 뒤 다시 로그인할 때는 보내지 않는다
+        mails.sent().clear();
+        expectLoggedInAs(googleReturns("g-9", "notify@example.com", true, "김구글"), "알림회원");
+        Thread.sleep(200);
+        assertThat(mails.sent()).isEmpty();
+    }
+
 }

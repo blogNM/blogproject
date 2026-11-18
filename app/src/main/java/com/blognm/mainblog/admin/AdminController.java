@@ -57,7 +57,11 @@ public class AdminController {
     }
 
     @PostMapping("/auth/logout")
-    public Map<String, Boolean> logout(HttpServletResponse response) {
+    public Map<String, Boolean> logout(@AuthenticationPrincipal AdminPrincipal me, HttpServletResponse response) {
+        // 쿠키만 지우면 복사해 둔 토큰이 2시간 동안 남으므로 서버에서도 무효로 한다 (D-130)
+        if (me != null) {
+            accounts.logout(me.adminId());
+        }
         cookies.clearAdmin(response);
         return Map.of("loggedOut", true);
     }

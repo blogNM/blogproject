@@ -53,7 +53,7 @@ public record AppProperties(
      * uploadPerMinute: 회원 한 명이 1분에 올리는 사진 수 (D-127).
      */
     public record RateLimit(int loginPerMinute, int mailPerHour, int emailCheckPerMinute, int passwordCheckPerHour,
-            int uploadPerMinute) {
+            int uploadPerMinute, int mailPerEmailPerDay) {
     }
 
     public record Recaptcha(String siteKey, String secretKey, String verifyUrl) {

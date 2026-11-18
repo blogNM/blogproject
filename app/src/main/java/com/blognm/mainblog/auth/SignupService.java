@@ -31,18 +31,20 @@ public class SignupService {
     private final AuthMailService mail;
     private final PasswordEncoder passwordEncoder;
     private final RateLimiter rateLimiter;
+    private final EmailDailyQuota dailyQuota;
     private final AppProperties props;
     private final Clock clock;
 
     public SignupService(EmailVerificationRepository verifications, MemberRepository members,
             SocialAccountRepository socialAccounts, AuthMailService mail, PasswordEncoder passwordEncoder,
-            RateLimiter rateLimiter, AppProperties props, Clock clock) {
+            RateLimiter rateLimiter, EmailDailyQuota dailyQuota, AppProperties props, Clock clock) {
         this.verifications = verifications;
         this.members = members;
         this.socialAccounts = socialAccounts;
         this.mail = mail;
         this.passwordEncoder = passwordEncoder;
         this.rateLimiter = rateLimiter;
+        this.dailyQuota = dailyQuota;
         this.props = props;
         this.clock = clock;
     }
@@ -105,6 +107,9 @@ public class SignupService {
             throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "TOO_MANY_REQUESTS",
                     "요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.");
         }
+
+        // 남의 이메일로 가입 메일을 계속 보내지 못하게 이메일마다 하루 총량 (D-130)
+        dailyQuota.acquire(email, Purpose.SIGNUP, now.toLocalDate(), props.rateLimit().mailPerEmailPerDay());
 
         // 다시 보내면 이전 번호는 무효 (USR-02)
         verifications.deleteAllFor(email, Purpose.SIGNUP);

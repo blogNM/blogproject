@@ -52,6 +52,15 @@ CREATE TABLE email_verifications (
   CONSTRAINT ck_email_verifications_purpose CHECK (purpose IN ('SIGNUP', 'PASSWORD_RESET'))
 ) COMMENT '이메일 인증번호. 쓰거나 만료되면 바로 삭제 (USR-02·06, SEC-05)';
 
+CREATE TABLE email_daily_sends (
+  email VARCHAR(255) NOT NULL COMMENT '소문자. 회원과 연결하지 않음 (가입 전 이메일도 셈)',
+  purpose VARCHAR(20) NOT NULL COMMENT 'SIGNUP 또는 PASSWORD_RESET',
+  send_date DATE NOT NULL COMMENT '한국 날짜',
+  sent_count INT NOT NULL COMMENT '그날 보낸 인증번호 수. 하루 10번까지',
+  PRIMARY KEY (email, purpose, send_date),
+  KEY idx_email_daily_sends_date (send_date)
+) COMMENT '이메일별 하루 인증번호 발송 수. 지난 날짜는 새벽에 삭제 (V22, D-130)';
+
 CREATE TABLE email_find_tokens (
   id BIGINT NOT NULL AUTO_INCREMENT,
   member_id BIGINT NOT NULL COMMENT '대상 회원',
@@ -519,6 +528,7 @@ CREATE TABLE admins (
   name VARCHAR(50) NOT NULL,
   must_change_password BOOLEAN NOT NULL DEFAULT TRUE COMMENT '임시 비밀번호면 TRUE. 바꾸기 전에는 다른 기능 못 씀 (V7, 추천안 #16)',
   password_changed_at DATETIME NULL COMMENT '이전에 받은 관리자 로그인 무효 (V7)',
+  tokens_revoked_at DATETIME NULL COMMENT '로그아웃한 시각. 이전에 받은 관리자 로그인 무효 (V22, D-130)',
   created_by BIGINT NULL COMMENT '만든 관리자. 첫 관리자(환경변수)는 NULL (V7)',
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   last_login_at DATETIME NULL,

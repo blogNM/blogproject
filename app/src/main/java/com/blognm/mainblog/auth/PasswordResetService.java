@@ -38,13 +38,14 @@ public class PasswordResetService {
     private final AuthMailService mail;
     private final PasswordEncoder passwordEncoder;
     private final RateLimiter rateLimiter;
+    private final EmailDailyQuota dailyQuota;
     private final AppProperties props;
     private final Clock clock;
 
     public PasswordResetService(EmailVerificationRepository verifications, EmailFindTokenRepository findTokens,
             MemberRepository members, RefreshTokenRepository refreshTokens, LoginFailureRepository loginFailures,
-            AuthMailService mail, PasswordEncoder passwordEncoder, RateLimiter rateLimiter, AppProperties props,
-            Clock clock) {
+            AuthMailService mail, PasswordEncoder passwordEncoder, RateLimiter rateLimiter, EmailDailyQuota dailyQuota,
+            AppProperties props, Clock clock) {
         this.verifications = verifications;
         this.findTokens = findTokens;
         this.members = members;
@@ -53,6 +54,7 @@ public class PasswordResetService {
         this.mail = mail;
         this.passwordEncoder = passwordEncoder;
         this.rateLimiter = rateLimiter;
+        this.dailyQuota = dailyQuota;
         this.props = props;
         this.clock = clock;
     }
@@ -79,6 +81,8 @@ public class PasswordResetService {
             throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "TOO_MANY_REQUESTS",
                     "요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.");
         }
+        // 이메일마다 하루 총량 (D-130). 가입 안 된 이메일도 똑같이 세어 답으로 가입 여부를 알 수 없게 한다
+        dailyQuota.acquire(email, Purpose.PASSWORD_RESET, now.toLocalDate(), props.rateLimit().mailPerEmailPerDay());
         verifications.deleteAllFor(email, Purpose.PASSWORD_RESET);
 
         boolean registered = members.findByEmail(email).filter(Member::isActive).isPresent();

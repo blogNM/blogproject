@@ -7,6 +7,14 @@
 
 ## 2026-11-18
 
+### 인증번호 하루 총량, 소셜 자동 연결 알림, 관리자 로그아웃 (D-130)
+
+- **기능** 가입·비밀번호 찾기 인증번호를 이메일 한 곳에 하루 10번까지 보냄(`MAIL_DAILY_LIMIT`). 1분마다 새 번호를 받아 계속 맞혀 보거나 남에게 메일 폭탄을 보내던 틈을 막음. 서버 두 대가 함께 세도록 DB에 셈 (D-130, 김채림 요청)
+- **기능** 구글·네이버·카카오 계정이 같은 이메일 회원에 자동으로 연결되면 그 이메일로 알림 메일을 보냄 (D-130)
+- **수정** 관리자가 로그아웃하면 그 전에 받은 관리자 로그인을 서버에서도 무효로 함. 전에는 쿠키만 지워 복사해 둔 토큰이 2시간 동안 남았음 (D-130)
+- **설정** DB 마이그레이션 `V22__email_daily_sends_admin_logout.sql`: `email_daily_sends` 표, `admins.tokens_revoked_at` 칸. 환경변수 `RATE_MAIL_PER_EMAIL_PER_DAY`(기본 10)
+- **문서** D-130, spec 001·005 Clarifications, specs/README·docs/README·CLAUDE.md 결정 번호, schema.sql·ERD
+
 ### 매일 백업 (D-129)
 
 - **설정** 워크플로 "매일 백업"(`.github/workflows/backup.yml`): 매일 새벽 5:10(한국 시간) 서버에서 DB를 떠서 Actions 보관함에 14일 보관. 올린 사진은 일요일과 손으로 돌릴 때 함께 (D-129, 김채림 요청)
