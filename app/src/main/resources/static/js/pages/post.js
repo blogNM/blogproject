@@ -196,26 +196,72 @@ function setupShare() {
 }
 
 // ----- 댓글 (BRD-06, US5). 내용·닉네임은 모두 textContent -----
+// 댓글은 쪽으로 나눠 받는다 (D-131). 한 쪽은 댓글 50개와 그 답글. [댓글 더 보기]로 다음 쪽을 붙인다.
+let commentPages = 1;
+let commentHasMore = false;
+
+function commentsUrl(page) {
+  const sep = keyQuery ? '&' : '?';
+  return `/api/posts/${post.id}/comments${keyQuery}${sep}page=${page}`;
+}
+
+function showCommentPage(data, append) {
+  $('comment-count').textContent = String(data.total);
+  $('counts').textContent = `조회 ${post.counts.views} · 댓글 ${data.total}`;
+  const items = data.comments.map((c) => commentItem(c, c.id));
+  if (append) {
+    $('comment-list').append(...items);
+  } else {
+    $('comment-list').replaceChildren(...items);
+  }
+  commentHasMore = data.hasMore;
+  $('comment-more').hidden = !data.hasMore;
+}
+
+/** 댓글을 다시 받는다. 지금까지 펼친 쪽까지 다시 받아 보던 자리를 지킨다. */
 async function loadComments() {
   $('comments').hidden = false;
   $('comment-form').hidden = !me;
   $('comment-login').hidden = !!me;
-  let comments;
   try {
-    comments = await api.get(`/api/posts/${post.id}/comments${keyQuery}`);
+    const pages = Math.max(1, commentPages);
+    commentPages = 0;
+    for (let p = 1; p <= pages; p++) {
+      const data = await api.get(commentsUrl(p));
+      showCommentPage(data, p > 1);
+      commentPages = p;
+      if (!data.hasMore) break;
+    }
   } catch (err) {
     $('comment-list').replaceChildren(el('li', { class: 'muted' }, err.message));
+    $('comment-more').hidden = true;
     return;
   }
-  const total = comments.reduce((n, c) => n + (c.deleted ? 0 : 1) + c.replies.length, 0);
-  $('comment-count').textContent = String(total);
-  $('counts').textContent = `조회 ${post.counts.views} · 댓글 ${total}`;
-  $('comment-list').replaceChildren(...comments.map((c) => commentItem(c, c.id)));
-  // 알림에서 눌러 들어오면 그 댓글로 내려간다.
-  const target = /^#comment-\d+$/.test(location.hash) ? document.querySelector(location.hash) : null;
-  if (target) {
-    target.classList.add('focused');
-    target.scrollIntoView({ block: 'center' });
+  // 알림에서 눌러 들어오면 그 댓글로 내려간다. 아직 받지 않은 쪽에 있으면 찾을 때까지 더 받는다(최대 20쪽).
+  if (/^#comment-\d+$/.test(location.hash)) {
+    let target = document.querySelector(location.hash);
+    while (!target && commentHasMore && commentPages < 20) {
+      await loadMoreComments();
+      target = document.querySelector(location.hash);
+    }
+    if (target) {
+      target.classList.add('focused');
+      target.scrollIntoView({ block: 'center' });
+    }
+  }
+}
+
+async function loadMoreComments() {
+  const button = $('comment-more');
+  button.disabled = true;
+  try {
+    const data = await api.get(commentsUrl(commentPages + 1));
+    commentPages += 1;
+    showCommentPage(data, true);
+  } catch (err) {
+    alert(err.message);
+  } finally {
+    button.disabled = false;
   }
 }
 
@@ -319,6 +365,7 @@ function miniForm(placeholder, value, onSubmit, onCancel) {
 }
 
 if (post) {
+  $('comment-more').addEventListener('click', loadMoreComments);
   const input = $('comment-input');
   input.addEventListener('input', () => { $('comment-length').textContent = `${[...input.value].length} / 500`; });
   $('comment-form').addEventListener('submit', async (e) => {

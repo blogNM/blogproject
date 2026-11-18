@@ -10,6 +10,8 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.imageio.ImageIO;
@@ -20,7 +22,11 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
+import com.blognm.mainblog.image.ImageService;
+import com.blognm.mainblog.image.UploadProperties;
 import com.blognm.mainblog.support.IntegrationTest;
 import com.jayway.jsonpath.JsonPath;
 import com.sun.net.httpserver.HttpServer;
@@ -124,12 +130,39 @@ class LinkPreviewTest extends IntegrationTest {
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM images", Long.class)).isZero();
     }
 
+    @Autowired
+    NamedParameterJdbcTemplate named;
+    @Autowired
+    ImageService images;
+    @Autowired
+    UploadProperties uploadProps;
+
+    @Test
+    @DisplayName("저장 응답은 바깥 사이트를 기다리지 않고, 미리보기는 뒤에서 받는다 (D-131)")
+    void background() {
+        LinkPreviewProperties props = new LinkPreviewProperties(true, Duration.ofSeconds(1), 5, Duration.ofDays(7),
+                true, Duration.ofSeconds(8), true);
+        List<Runnable> queued = new ArrayList<>();
+        LinkPreviewService service = new LinkPreviewService(named, new SafeFetcher(props), images, uploadProps, props,
+                clock, queued::add);
+        long ownerId = jdbc.queryForObject("SELECT id FROM members WHERE email = 'owner@example.com'", Long.class);
+
+        service.collectAfterSave("<p><a href=\"" + base + "/song\">" + base + "/song</a></p>", ownerId);
+        // 부른 자리에서는 바깥 사이트에 가지 않는다
+        assertThat(pageHits.get()).isZero();
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM link_previews", Long.class)).isZero();
+
+        queued.forEach(Runnable::run);
+        assertThat(pageHits.get()).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT status FROM link_previews", String.class)).isEqualTo("OK");
+    }
+
     @Test
     @DisplayName("내부망 주소는 받지 않는다 (SSRF)")
     void privateHostsBlocked() {
         SafeFetcher strict = new SafeFetcher(
                 new LinkPreviewProperties(true, Duration.ofSeconds(1), 5, Duration.ofDays(7), false,
-                        Duration.ofSeconds(8)));
+                        Duration.ofSeconds(8), false));
         for (String url : new String[] {base + "/song", "http://localhost/", "http://10.0.0.1/", "http://169.254.169.254/",
                 "http://[::1]/", "http://192.168.0.1/", "file:///etc/passwd", "http://user@example.com/",
                 "http://example.com:8080/", "http://[64:ff9b::a9fe:a9fe]/", "http://[64:ff9b::7f00:1]/",

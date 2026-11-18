@@ -7,6 +7,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -56,33 +57,72 @@ public class CommentService {
         this.clock = clock;
     }
 
+    private static final String SELECT_ROWS = """
+            SELECT c.id, c.post_id, c.parent_id, c.author_id, c.content, c.is_edited, c.status, c.created_at,
+                   m.nickname, m.status AS member_status, m.is_test, r.nickname AS reply_to
+            FROM comments c
+            JOIN members m ON m.id = c.author_id
+            LEFT JOIN members r ON r.id = c.reply_to_member_id
+            """;
+
+    /**
+     * 글의 댓글을 쪽으로 나눠 준다 (D-131). 한 쪽은 댓글 commentPageSize개와 그 답글 전부.
+     * 지워졌고 남은 답글도 없는 댓글은 쪽을 셀 때부터 뺀다. total은 지금 보는 사람에게 보이는 댓글·답글 수.
+     */
     @Transactional(readOnly = true)
-    public List<CommentView> list(long postId, String key, Long viewerId) {
+    public CommentPage list(long postId, String key, Long viewerId, int page) {
         PostService.Readable post = posts.readable(postId, key, viewerId);
-        List<Row> rows = jdbc.query("""
-                SELECT c.id, c.post_id, c.parent_id, c.author_id, c.content, c.is_edited, c.status, c.created_at,
-                       m.nickname, m.status AS member_status, m.is_test, r.nickname AS reply_to
-                FROM comments c
-                JOIN members m ON m.id = c.author_id
-                LEFT JOIN members r ON r.id = c.reply_to_member_id
-                WHERE c.post_id = ?
-                ORDER BY c.created_at, c.id
-                """, CommentService::row, postId);
+        int size = Math.max(1, props.commentPageSize());
+        int safePage = Math.max(1, page);
         // 서로 차단한 사이의 댓글은 숨긴다. 같은 블로그의 멤버끼리는 보인다 (D-36).
         Set<Long> hidden = viewerId == null ? Set.of() : blocks.hiddenIn(post.blog().getId(), viewerId);
+
+        int total = 0;
+        for (Map<String, Object> r : jdbc.queryForList("""
+                SELECT author_id, COUNT(*) AS n FROM comments WHERE post_id = ? AND status = 'NORMAL' GROUP BY author_id
+                """, postId)) {
+            if (!hidden.contains(((Number) r.get("author_id")).longValue())) {
+                total += ((Number) r.get("n")).intValue();
+            }
+        }
+        if (safePage > 1 && (long) (safePage - 1) * size >= total) {
+            // 남은 댓글보다 뒤쪽 쪽은 DB에 묻지 않는다 (D-128과 같은 방식)
+            return new CommentPage(List.of(), false, total);
+        }
+
+        List<Row> rootRows = jdbc.query(SELECT_ROWS + """
+                WHERE c.post_id = ? AND c.parent_id IS NULL
+                  AND (c.status = 'NORMAL'
+                       OR EXISTS (SELECT 1 FROM comments x WHERE x.parent_id = c.id AND x.status = 'NORMAL'))
+                ORDER BY c.created_at, c.id
+                LIMIT ? OFFSET ?
+                """, CommentService::row, postId, size + 1, (long) (safePage - 1) * size);
+        boolean hasMore = rootRows.size() > size;
+        if (hasMore) {
+            rootRows = rootRows.subList(0, size);
+        }
         Map<Long, CommentView> roots = new LinkedHashMap<>();
-        for (Row r : rows) {
-            if (r.parentId() == null) {
-                Row shown = hidden.contains(r.authorId()) ? r.asDeleted() : r;
-                roots.put(r.id(), view(shown, viewerId, post, new ArrayList<>()));
+        for (Row r : rootRows) {
+            Row shown = hidden.contains(r.authorId()) ? r.asDeleted() : r;
+            roots.put(r.id(), view(shown, viewerId, post, new ArrayList<>()));
+        }
+        if (!roots.isEmpty()) {
+            String in = String.join(",", Collections.nCopies(roots.size(), "?"));
+            List<Object> args = new ArrayList<>(roots.keySet());
+            for (Row r : jdbc.query(SELECT_ROWS + " WHERE c.parent_id IN (" + in + ") AND c.status = 'NORMAL'"
+                    + " ORDER BY c.created_at, c.id", CommentService::row, args.toArray())) {
+                if (!hidden.contains(r.authorId())) {
+                    roots.get(r.parentId()).replies().add(view(r, viewerId, post, List.of()));
+                }
             }
         }
-        for (Row r : rows) {
-            if (r.parentId() != null && r.normal() && roots.containsKey(r.parentId()) && !hidden.contains(r.authorId())) {
-                roots.get(r.parentId()).replies().add(view(r, viewerId, post, List.of()));
-            }
-        }
-        return roots.values().stream().filter(c -> !c.deleted() || !c.replies().isEmpty()).toList();
+        List<CommentView> comments = roots.values().stream().filter(c -> !c.deleted() || !c.replies().isEmpty())
+                .toList();
+        return new CommentPage(comments, hasMore, total);
+    }
+
+    /** 댓글 한 쪽. hasMore면 [댓글 더 보기]로 다음 쪽을 부른다. */
+    public record CommentPage(List<CommentView> comments, boolean hasMore, int total) {
     }
 
     /** 글을 읽을 수 있는 회원은 누구나 댓글을 단다. 답글에 다시 답하면 그 댓글의 줄기에 붙는다 (D-78). */

@@ -52,11 +52,11 @@ class CommentTest extends IntegrationTest {
         comment(other, "저도 가 볼게요", reply);
 
         getAs("/api/posts/" + postId + "/comments")
-                .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].authorName").value("독자"))
-                .andExpect(jsonPath("$[0].replies.length()").value(2))
-                .andExpect(jsonPath("$[0].replies[0].replyTo").value("독자"))
-                .andExpect(jsonPath("$[0].replies[1].replyTo").value("블로그장"));
+                .andExpect(jsonPath("$.comments.length()").value(1))
+                .andExpect(jsonPath("$.comments[0].authorName").value("독자"))
+                .andExpect(jsonPath("$.comments[0].replies.length()").value(2))
+                .andExpect(jsonPath("$.comments[0].replies[0].replyTo").value("독자"))
+                .andExpect(jsonPath("$.comments[0].replies[1].replyTo").value("블로그장"));
         getAs("/api/posts/" + postId).andExpect(jsonPath("$.counts.comments").value(3));
 
         Integer toOwner = jdbc.queryForObject("""
@@ -80,11 +80,11 @@ class CommentTest extends IntegrationTest {
         sendAs(HttpMethod.DELETE, "/api/comments/" + lonely, null, other).andExpect(status().isOk());
 
         getAs("/api/posts/" + postId + "/comments")
-                .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].deleted").value(true))
-                .andExpect(jsonPath("$[0].content").value("삭제된 댓글입니다."))
-                .andExpect(jsonPath("$[0].authorName").doesNotExist())
-                .andExpect(jsonPath("$[0].replies[0].content").value("답글"));
+                .andExpect(jsonPath("$.comments.length()").value(1))
+                .andExpect(jsonPath("$.comments[0].deleted").value(true))
+                .andExpect(jsonPath("$.comments[0].content").value("삭제된 댓글입니다."))
+                .andExpect(jsonPath("$.comments[0].authorName").doesNotExist())
+                .andExpect(jsonPath("$.comments[0].replies[0].content").value("답글"));
         getAs("/api/posts/" + postId).andExpect(jsonPath("$.counts.comments").value(1));
     }
 
@@ -97,9 +97,9 @@ class CommentTest extends IntegrationTest {
         sendAs(HttpMethod.PUT, "/api/comments/" + c, """
                 {"content":"고침"}""", reader).andExpect(status().isOk());
         getAs("/api/posts/" + postId + "/comments", reader)
-                .andExpect(jsonPath("$[0].content").value("고침"))
-                .andExpect(jsonPath("$[0].edited").value(true))
-                .andExpect(jsonPath("$[0].mine").value(true));
+                .andExpect(jsonPath("$.comments[0].content").value("고침"))
+                .andExpect(jsonPath("$.comments[0].edited").value(true))
+                .andExpect(jsonPath("$.comments[0].mine").value(true));
 
         sendAs(HttpMethod.DELETE, "/api/comments/" + c, null, other).andExpect(status().isForbidden());
         sendAs(HttpMethod.DELETE, "/api/comments/" + c, null, owner).andExpect(status().isOk());
@@ -138,5 +138,33 @@ class CommentTest extends IntegrationTest {
         getAs("/api/posts/" + secret + "/comments", reader).andExpect(status().isNotFound());
         postAs("/api/posts/" + secret + "/comments", """
                 {"content":"몰래"}""", reader).andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("댓글은 50개씩 쪽으로 나눠 주고, 답글은 그 댓글과 함께 온다. 뒤쪽 쪽 번호는 빈 목록 (D-131)")
+    void paging() throws Exception {
+        long readerId = jdbc.queryForObject("SELECT id FROM members WHERE email = 'reader@example.com'", Long.class);
+        java.time.LocalDateTime t = java.time.LocalDateTime.of(2026, 1, 1, 0, 0);
+        for (int i = 1; i <= 55; i++) {
+            jdbc.update("INSERT INTO comments (post_id, author_id, content, created_at) VALUES (?, ?, ?, ?)",
+                    postId, readerId, "댓글" + i, t.plusMinutes(i));
+        }
+        long c51 = jdbc.queryForObject("SELECT id FROM comments WHERE content = '댓글51'", Long.class);
+        jdbc.update("INSERT INTO comments (post_id, author_id, parent_id, content, created_at) VALUES (?, ?, ?, ?, ?)",
+                postId, readerId, c51, "답글", t.plusHours(5));
+
+        getAs("/api/posts/" + postId + "/comments")
+                .andExpect(jsonPath("$.comments.length()").value(50))
+                .andExpect(jsonPath("$.comments[0].content").value("댓글1"))
+                .andExpect(jsonPath("$.hasMore").value(true))
+                .andExpect(jsonPath("$.total").value(56));
+        getAs("/api/posts/" + postId + "/comments?page=2")
+                .andExpect(jsonPath("$.comments.length()").value(5))
+                .andExpect(jsonPath("$.comments[0].content").value("댓글51"))
+                .andExpect(jsonPath("$.comments[0].replies[0].content").value("답글"))
+                .andExpect(jsonPath("$.hasMore").value(false));
+        getAs("/api/posts/" + postId + "/comments?page=99")
+                .andExpect(jsonPath("$.comments.length()").value(0))
+                .andExpect(jsonPath("$.hasMore").value(false));
     }
 }

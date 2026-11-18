@@ -175,15 +175,15 @@ class SocialTest extends IntegrationTest {
 
         postAs("/api/members/" + otherId + "/block", null, reader).andExpect(jsonPath("$.blocked").value(true));
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM follows", Integer.class)).isZero();
-        getAs("/api/posts/" + postId + "/comments", reader).andExpect(jsonPath("$.length()").value(0));
-        getAs("/api/posts/" + postId + "/comments").andExpect(jsonPath("$.length()").value(1));
+        getAs("/api/posts/" + postId + "/comments", reader).andExpect(jsonPath("$.comments.length()").value(0));
+        getAs("/api/posts/" + postId + "/comments").andExpect(jsonPath("$.comments.length()").value(1));
         postAs("/api/members/" + readerId + "/follow", null, other).andExpect(status().isForbidden());
         getAs("/api/me/blocks", reader).andExpect(jsonPath("$[0].nickname").value("다른독자"));
 
         // 같은 블로그의 멤버가 되면 그 블로그 안에서는 보인다
         postAs("/api/blogs/food/join", "{}", reader).andExpect(status().isOk());
         postAs("/api/blogs/food/join", "{}", other).andExpect(status().isOk());
-        getAs("/api/posts/" + postId + "/comments", reader).andExpect(jsonPath("$.length()").value(1));
+        getAs("/api/posts/" + postId + "/comments", reader).andExpect(jsonPath("$.comments.length()").value(1));
 
         // 블로그장이 차단한 회원은 좋아요·참여를 못 한다
         Cookie[] stranger = member("stranger@example.com", "낯선이");

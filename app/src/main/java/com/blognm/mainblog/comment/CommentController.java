@@ -1,6 +1,5 @@
 package com.blognm.mainblog.comment;
 
-import java.util.List;
 import java.util.Map;
 
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -26,9 +25,9 @@ public class CommentController {
     }
 
     @GetMapping("/api/posts/{postId}/comments")
-    public List<CommentService.CommentView> list(@PathVariable long postId, @RequestParam(required = false) String key,
-            @AuthenticationPrincipal MemberPrincipal me) {
-        return comments.list(postId, key, me == null ? null : me.memberId());
+    public CommentService.CommentPage list(@PathVariable long postId, @RequestParam(required = false) String key,
+            @RequestParam(defaultValue = "1") int page, @AuthenticationPrincipal MemberPrincipal me) {
+        return comments.list(postId, key, me == null ? null : me.memberId(), page);
     }
 
     @PostMapping("/api/posts/{postId}/comments")

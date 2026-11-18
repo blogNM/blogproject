@@ -186,6 +186,8 @@ link-preview:
   allow-private-hosts: false
   # 글 하나를 저장할 때 미리보기 받기에 쓰는 시간 상한. 넘으면 남은 링크는 카드 없이 두고 다음 저장 때 받는다
   collect-budget: ${LINK_PREVIEW_COLLECT_BUDGET:8s}
+  # 글 저장 응답은 바로 보내고 미리보기는 뒤에서 받는다. 받는 동안 글을 열면 글자 링크로 보인다 (D-131)
+  background: ${LINK_PREVIEW_BACKGROUND:true}
 
 # 댓글·좋아요·검색·피드 (004 4단계)
 board:
@@ -196,6 +198,8 @@ board:
   popular-window: ${BOARD_POPULAR_WINDOW:7d}
   recent-search-max: ${BOARD_RECENT_SEARCH_MAX:10}
   feed-notice-count: ${BOARD_FEED_NOTICE_COUNT:5}
+  # 글 화면에서 한 번에 불러오는 댓글 수. 답글은 그 댓글에 함께 온다. 나머지는 [댓글 더 보기] (D-131)
+  comment-page-size: ${BOARD_COMMENT_PAGE_SIZE:50}
 
 # 팔로우·구독·차단·신고·알림 (003 5단계)
 social:
